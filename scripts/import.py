@@ -29,6 +29,10 @@ def main():
         sys.exit('Could not find properties.db.')
     properties_db_conn = sqlite3.connect(properties_db_file)
     properties_db_conn.row_factory = sqlite3.Row
+    # make sure inchi method is loaded
+    if not os.path.isfile(os.path.join(os.path.dirname(__file__), '../sql/inchi.sql')):
+        sys.exit('Could not find inchi.sql.')
+    c.executescript(open().read(os.path.join(os.path.dirname(__file__), '../sql/inchi.sql')))
     # set up source and retrieve source id
     source_row = parse_source(properties_db_conn, args.source)
     # iterate over source file or dir and update folder and sql databases
@@ -115,8 +119,8 @@ def main():
             properties_db_conn.commit()
             # restart logging for next iteration
             pybel.ob.obErrorLog.StartLogging()
-        # close db
-        properties_db_conn.close()
+    # close db
+    properties_db_conn.close()
 
 def touch(fname, times=None):
     fhandle = file(fname, 'a')
