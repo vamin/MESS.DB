@@ -1,33 +1,46 @@
---if your sqlite3 installation supports foreign keys,
---uncommenting the foreign key declarations is recommended
+/*
+If your sqlite3 installation supports foreign keys,
+uncommenting the foreign key declarations is recommended.
+*/
+
+/*
+Describing molecules, their names, and where to get them.
+*/
 
 --DROP TABLE molecule;
 CREATE TABLE IF NOT EXISTS
-    molecule( --contains molecule names and empirical parameters
+    molecule( --contains molecule name and fundamental identifiers
         inchikey TEXT PRIMARY KEY,
         inchi TEXT,
         smiles TEXT,
-        cactvs_hashisy TEXT,
         formula TEXT,
         iupac TEXT
     );
 
 --DROP TABLE molecule_synonym;
 CREATE TABLE IF NOT EXISTS
-    molecule_synonym(
-        inchikey TEXT,
+    molecule_synonym( --any synonyms, common names, identifiers, etc.
+        inchikey TEXT NOT NULL,
         --FOREIGN KEY(inchikey) REFERENCES molecule(inchikey),
-        name TEXT,
+        name TEXT NOT NULL,
         UNIQUE(inchikey, name)
     );
 CREATE INDEX IF NOT EXISTS ix_molecule_synonym_name ON molecule_synonym (name);
 
+--DROP TABLE state;
+CREATE TABLE IF NOT EXISTS
+    state( --descriptors for various electronic/conformational states that can be applied to a molecule
+        state_id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL, --e.g. anion, cation, triplet, protonated, etc.
+        UNIQUE(name)
+    );
+
 --DROP TABLE source;
 CREATE TABLE IF NOT EXISTS
-    source(
+    source( --catalogs where molecules exist and might be purchased
         source_id INTEGER PRIMARY KEY,
-        name TEXT,
-        filename TEXT,
+        name TEXT NOT NULL,
+        filename TEXT NOT NULL,
         url TEXT,
         url_template TEXT,
         last_update TEXT
@@ -37,7 +50,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_source_filename ON source (filename);
 
 --DROP TABLE molecule_source;
 CREATE TABLE IF NOT EXISTS
-    molecule_source(
+    molecule_source( --links molecules to sources
         inchikey TEXT,
         --FOREIGN KEY(inchikey) REFERENCES molecule(inchikey),
         source_id INTEGER,
@@ -46,208 +59,127 @@ CREATE TABLE IF NOT EXISTS
     );
 CREATE INDEX IF NOT EXISTS ix_molecule_souce_identifier ON molecule_source (identifier);
 
---DROP TABLE program;
-CREATE TABLE IF NOT EXISTS
-    program(
-        program_id INTEGER PRIMARY KEY,
-        name TEXT,
-        version REAL,
-        url TEXT
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_program_name ON program (name);
-
---DROP TABLE program;
-CREATE TABLE IF NOT EXISTS
-    job_type(
-        job_id INTEGER PRIMARY KEY,
-        name TEXT,
-        geop INT
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_job_type_name ON job_type (name);
+/*
+Describing methods to calculate properties of molecules and their relationships.
+*/
 
 --DROP TABLE level;
 CREATE TABLE IF NOT EXISTS
-    level(
+    level( --level of theory, used to classify methods
         level_id INTEGER PRIMARY KEY,
-        name TEXT
+        name TEXT NOT NULL --e.g. empirical, semiempirical, dft, hf, etc
     );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_level_name ON level (name);
 
---DROP TABLE mm_method;
+--DROP TABLE program;
 CREATE TABLE IF NOT EXISTS
-    mm_method(
-        mm_id INTEGER PRIMARY KEY,
-        name TEXT
+    program( --programs used to calculate properties
+        program_id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        version REAL NOT NULL,
+        url TEXT,
+        UNIQUE(name, version)
     );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_mm_method_name ON mm_method (name);
-
---DROP TABLE md_method;
-CREATE TABLE IF NOT EXISTS
-    md_method(
-        md_id INTEGER PRIMARY KEY,
-        name TEXT
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_md_method_name ON md_method (name);
-
---DROP TABLE empirical_method;
-CREATE TABLE IF NOT EXISTS
-    empirical_method(
-        empirical_id INTEGER PRIMARY KEY,
-        name TEXT
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_empirical_method_name ON empirical_method (name);
-
---DROP TABLE semiempirical_method;
-CREATE TABLE IF NOT EXISTS
-    semiempirical_method(
-        semiempirical_id INTEGER PRIMARY KEY,
-        name TEXT
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_semiempirical_method_name ON semiempirical_method (name);
-
---DROP TABLE mp_method;
-CREATE TABLE IF NOT EXISTS
-    mp_method(
-        mp_id INTEGER PRIMARY KEY,
-        name TEXT
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_mp_method_name ON mp_method (name);
-
---DROP TABLE cc_method;
-CREATE TABLE IF NOT EXISTS
-    cc_method(
-        cc_id INTEGER PRIMARY KEY,
-        name TEXT
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_cc_method_name ON cc_method (name);
-
---DROP TABLE basis_set;
-CREATE TABLE IF NOT EXISTS
-    basis_set(
-        basis_id INTEGER PRIMARY KEY,
-        name TEXT,
-        valence INTEGER,
-        zeta INTEGER,
-        p INTEGER,
-        d INTEGER,
-        f INTEGER,
-        diff INTEGER
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_basis_set_name ON basis_set (name);
-
---DROP TABLE ecp;
-CREATE TABLE IF NOT EXISTS
-    ecp(
-        ecp_id INTEGER PRIMARY KEY,
-        name TEXT,
-        core_size INTEGER
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_ecp_name ON ecp (name);
-
---DROP TABLE dispersion;
-CREATE TABLE IF NOT EXISTS
-    dispersion(
-        dispersion_id INTEGER PRIMARY KEY,
-        name TEXT
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_dispersion_name ON dispersion (name);
-
---DROP TABLE functional;
-CREATE TABLE IF NOT EXISTS
-    functional(
-        functional_id INTEGER PRIMARY KEY,
-        name TEXT,
-        rung REAL
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_functional_name ON functional (name);
+--CREATE UNIQUE INDEX IF NOT EXISTS ux_program_name ON program (name);
 
 --DROP TABLE method;
 CREATE TABLE IF NOT EXISTS
-    method(
+    method( --methods for calculating properties
         method_id INTEGER PRIMARY KEY,
         level_id INTEGER,
         --FOREIGN KEY(level_id) REFERENCES level(level_id),
-        mm_id INTEGER,
-        --FOREIGN KEY(mm_id) REFERENCES mm_method(mm_id),
-        md_id INTEGER,
-        --FOREIGN KEY(md_id) REFERENCES md_method(md_id),
-        empirical_id INTEGER,
-        --FOREIGN KEY(empirical_id) REFERENCES empirical_method(empirical_id),
-        semiempirical_id INTEGER,
-        --FOREIGN KEY(semiempirical_id) REFERENCES semiempirical_method(semiempirical_id),
-        mp_id INTEGER,
-        --FOREIGN KEY(mp_id) REFERENCES mp_method(mp_id),
-        cc_id INTEGER,
-        --FOREIGN KEY(cc_id) REFERENCES cc_method(cc_id),
-        basis_id INTEGER,
-        --FOREIGN KEY(basis_id) REFERENCES basis_set(basis_id),
-        ecp_id INTEGER,
-        --FOREIGN KEY(ecp_id) REFERENCES ecp(ecp_id),
-        functional_id INTEGER,
-        --FOREIGN KEY(functional_id) REFERENCES functional(functional_id),
-        dispersion_id INTEGER,
-        --FOREIGN KEY(dispersion_id) REFERENCES dispersion(dispersion_id),
-        job_id INTEGER,
-        --FOREIGN KEY(run_id) REFERENCES job_type(job_id)
         program_id INTEGER,
         --FOREIGN KEY(program_id) REFERENCES program(program_id),
-        name TEXT,
+        geop INTEGER, --flag, indicates whether method generates new geometry
+        name TEXT NOT NULL,
         note TEXT
     );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_method_name ON method (name);
 
+--DROP TABLE parameter
+CREATE TABLE IF NOT EXISTS
+    parameter( --description of parameters that are specified in methods
+        parameter_id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT
+    );
+CREATE UNIQUE INDEX IF NOT EXISTS ux_parameter_name ON parameter (name);
+
+--DROP TABLE method_parameter;
+CREATE TABLE IF NOT EXISTS
+    method_parameter( --links methods to their parameters and records the parameter setting
+        method_id INTEGER NOT NULL,
+        parameter_id INTEGER NOT NULL,
+        setting TEXT,
+        UNIQUE(method_id, parameter_id)
+    );
+
 --DROP TABLE method_edge;
 CREATE TABLE IF NOT EXISTS
-    method_path(
-        method_path_id INTEGER,
-        parent_method_id INTEGER,
-        --FOREIGN KEY(parent_method_id) REFERENCES method(method_id)
-        child_method_id INTEGER,
-        --FOREIGN KEY(child_method_id) REFERENCES method(method_id)
-        length INTEGER,
-        distance INTEGER
-        UNIQUE(method_path_id, parent_method_id, child_method_id, length, distance)
+    method_edge( --edges in DAG describing method relationships
+        method_edge_id INTEGER PRIMARY KEY,
+        parent_method_id INTEGER NOT NULL,
+        --FOREIGN KEY(parent_method_id) REFERENCES method(method_id),
+        child_method_id INTEGER NOT NULL,
+        --FOREIGN KEY(child_method_id) REFERENCES method(method_id),
+        UNIQUE(parent_method_id, child_method_id)
     );
 
 --DROP TABLE method_path;
 CREATE TABLE IF NOT EXISTS
-    method_path(
-        method_path_id INTEGER,
-        method_edge_id INTEGER,
-        method_path_distance INTEGER
-        UNIQUE(method_path_id, method_edge_id, method_path_order)
+    method_path( --valid paths, e.g. ordered collections of edges, and their lengths
+        method_path_id INTEGER PRIMARY KEY,
+        length INTEGER NOT NULL
     );
+
+--DROP TABLE method_path_edge;
+CREATE TABLE IF NOT EXISTS
+    method_path_edge( --links paths to their edges and their order (i.e. 'distance')
+        method_path_id INTEGER NOT NULL,
+        --FOREIGN KEY(method_path_id) REFERENCES method_path(method_path_id),
+        method_edge_id INTEGER NOT NULL,
+        --FOREIGN KEY(method_edge_id) REFERENCES method_edge(method_edge_id),
+        distance INTEGER NOT NULL,
+        UNIQUE(method_path_id, method_edge_id)
+    );
+
+--DROP TABLE method_path_parent;
+CREATE TABLE IF NOT EXISTS
+    method_path_parent( --this table tracks path parents and the ending method id for convenience of some queries
+        method_path_id INTEGER NOT NULL,
+        --FOREIGN KEY(method_path_id) REFERENCES method_path(method_path_id),
+        parent_method_path_id INTEGER NOT NULL,
+        --FOREIGN KEY(parent_method_path_id) REFERENCES method_path(method_path_id),
+        method_id INTEGER NOT NULL, --method id of the lastest method in then path
+        --FOREIGN KEY(method_id) REFERENCES method(method_id),
+        UNIQUE(method_path_id, parent_method_path_id, method_id)
+    );
+
+/*
+Describing properties of molecules.
+*/
 
 --DROP TABLE property;
 CREATE TABLE IF NOT EXISTS
-    property(
+    property( --describes properties and their formats
         property_id INTEGER PRIMARY KEY,
-        name TEXT,
-        description TEXT,
-        format TEXT
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        format TEXT NOT NULL,
+        UNIQUE(name, description, format)
     );
 
---DROP TABLE molecule_property;
+--DROP TABLE molecule_state_method_property;
 CREATE TABLE IF NOT EXISTS
-    molecule_property(
-        inchikey TEXT PRIMARY KEY,
+    molecule_state_method_property( --links molecule, state, method_path, and property; assigns value (i.e. 'result')
+        inchikey TEXT NOT NULL,
         --FOREIGN KEY(inchikey) REFERENCES molecule(inchikey),
-        property_id INTEGER,
+        state_id INTEGER NOT NULL,
+        --FOREIGN KEY(state_id) REFERENCES state(state_id),
+        method_path_id INTEGER NOT NULL,
+        --FOREIGN KEY(method_path_id) REFERENCES method(method_path_id),
+        property_id INTEGER NOT NULL,
         --FOREIGN KEY(property_id) REFERENCES property(property_id),
-        method_id INTEGER,
-        --FOREIGN KEY(methodid) REFERENCES method(method_id)
-        method_path_id INTEGER,
-        --FOREIGN KEY(method_path_id) REFERENCES method(method_path_id)
-        result BLOB
+        result BLOB,
+        UNIQUE(inchikey, state_id, method_path_id, property_id)
     );
-
---DROP TABLE blacklist;
---CREATE TABLE IF NOT EXISTS
---    blacklist(
---        inchikey TEXT PRIMARY KEY,
---        --FOREIGN KEY(inchikey) REFERENCES molecule(inchikey),
---        method_id INTEGER,
---        --FOREIGN KEY(method_id) REFERENCES method(method_id)
---        reason TEXT
---    );
-
