@@ -7,11 +7,13 @@
 ehthumbs.db
 Thumbs.db
 
+# ignore pyc
+*.pyc
+
 # ignore the database
-properties.db
+db/mess.db
 
 # ignore folder contents
 backups/*
 molecules/*
-screens/*
 sources/*

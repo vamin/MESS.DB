@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS
     program( --programs used to calculate properties
         program_id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
-        version REAL NOT NULL,
+        version TEXT NOT NULL,
         url TEXT,
         UNIQUE(name, version)
     );
@@ -146,12 +146,12 @@ CREATE TABLE IF NOT EXISTS
 --DROP TABLE method_path_parent;
 CREATE TABLE IF NOT EXISTS
     method_path_parent( --this table tracks path parents and the ending method id for convenience of some queries
+        method_id INTEGER NOT NULL, --method id of the lastest method in the path
+        --FOREIGN KEY(method_id) REFERENCES method(method_id),
         method_path_id INTEGER NOT NULL,
         --FOREIGN KEY(method_path_id) REFERENCES method_path(method_path_id),
         parent_method_path_id INTEGER NOT NULL,
         --FOREIGN KEY(parent_method_path_id) REFERENCES method_path(method_path_id),
-        method_id INTEGER NOT NULL, --method id of the lastest method in then path
-        --FOREIGN KEY(method_id) REFERENCES method(method_id),
         UNIQUE(method_path_id, parent_method_path_id, method_id)
     );
 
@@ -180,6 +180,7 @@ CREATE TABLE IF NOT EXISTS
         --FOREIGN KEY(method_path_id) REFERENCES method(method_path_id),
         property_id INTEGER NOT NULL,
         --FOREIGN KEY(property_id) REFERENCES property(property_id),
+        units TEXT NOT NULL,
         result BLOB,
-        UNIQUE(inchikey, state_id, method_path_id, property_id)
+        UNIQUE(inchikey, state_id, method_path_id, property_id, units)
     );
