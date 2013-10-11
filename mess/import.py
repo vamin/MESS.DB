@@ -6,10 +6,10 @@ import argparse
 import csv
 import os
 import re
-import requests
 import sqlite3
 import sys
 import time
+import urllib2
 from cStringIO import StringIO
 from datetime import datetime
 
@@ -129,10 +129,11 @@ class Import(AbstractTool):
         url = 'http://cactus.nci.nih.gov/chemical/structure/' + inchikey + '/' + representation
         time.sleep(0.1) # protect cactus from hammering
         try:
-            r = requests.get(url)
-            if (r.status_code == 200):
-                return r.text
-        except requests.ConnectionError:
+            r = urllib2.urlopen(url)
+            if (r.getcode() == 200):
+                return r.read()
+        except URLError, e:
+            print >> sys.stderr, e.reason
             print >> sys.stderr, 'CIR is down. Proceeding without importing IUPAC names or other synonyms.'
             self.cir = False
         return None
@@ -177,14 +178,17 @@ class Import(AbstractTool):
         smiles = mol.write('can').rstrip() # canonical smiles
         formula = mol.formula
         # get identifiers from CIR
-        iupacs = self.cir_request(inchikey, 'iupac_name').splitlines(True)
-        iupac = max(iupacs, key=len).rstrip() # if multiple iupacs, take the longest (most specific) one
-        if (len(iupacs) > 1): # if multiple iupacs entered, add others as synonym
-            for i in iupacs:
-                if i != max(mylist, key=len):
-                    c.execute("INSERT OR IGNORE INTO molecule_synonym \
-                            (inchikey, name) VALUES (?, ?)", \
-                            (inchikey, i.rstrip()))
+        try:
+            iupacs = self.cir_request(inchikey, 'iupac_name').splitlines(True)
+            iupac = max(iupacs, key=len).rstrip() # if multiple iupacs, take the longest (most specific) one
+            if (len(iupacs) > 1): # if multiple iupacs entered, add others as synonym
+                for i in iupacs:
+                    if i != max(mylist, key=len):
+                        c.execute("INSERT OR IGNORE INTO molecule_synonym \
+                                (inchikey, name) VALUES (?, ?)", \
+                                (inchikey, i.rstrip()))
+        except AttributeError:
+            iupac = ''
         # insert molecule identifiers
         c.execute("INSERT OR IGNORE INTO molecule \
                 (inchikey, inchi, smiles, formula, iupac) \
