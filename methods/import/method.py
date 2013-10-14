@@ -1,0 +1,201 @@
+#!/usr/bin/env python
+# encoding: utf-8
+# Victor Amin 2013
+
+# import molecule into mess.db
+
+import csv
+import math
+import os
+import re
+import sqlite3
+import sys
+import time
+import urllib2
+from datetime import datetime
+
+import pybel
+
+from _methods import AbstractMethod
+from _paths import Path
+from _sources import Source
+
+class Method(AbstractMethod):
+    # method info
+    method_name = 'import'
+    method_description = 'initial import'
+    method_level = ''
+    geop = 0
+    # program info
+    prog_name = 'Open Babel'
+    prog_version = ''
+    prog_url = 'http://openbabel.org/wiki/Main_Page'
+    
+    def execute(self, args):
+        inchikey = args['inchikey']
+        mol = args['mol']
+        s = args['source']
+        p = args['path']
+        inchikey_dir = self.get_inchikey_dir(inchikey)
+        inchikey_basename = os.path.join(inchikey_dir, inchikey)
+        self.setup_dir(inchikey_dir)
+        if not self.check(inchikey, inchikey_dir):
+            # import
+            identifier = mol.title
+            mol.title = ''
+            mol.write('inchi', inchikey_basename + '.inchi', overwrite=True)
+            if not os.path.exists(inchikey_basename + '.png'):
+                mol.write('_png2', inchikey_basename + '.png')
+            #mol.title = identifier
+            self.touch(inchikey_basename + '.log')
+            self.touch(inchikey_basename + '.notes')
+            self.touch(os.path.join(inchikey_dir, 'sources.tsv'))
+            # insert molecule to db
+            self.update_molecule(inchikey, mol)
+            # update source catalog in db
+            s.update_molecule_source(inchikey, identifier)
+            # update source list tsv
+            s.update_source_tsv(inchikey_dir, identifier)
+            # import basic properties
+            self.import_properties(inchikey, p.path_id, mol)
+            self.check(inchikey, inchikey_dir)
+        else:
+            self.status = 'skipped'
+        self.log(args, inchikey_dir)
+        self.db.commit()
+        return self.status
+
+    def check(self, inchikey, inchikey_dir):
+        inchi = os.path.join(inchikey_dir, inchikey + '.inchi')
+        log = os.path.join(inchikey_dir, inchikey + '.log')
+        notes = os.path.join(inchikey_dir, inchikey + '.notes')
+        png = os.path.join(inchikey_dir, inchikey + '.png')
+        sources = os.path.join(inchikey_dir, 'sources.tsv')
+        try:
+            with open(inchi) as f:
+                inchi_str = f.readline().split('=')[1].strip()
+                row = self.c.execute('SELECT inchikey FROM molecule WHERE inchi=?', (inchi_str,)).fetchone()
+                try:
+                    if (row['inchikey'] != inchikey):
+                        self.status = 'import failed'
+                        return False 
+                except TypeError:
+                    self.status = 'import failed'
+                    return False                         
+            with open(log):
+                pass
+            with open(notes):
+                pass
+            with open(png):
+                pass
+            with open(sources):
+                pass
+            self.status = 'import successful'
+            return True
+        except IOError:
+            self.status = 'import failed'
+            return False
+    
+    def log(self, args, inchikey_dir):
+        base_log_path = os.path.join(inchikey_dir, args['inchikey'] + '.log')
+        ob_logs_raw = []
+        ob_logs = []
+        for i in range(3):
+            ob_logs_raw.append(pybel.ob.obErrorLog.GetMessagesOfLevel(i)) # (0-error, 1-warning, 2-info, 3-audit)
+        for ll in ob_logs_raw:
+            for l in ll:
+                ob_logs.append(l)
+        self.add_messages_to_log(base_log_path, self.method_name, ['status: ' + self.status])
+        pybel.ob.obErrorLog.ClearLog()
+    
+    def setup_parameters(self):
+        pass
+    
+    def import_properties(self, inchikey, method_path_id, mol):
+        # insert Open Babel descriptors
+        for property_name, property_value in mol.calcdesc().iteritems():
+            if (math.isnan(property_value)):
+                continue
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                property_name, 'Open Babel descriptor value', type(property_value).__name__,
+                property_value, '')
+        # insert Open Babel molecule attributes
+        self.insert_property_value(
+            inchikey, '', method_path_id,
+            'charge', 'Open Babel molecule attribute', type(mol.charge).__name__,
+            mol.charge, '')
+        self.insert_property_value(
+            inchikey, '', method_path_id,
+            'exactmass', 'Open Babel molecule attribute', type(mol.exactmass).__name__,
+            mol.exactmass, 'g/mol')
+        self.insert_property_value(
+            inchikey, '', method_path_id,
+            'molwt', 'Open Babel descriptor value', type(mol.molwt).__name__,
+            mol.molwt, 'g/mol')
+        self.insert_property_value(
+            inchikey, '', method_path_id,
+            'spin', 'Open Babel descriptor value', type(mol.spin).__name__,
+            mol.spin, '')
+        self.db.commit()
+
+    def update_molecule(self, inchikey, mol):
+        # insert/update molecule synonyms
+        synonyms = self.cir_request(inchikey, 'names')
+        if (synonyms):
+            for synonym in (synonyms.split("\n")):
+                self.c.execute("INSERT OR IGNORE INTO molecule_synonym \
+                        (inchikey, name) VALUES (?, ?)", \
+                        (inchikey, synonym))
+        # calculate identifiers with ob/cir, unless entry exists
+        inchikey_check_row = self.c.execute("SELECT inchi FROM molecule WHERE inchikey=?", (inchikey,)).fetchone()
+        inchi = mol.write('inchi').rstrip().split('=')[1]
+        if inchikey_check_row is not None and inchikey_check_row['inchi'] == inchi:
+            self.status = 'updated'
+            return 0 # this molecule is already correct in the db
+        smiles = mol.write('can').rstrip() # canonical smiles
+        formula = mol.formula
+        # get identifiers from CIR
+        try:
+            iupacs = self.cir_request(inchikey, 'iupac_name').splitlines(True)
+            iupac = max(iupacs, key=len).rstrip() # if multiple iupacs, take the longest (most specific) one
+            if (len(iupacs) > 1): # if multiple iupacs entered, add others as synonym
+                for i in iupacs:
+                    if i != max(iupacs, key=len):
+                        self.c.execute("INSERT OR IGNORE INTO molecule_synonym \
+                                (inchikey, name) VALUES (?, ?)", \
+                                (inchikey, i.rstrip()))
+        except AttributeError:
+            iupac = ''
+        # insert molecule identifiers
+        self.c.execute("INSERT OR IGNORE INTO molecule \
+                (inchikey, inchi, smiles, formula, iupac) \
+                VALUES \
+                (?, ?, ?, ?, ?)", \
+                (inchikey, inchi, smiles, formula, iupac))
+    
+    def touch(self, fname, times=None):
+        fhandle = file(fname, 'a')
+        try:
+            os.utime(fname, times)
+        finally:
+            fhandle.close()
+    
+    def cir_request(self, inchikey, representation):
+        try:
+            if not self.cir:
+                return None
+        except AttributeError:
+            self.cir = True
+        url = 'http://cactus.nci.nih.gov/chemical/structure/' + inchikey + '/' + representation
+        time.sleep(0.1) # protect cactus from hammering
+        try:
+            r = urllib2.urlopen(url)
+            if (r.getcode() == 200):
+                return r.read()
+        except urllib2.URLError as e:
+            if hasattr(e, 'reason'):
+                print >> sys.stderr, e.reason
+                print >> sys.stderr, 'CIR is down. Proceeding without importing IUPAC names or other synonyms.'
+                self.cir = False
+        return None

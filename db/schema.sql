@@ -40,13 +40,13 @@ CREATE TABLE IF NOT EXISTS
     source( --catalogs where molecules exist and might be purchased
         source_id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
-        filename TEXT NOT NULL,
+        dirname TEXT NOT NULL,
         url TEXT,
         url_template TEXT,
         last_update TEXT
     );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_source_name ON source (name);
-CREATE UNIQUE INDEX IF NOT EXISTS ux_source_filename ON source (filename);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_source_dirname ON source (dirname);
 
 --DROP TABLE molecule_source;
 CREATE TABLE IF NOT EXISTS
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS
         --FOREIGN KEY(program_id) REFERENCES program(program_id),
         geop INTEGER, --flag, indicates whether method generates new geometry
         name TEXT NOT NULL,
-        note TEXT
+        description TEXT
     );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_method_name ON method (name);
 
@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS
         state_id INTEGER NOT NULL,
         --FOREIGN KEY(state_id) REFERENCES state(state_id),
         method_path_id INTEGER NOT NULL,
-        --FOREIGN KEY(method_path_id) REFERENCES method(method_path_id),
+        --FOREIGN KEY(method_path_id) REFERENCES method_path(method_path_id),
         property_id INTEGER NOT NULL,
         --FOREIGN KEY(property_id) REFERENCES property(property_id),
         units TEXT NOT NULL,
