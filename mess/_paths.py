@@ -1,4 +1,5 @@
 import sqlite3
+import sys
 
 class Path(object):
     # After calling setup, the following attributes will be set:
@@ -15,10 +16,19 @@ class Path(object):
         self.db = db
         self.c = db.cursor()
     
-    def setup(self, method_id, parent_path_id = ''):
+    def setup(self, method_id, parent_path_id = '', parent_method_name = None):
         self.method_id = method_id
         self.parent_path_id = parent_path_id
-        if (parent_path_id):
+        if (parent_method_name and parent_method_name == 'import'):
+            import_method_row = self.c.execute('SELECT method_id, name FROM method WHERE name = ?', (parent_method_name,)).fetchone()
+            try:
+                self.path_length = 1
+                self.parent_method_name = import_method_row['name']
+                self.parent_method_id = import_method_row['method_id']
+                self.superparent_method_id = ''
+            except TypeError:
+                sys.exit('It seems like import has not been run yet.')
+        elif (parent_path_id):
             parent_path_row = self.c.execute('SELECT mp.length, me.parent_method_id, me.child_method_id, m.name method_name, l.name level_name FROM method_path mp JOIN method_path_edge mpe ON mpe.distance = mp.length AND mpe.method_path_id = mp.method_path_id JOIN method_edge me ON me.method_edge_id = mpe.method_edge_id JOIN method m ON me.child_method_id = m.method_id JOIN level l ON l.level_id = m.level_id WHERE mp.method_path_id= ?;', (self.parent_path_id,)).fetchone()
             try:
                 self.path_length = parent_path_row['length'] + 1
