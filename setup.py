@@ -5,12 +5,12 @@ except ImportError:
 import sys, os
 
 config = {
-    'descripton': 'Molecular Electronic Structure and other Stuff DB.',
+    'description': 'Molecular Electronic Structure and other Stuff DB.',
     'url': 'https://github.com/vamin/messdb',
     'author': 'Victor Amin',
     'author_email': 'victor.amin@gmail.com',
-    'version': '0.1',
-    'install_requires': ['pybel'],
+    'version': '0.3',
+    'install_requires': [],
     'packages': ['mess'],
     'scripts': [],
     'name': 'messdb',
