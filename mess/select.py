@@ -21,6 +21,9 @@ class Select(AbstractTool):
         subparser.add_argument("-r", "--regex-subset", type=str, help="subset the output by regex on inchikey (superceded by subset)")
         subparser.add_argument("-d", "--delimiter", type=str, default='\t', help="choose a delimiter for output files, tab is default")
         subparser.add_argument("-hd", "--headers", action='store_true', help="include headers in output, not recommended if piping to 'mess calculate'")
+
+    def check_dependencies(self):
+        return True
     
     def execute(self, args):
         db = MessDB()

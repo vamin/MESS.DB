@@ -6,8 +6,9 @@ import argparse
 import imp
 import os
 import sqlite3
+import subprocess
 import sys
-#from cStringIO import StringIO
+from distutils.version import LooseVersion
 
 import pybel
 
@@ -22,6 +23,16 @@ class Import(AbstractTool):
             
     def subparse(self, subparser):
         subparser.add_argument("source", help='A molecule source file or directory.')
+
+    def check_dependencies(self):
+        try:
+            babel = subprocess.Popen(['babel', '-V'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            babel_version = babel.stdout.read().split()[2]
+            if (LooseVersion(babel_version) < LooseVersion('2.3.0')):
+                sys.exit('This tool requires Open Babel (and its python module, pybel) version >=2.3.0.')
+        except OSError:
+            sys.exit('This tool requires Open Babel (and its python module, pybel) version >=2.3.0.')
+        return True
     
     def execute(self, args):
         self.db = MessDB()
@@ -42,7 +53,7 @@ class Import(AbstractTool):
         # turn off pybel logging
         pybel.ob.obErrorLog.StopLogging() 
         for f in s.files():
-            if (f.split('.')[-1] == 'sql'):
+            if (f.split('.')[-1] == 'sql' or f.split('.')[-1] == 'txt'):
                 continue
             for mol in pybel.readfile(f.split('.')[-1], os.path.join(args.source, f)):
                 #ob_logs = []

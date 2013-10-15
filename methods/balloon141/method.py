@@ -11,6 +11,7 @@ import sqlite3
 import subprocess
 import sys
 from datetime import datetime
+from distutils.version import LooseVersion
 
 import pybel
 
@@ -26,6 +27,16 @@ class Method(AbstractMethod):
     prog_name = 'Balloon'
     prog_version = '1.4.1'
     prog_url = 'http://users.abo.fi/mivainio/balloon/'
+
+    def check_dependencies(self):
+        try:
+            balloon = subprocess.Popen(['balloon'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            balloon_version = balloon.stdout.read().split()[2]
+            if (LooseVersion(balloon_version) < LooseVersion('1.4.1')):
+                sys.exit("Balloon version must be >=1.4.1.")
+        except OSError:
+            sys.exit("The " + self.method_name + " method requires balloon (" + self.prog_url + ").")
+        return True
     
     def execute(self, args):
         inchikey = args['inchikey']

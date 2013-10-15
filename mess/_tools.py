@@ -33,14 +33,17 @@ class ToolsManager(object):
 class AbstractTool(object):
     # all tools should inherit from this class
     
+    def subparse(self, subparser):
+        # this method sets tool-specific arguments for argparser
+        raise NotImplementedError( "every tool needs a 'subparse' method" )
+
+    def check_dependencies(self):
+        raise NotImplementedError( "every tool needs a 'check_dependencies' method" )
+    
     def execute(self, args):
         # all tools should have a method that executes its tasks
         # based on the given commands
-        raise NotImplementedError( "every tool needs an execute method" )
-    
-    def subparse(self, subparser):
-        # this method sets tool-specific arguments for argparser
-        raise NotImplementedError( "every tool needs a subparse method" )
+        raise NotImplementedError( "every tool needs an 'execute' method" )
 
 # each tool must provide a load method at module level that will be
 # used to instantiate the plugin (e.g. def load():\ return Tool())

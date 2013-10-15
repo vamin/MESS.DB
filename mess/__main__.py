@@ -16,20 +16,11 @@ def main():
         description="A collection of tools for interacting with the mess db.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)#,
 	    #add_help=False)
-    toolsmanager.populate_parser(parser) # load tool-specific arguments
-    # run tool with args
+    toolsmanager.populate_parser(parser)
     args = parser.parse_args()
     tool = toolsmanager.load_tool(args.subparser_name)
-    tool.execute(args)
-
-def cursor():
-    # connect to db
-    try:
-        mess_db_conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), '../db/mess.db'))
-    except IOError:
-        sys.exit('could not find mess.db')
-    mess_db_conn.row_factory = sqlite3.Row
-    return mess_db_conn.cursor()
+    if tool.check_dependencies():
+        tool.execute(args)
 
 if __name__ == '__main__':
     main()

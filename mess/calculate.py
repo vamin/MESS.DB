@@ -6,7 +6,9 @@ import argparse
 import imp
 import os
 import sqlite3
+import subprocess
 import sys
+from distutils.version import LooseVersion
 
 import pybel
 
@@ -24,6 +26,16 @@ class Calculate(AbstractTool):
         subparser.add_argument("-pp", "--parent-path", default='', help="Specify a parent path id. If not set, start from InChI.")
         #subparser.add_argument("-s", "--state", help="Apply method to special state/condition (cation, anion, protonated, etc.)")
         #subparser.add_argument("-ss", "--parent-state", help="Apply method to special state/condition (cation, anion, protonated, etc.)")
+
+    def check_dependencies(self):
+        try:
+            babel = subprocess.Popen(['babel', '-V'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            babel_version = babel.stdout.read().split()[2]
+            if (LooseVersion(babel_version) < LooseVersion('2.3.0')):
+                sys.exit('This tool requires Open Babel (and its python module, pybel) version >=2.3.0.')
+        except OSError:
+            sys.exit('This tool requires Open Babel (and its python module, pybel) version >=2.3.0.')
+        return True
     
     def execute(self, args):
         db = MessDB()

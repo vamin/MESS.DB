@@ -20,6 +20,7 @@ class AbstractMethod(object):
         except AttributeError as e:
             sys.stderr.write(''.join([str(e), "\n"]))
             sys.exit('Each method class needs to define method_name, method_description, method_level, geop, prog_name, prog_version, and prog_url as attributes.')
+        self.check_dependencies()
     
     def setup(self):
         if not self.is_setup:
@@ -27,11 +28,14 @@ class AbstractMethod(object):
             self.setup_parameters()
             self.db.commit()
             self.is_setup = True
+
+    def check_dependencies(self):
+        raise NotImplementedError( "every method needs a 'check_dependencies' method" )
     
     def execute(self, args):
         # all methods should have a method that executes its tasks
         # based on the given commands
-        raise NotImplementedError( "every method needs an execute method" )
+        raise NotImplementedError( "every method needs an 'execute' method" )
         self.log(args) # all methods should record logs
         self.db.commit()
         return self.status # should be set by self.check()
@@ -39,23 +43,23 @@ class AbstractMethod(object):
     def check(self, args):
         # the check method should be called before a calculation (so calculations are
         # not repeated) and after (to verify success)
-        raise NotImplementedError( "every method needs a check method" )
+        raise NotImplementedError( "every method needs a 'check' method" )
     
     def log(self, args):
         # the log method should be called at the end of every execute method
         # to record that a calculation has been attempted (in the main log)
         # and to record method-specific messages into the method log
-        raise NotImplementedError( "every method needs a log method" )
+        raise NotImplementedError( "every method needs a 'log' method" )
     
     def setup_parameters(self):
         # this method sets up parameters
-        raise NotImplementedError( "every method needs a setup_parameters method" )
+        raise NotImplementedError( "every method needs a 'setup_parameters' method" )
         self.db.commit() # make sure you implement commit
     
     def import_properties(self):
         # this method reads molecule-proprty values from calc
         # into db
-        raise NotImplementedError( "every method needs an import_properties method" )
+        raise NotImplementedError( "every method needs an 'import_properties' method" )
         self.db.commit() # make sure you implement commit
     
     def get_inchikey_dir(self, inchikey):

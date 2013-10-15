@@ -30,7 +30,10 @@ class Method(AbstractMethod):
     prog_name = 'Open Babel'
     prog_version = ''
     prog_url = 'http://openbabel.org/wiki/Main_Page'
-    
+
+    def check_dependencies(self):
+        return True
+
     def execute(self, args):
         inchikey = args['inchikey']
         mol = args['mol']

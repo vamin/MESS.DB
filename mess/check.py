@@ -19,6 +19,9 @@ class Check(AbstractTool):
         #subparser.add_argument('x', help='desc')
         #subparser.add_argument('-x', '--x', type=str, help='desc')
         pass
+
+    def check_dependencies(self):
+        return True
     
     def execute(self, args):
         db = MessDB()

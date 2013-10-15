@@ -22,6 +22,13 @@ class Method(AbstractMethod):
     prog_name = 'MOPAC'
     prog_version = '2012'
     prog_url = 'http://openmopac.net/'
+    
+    def check_dependencies(self):
+        try:
+            mopac = subprocess.Popen(['MOPAC2012.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except OSError:
+            sys.exit("The " + self.method_name + " method requires MOPAC2012.exe to be installed and in PATH.")
+        return True
 
     def execute(self, args):
         if args['parent_method_dir'] is None:
@@ -38,8 +45,11 @@ class Method(AbstractMethod):
         xyz_in = os.path.relpath(os.path.join(inchikey_dir, parent_method_dir, inchikey + '.xyz').encode("ascii"))
         xyz_out = os.path.relpath(os.path.join(out_dir, inchikey + '.xyz').encode("ascii"))
         if not self.check(out_file, xyz_out):
-            subprocess.call(['obabel', '-ixyz', xyz_in, '-omop', '-xkPM7 PRECISE LARGE ALLVEC BONDS LOCALIZE AUX T=1W'], stdout=open(mop_file, 'w'), stderr=open('/dev/null', 'a')
-            subprocess.call(['/home/victor/software/mopac/MOPAC2012.32.exe', mop_file])
+            subprocess.Popen(['obabel', '-ixyz', xyz_in, '-omop', '-xkPM7 PRECISE LARGE ALLVEC BONDS LOCALIZE AUX LET MMOK DDMIN=0.0 T=1W'], stdout=open(mop_file, 'w'), stderr=open(os.devnull, 'w'))
+            pwd = os.getcwd()
+            os.chdir(out_dir) # mopac can be buggy if not run in same dir as input
+            subprocess.Popen(['MOPAC2012.exe', inchikey + '.mop'])
+            os.chdir(pwd)
             #subprocess.call(['obabel', '-imoo', os.path.relpath(os.path.join(out_dir, inchikey + '.out').encode("ascii")), '-oxyz'], stdout=open(xyz_out, 'w'))
             # Open Babel prints the input geometry instead of the optimized for some reason. Ugh.
             self.moo_to_xyz(os.path.relpath(os.path.join(out_dir, inchikey + '.out').encode("ascii")), xyz_out)
@@ -96,6 +106,9 @@ class Method(AbstractMethod):
         self.insert_method_parameter('BONDS', '')
         self.insert_method_parameter('LOCALIZE', '')
         self.insert_method_parameter('AUX', '')
+        self.insert_method_parameter('LET', '')
+        self.insert_method_parameter('MMOK', '')
+        self.insert_method_parameter('DDMIN', 0.0)
         self.insert_method_parameter('T', '1W')
     
     def import_properties(self, inchikey, method_path_id, moo_out):
@@ -135,58 +148,62 @@ class Method(AbstractMethod):
         except IOError:
             sys.exit('Expected ' + moo_out + ' to be a valid path. Check method code.')
         # insert properties into db
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'HEAT OF FORMATION', 'MOPAC property', 'float',
-            heat_of_formation_kcal, 'kcal/mol')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'HEAT OF FORMATION', 'MOPAC property', 'float',
-            heat_of_formation_kJ, 'kJ/mol')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'TOTAL ENERGY', 'MOPAC property', 'float',
-            total_energy, 'eV')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'ELECTRONIC ENERGY', 'MOPAC property', 'float',
-            electronic_energy, 'eV')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'POINT GROUP', 'MOPAC property', 'str',
-            point_group, '')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'CORE-CORE REPULSION', 'MOPAC property', 'float',
-            core_repulsion, 'eV')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'COSMO AREA', 'MOPAC property', 'float',
-            cosmo_area, 'A^2')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'COSMO VOLUME', 'MOPAC property', 'float',
-            cosmo_volume, 'A^3')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'GRADIENT NORM', 'MOPAC property', 'float',
-            gradient_norm, '')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'IONIZATION POTENTIAL', 'MOPAC property', 'float',
-            ionization_potential, 'eV')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'HOMO', 'MOPAC property', 'float',
-            homo, 'eV')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'LUMO', 'MOPAC property', 'float',
-            lumo, 'eV')
-        self.insert_property_value(
-            inchikey, '', method_path_id,
-            'FILLED LEVELS', 'MOPAC property', 'int',
-            filled_levels, '')
+        try:
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'HEAT OF FORMATION', 'MOPAC property', 'float',
+                heat_of_formation_kcal, 'kcal/mol')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'HEAT OF FORMATION', 'MOPAC property', 'float',
+                heat_of_formation_kJ, 'kJ/mol')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'TOTAL ENERGY', 'MOPAC property', 'float',
+                total_energy, 'eV')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'ELECTRONIC ENERGY', 'MOPAC property', 'float',
+                electronic_energy, 'eV')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'POINT GROUP', 'MOPAC property', 'str',
+                point_group, '')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'CORE-CORE REPULSION', 'MOPAC property', 'float',
+                core_repulsion, 'eV')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'COSMO AREA', 'MOPAC property', 'float',
+                cosmo_area, 'A^2')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'COSMO VOLUME', 'MOPAC property', 'float',
+                cosmo_volume, 'A^3')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'GRADIENT NORM', 'MOPAC property', 'float',
+                gradient_norm, '')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'IONIZATION POTENTIAL', 'MOPAC property', 'float',
+                ionization_potential, 'eV')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'HOMO', 'MOPAC property', 'float',
+                homo, 'eV')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'LUMO', 'MOPAC property', 'float',
+                lumo, 'eV')
+            self.insert_property_value(
+                inchikey, '', method_path_id,
+                'FILLED LEVELS', 'MOPAC property', 'int',
+                filled_levels, '')
+        except UnboundLocalError:
+            self.status = 'could not parse properties'
+            return 0
         self.db.commit()
 
     def moo_to_xyz(self, moo, xyz):
@@ -208,7 +225,9 @@ class Method(AbstractMethod):
                 if ('Empirical Formula:' in line):
                     # check integrity
                     if not (len(xyz_coords) == int(line.split()[-2])):
-                        sys.exit('Unrecoverable error in xyz conversion.')
+                        print moo + ':'
+                        print 'unrecoverable error in xyz conversion.' + "\n"
+                        break
                     # print xyz
                     with open(xyz, 'w') as x:
                         x.write(str(len(xyz_coords)) + "\n")
