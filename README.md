@@ -48,6 +48,7 @@ MESS.DB scales happily to thousands, if not millions, of molecules.
 git clone git@github.com:vamin/MESS.DB.git
 cd messdb  
 python setup.py
+python mess/scripts/setup_db.py
 ```
 
 ## Usage Examples
