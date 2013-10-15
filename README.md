@@ -45,7 +45,7 @@ MESS.DB scales happily to thousands, if not millions, of molecules.
 
 ## How to Install
 ```bash
-git clone path/to/messdb.git
+git clone git@github.com:vamin/MESS.DB.git
 cd messdb  
 python setup.py
 ```
