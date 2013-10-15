@@ -67,7 +67,7 @@ Balloon generates 3D structures from smiles.
 ```bash
 mess select 'select * from molecule' | mess calculate -m pm7_mopac2012 -pp 2
 ```
-Run a semiempirical calculation using the output from path 2 (the balloon 3D structures in this case, if you've been following along)
+Run a semiempirical calculation using the output from path 2 (the balloon 3D structures in this case, if you've been following along).
 
 ## Current Features
 -import from most common molecule formats (smi, inchi, xyz, sdf, etc.)  
