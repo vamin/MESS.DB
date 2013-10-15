@@ -4,19 +4,19 @@ This project provides a framework for organizing electronic structure (and other
 
 ## Motivation and Design Philosophy
 
-MESS.DB is designed to facilitate large scale screening. Molecules are represented in the database and file structure by their InChiKeys. MESS.DB is intended to be simple, portable, and human-friendly.
+MESS.DB is designed to facilitate large scale screening. Molecules are represented in the database and file structure by their InChIKeys. MESS.DB is intended to be simple, portable, and human-friendly.
 
 ## How it Works
-Suppose you import the molecule Morphine. Morphine's InChiKey will be calculated (BQJCRHHNABKAKU-KBQPJGBKSA-N) and a directory will be created for it:
+Suppose you import the molecule Morphine. Morphine's InChIKey will be calculated (BQJCRHHNABKAKU-KBQPJGBKSA-N) and a directory will be created for it:
 
 molecules/B/QJ/CRHHNABKAKU-KBQPJGBKSA-N/  
-    BQJCRHHNABKAKU-KBQPJGBKSA-N.inchi <- the molecule in InChi format  
+    BQJCRHHNABKAKU-KBQPJGBKSA-N.inchi <- the molecule in InChI format  
     BQJCRHHNABKAKU-KBQPJGBKSA-N.log <- a log tracking what has been done to the molecule  
     BQJCRHHNABKAKU-KBQPJGBKSA-N.notes <- a blank space for notes  
     BQJCRHHNABKAKU-KBQPJGBKSA-N.png <- a 2D representation of the molecule  
     sources.tsv <- a table of sources for the molecule, including where to buy if the source is commercial
 
-In addition, morphine, along with its smiles, inchi, IUPAC name, synonyms, and basic properties (like MW, charge, etc.) will be imported to mess.db, an SQLite relational database. For the curious, the schema is in db/schema.sql.
+In addition, morphine, along with its SMILES, InChI, IUPAC name, synonyms, and basic properties (like MW, charge, etc.) will be imported to MESS.DB, an SQLite relational database. For the curious, the schema is in db/schema.sql.
 
 Methods (which, as far as MESS is concerned, are plugins that describe how to run a particular calculation) can be run against the database (or a subset on it). If I apply the balloon141 method, which genereates 3D structures from smiles strings, a new folder appears in the molecules folder:
 
