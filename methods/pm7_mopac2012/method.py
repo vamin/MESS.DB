@@ -27,7 +27,7 @@ class Method(AbstractMethod):
         try:
             mopac = subprocess.Popen(['MOPAC2012.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except OSError:
-            sys.exit("The " + self.method_name + " method requires MOPAC2012.exe to be installed and in PATH.")
+            sys.exit("The " + self.method_name + " method requires MOPAC2012.exe (" + self.prog_url + ") to be installed and in PATH.")
         return True
 
     def execute(self, args):
