@@ -18,7 +18,7 @@ molecules/B/QJ/CRHHNABKAKU-KBQPJGBKSA-N/
 
 In addition, morphine, along with its SMILES, InChI, IUPAC name, synonyms, and basic properties (like MW, charge, etc.) will be imported to MESS.DB, an SQLite relational database. For the curious, the schema is in db/schema.sql.
 
-Methods (which, as far as MESS is concerned, are plugins that describe how to run a particular calculation) can be run against the database (or a subset on it). If I apply the balloon141 method, which genereates 3D structures from smiles strings, a new folder appears in the molecules folder:
+Methods (which, as far as MESS is concerned, are plugins that describe how to run a particular calculation) can be run against the database (or a subset on it). If I apply the balloon141 method, which generates 3D structures from smiles strings, a new folder appears in the molecules folder:
 
 molecules/B/QJ/CRHHNABKAKU-KBQPJGBKSA-N/  
     balloon141_FROM_import_PATH_2/ <- contains logs and output from running balloon  
@@ -44,12 +44,30 @@ Even though most relevant properties are imported into the database after a run,
 MESS.DB scales happily to thousands, if not millions, of molecules.
 
 ## How to Install
+First, clone the repository and set up an empty database:
 ```bash
 git clone git@github.com:vamin/MESS.DB.git
 cd messdb  
-python setup.py
 python mess/scripts/setup_db.py
 ```
+
+MESS.DB can be run from the messdb directory without installation:
+```bash
+python mess
+```
+or  
+```bash
+./bin/mess
+```
+
+If you would like to install MESS for all users on a system (expreimental):
+```bash
+python setup.py
+```
+
+MESS.DB works best with Python 2.7+, though it will work with lower versions of Python so long as they have Python 2.7's default modules installed. [Open Babel](http://openbabel.org/wiki/Main_Page), and it's python module pybel, are also required for most operations.
+
+Modules also have their own dependencies, which you can learn about by running them.
 
 ## Usage Examples
 ### import a set of molecules
@@ -72,7 +90,7 @@ Run a semiempirical calculation using the output from path 2 (the balloon 3D str
 
 ## Current Features
 -import from most common molecule formats (smi, inchi, xyz, sdf, etc.)  
--rationial file structure with graceful duplicate handling  
+-rational file structure with graceful duplicate handling  
 -relational database of all molecules, sources, methods, and properties  
 -source tracking  
 -select molecules based on sql queries of their properties  
