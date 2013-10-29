@@ -1,8 +1,7 @@
-# Automatically set the __all__ variable with all
-# the available tools.
-
 import os
 
+# Automatically set the __all__ variable with all
+# the available tools.
 __all__ = []
 for filename in os.listdir(os.path.dirname(__file__)):
     base, extension = os.path.splitext(filename)

@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-# Victor Amin 2013
-
 import argparse
 import imp
 import os
@@ -19,19 +15,25 @@ from _sources import Source
 
 class Import(AbstractTool):
     def __init__(self):
-        self.description = 'imports molecule file, multi-molecule file, or dir of molecules into mess.db'
+        self.description = ('imports molecule file, multi-molecule file, '
+                            'or dir of molecules into mess.db')
             
     def subparse(self, subparser):
-        subparser.add_argument("source", help='A molecule source file or directory.')
+        subparser.add_argument('source', 
+                               help='A molecule source file or directory.')
 
     def check_dependencies(self):
         try:
-            babel = subprocess.Popen(['babel', '-V'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            babel = subprocess.Popen(['babel', '-V'], 
+                                     stdout=subprocess.PIPE, 
+                                     stderr=subprocess.PIPE)
             babel_version = babel.stdout.read().split()[2]
             if (LooseVersion(babel_version) < LooseVersion('2.3.0')):
-                sys.exit('This tool requires Open Babel (and its python module, pybel) version >=2.3.0.')
+                sys.exit(('This tool requires Open Babel (and its python '
+                         'module, pybel) version >=2.3.0.'))
         except OSError:
-            sys.exit('This tool requires Open Babel (and its python module, pybel) version >=2.3.0.')
+            sys.exit(('This tool requires Open Babel (and its python module, '
+                      'pybel) version >=2.3.0.'))
         return True
     
     def execute(self, args):
@@ -39,7 +41,9 @@ class Import(AbstractTool):
         self.c = self.db.cursor()
         # setup import method
         try:
-            method = imp.load_source('method', os.path.join(os.path.dirname( __file__ ), '..', 'methods', 'import', 'method.py'))
+            method = imp.load_source('method', 
+                                     os.path.join(os.path.dirname( __file__ ), 
+                                     '..', 'methods', 'import', 'method.py'))
         except IOError:
             sys.exit("Can't find 'import' method in the 'methods' directory.")
         m = method.Method(self.db)
@@ -55,7 +59,8 @@ class Import(AbstractTool):
         for f in s.files():
             if (f.split('.')[-1] == 'sql' or f.split('.')[-1] == 'txt'):
                 continue
-            for mol in pybel.readfile(f.split('.')[-1], os.path.join(args.source, f)):
+            for mol in pybel.readfile(f.split('.')[-1], 
+                                      os.path.join(args.source, f)):
                 #ob_logs = []
                 # generate inchikey
                 pybel.ob.obErrorLog.StartLogging()

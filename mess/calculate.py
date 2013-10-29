@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-# Victor Amin 2013
-
 import argparse
 import imp
 import os
@@ -21,20 +17,29 @@ class Calculate(AbstractTool):
         self.description = 'applys a method to a set of molecules'
     
     def subparse(self, subparser):
-        subparser.add_argument('inchikeys', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='A list of inchikeys, file or passed in through STDIN')
-        subparser.add_argument("-m", "--method", required=True, help='A method name.')
-        subparser.add_argument("-pp", "--parent-path", default='', help="Specify a parent path id. If not set, start from InChI.")
+        subparser.add_argument('inchikeys', nargs='?', 
+                               type=argparse.FileType('r'), default=sys.stdin, 
+                               help=('A list of inchikeys, file or passed in '
+                                     'through STDIN'))
+        subparser.add_argument('-m', '--method', required=True, 
+                               help='A method name.')
+        subparser.add_argument('-pp', '--parent-path', default='', 
+                               help=('Specify a parent path id. If not set, '
+                                     'start from InChI.'))
         #subparser.add_argument("-s", "--state", help="Apply method to special state/condition (cation, anion, protonated, etc.)")
         #subparser.add_argument("-ss", "--parent-state", help="Apply method to special state/condition (cation, anion, protonated, etc.)")
 
     def check_dependencies(self):
         try:
-            babel = subprocess.Popen(['babel', '-V'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            babel = subprocess.Popen(['babel', '-V'], stdout=subprocess.PIPE, 
+                                     stderr=subprocess.PIPE)
             babel_version = babel.stdout.read().split()[2]
             if (LooseVersion(babel_version) < LooseVersion('2.3.0')):
-                sys.exit('This tool requires Open Babel (and its python module, pybel) version >=2.3.0.')
+                sys.exit(('This tool requires Open Babel (and its python '
+                          'module, pybel) version >=2.3.0.'))
         except OSError:
-            sys.exit('This tool requires Open Babel (and its python module, pybel) version >=2.3.0.')
+            sys.exit(('This tool requires Open Babel (and its python module, '
+                      'pybel) version >=2.3.0.'))
         return True
     
     def execute(self, args):
@@ -42,7 +47,9 @@ class Calculate(AbstractTool):
         c = db.cursor()
         # setup import method
         try:
-            method = imp.load_source('method', os.path.join(os.path.dirname( __file__ ), '..', 'methods', args.method, 'method.py'))
+            method = imp.load_source('method', 
+                                     os.path.join(os.path.dirname( __file__ ), 
+                                     '..', 'methods', args.method, 'method.py'))
         except IOError:
             sys.exit(args.method + " is not a valid method.")
         m = method.Method(db)
@@ -57,10 +64,14 @@ class Calculate(AbstractTool):
         # apply method to molecule
         molecules_dir = os.path.join(os.path.dirname(__file__), '../molecules/')
         # method dir
-        method_dir = os.path.join(m.method_name + '_FROM_' + p.parent_method_name + '_PATH_' + str(p.path_id))
+        method_dir = os.path.join(m.method_name + '_FROM_' + 
+                                  p.parent_method_name + '_PATH_' + 
+                                  str(p.path_id))
         # parent method dir
         if (p.parent_path_id):
-            parent_method_dir = os.path.join(p.parent_method_name + '_FROM_' + p.superparent_method_name + '_PATH_' + str(p.parent_path_id))
+            parent_method_dir = os.path.join(p.parent_method_name + '_FROM_' + 
+                                             p.superparent_method_name + 
+                                             '_PATH_' + str(p.parent_path_id))
         else:
             parent_method_dir = None
         # to be implemented: conditions (state) checking

@@ -1,8 +1,5 @@
-#!/usr/bin/env python
-# encoding: utf-8
-# Victor Amin 2013
-
 # calculate mopac pm7 geometry and energies
+# Victor Amin 2013
 
 import math
 import os
@@ -15,7 +12,8 @@ from _methods import AbstractMethod
 class Method(AbstractMethod):
     # method info
     method_name = 'pm7_mopac2012'
-    method_description = 'precise pm7 geometry optimization and energies using mopac'
+    method_description = ('precise pm7 geometry optimization '
+                          'and energies using mopac')
     method_level = 'semiempirical'
     geop = 1
     # program info
@@ -25,14 +23,18 @@ class Method(AbstractMethod):
     
     def check_dependencies(self):
         try:
-            mopac = subprocess.Popen(['MOPAC2012.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            mopac = subprocess.Popen(['MOPAC2012.exe'], stdout=subprocess.PIPE, 
+                                     stderr=subprocess.PIPE)
         except OSError:
-            sys.exit("The " + self.method_name + " method requires MOPAC2012.exe (" + self.prog_url + ") to be installed and in PATH.")
+            sys.exit('The ' + self.method_name + 
+                     ' method requires MOPAC2012.exe (' + self.prog_url + 
+                     ') to be installed and in PATH.')
         return True
 
     def execute(self, args):
         if args['parent_method_dir'] is None:
-            sys.exit('This method requires a parent path with a valid xyz file (i.e., it cannot accept an InChI).')
+            sys.exit(('This method requires a parent path with a valid '
+                      'xyz file (i.e., it cannot accept an InChI).'))
         inchikey = args['inchikey']
         method_dir = args['method_dir']
         parent_method_dir = args['parent_method_dir']
@@ -42,17 +44,24 @@ class Method(AbstractMethod):
         self.setup_dir(out_dir)
         mop_file = os.path.join(out_dir, inchikey + '.mop')
         out_file = os.path.join(out_dir, inchikey + '.out')
-        xyz_in = os.path.relpath(os.path.join(inchikey_dir, parent_method_dir, inchikey + '.xyz').encode("ascii"))
-        xyz_out = os.path.relpath(os.path.join(out_dir, inchikey + '.xyz').encode("ascii"))
+        xyz_in = os.path.relpath(os.path.join(inchikey_dir, parent_method_dir, 
+                                 inchikey + '.xyz').encode("ascii"))
+        xyz_out = os.path.relpath(os.path.join(out_dir, 
+                                  inchikey + '.xyz').encode("ascii"))
         if not self.check(out_file, xyz_out):
-            subprocess.Popen(['obabel', '-ixyz', xyz_in, '-omop', '-xkPM7 PRECISE LARGE ALLVEC BONDS LOCALIZE AUX LET MMOK DDMIN=0.0 T=1W'], stdout=open(mop_file, 'w'), stderr=open(os.devnull, 'w'))
+            keywords = ('PM7 PRECISE LARGE ALLVEC BONDS LOCALIZE AUX LET MMOK '
+                        'DDMIN=0.0 T=1W')
+            subprocess.Popen(['obabel', '-ixyz', xyz_in, '-omop', 
+                              '-xk' + keywords], stdout=open(mop_file, 'w'), 
+                             stderr=open(os.devnull, 'w'))
             pwd = os.getcwd()
-            os.chdir(out_dir) # mopac can be buggy if not run in same dir as input
+            os.chdir(out_dir) # mopac unhappy if not run in same dir as input
             subprocess.Popen(['MOPAC2012.exe', inchikey + '.mop'])
             os.chdir(pwd)
             #subprocess.call(['obabel', '-imoo', os.path.relpath(os.path.join(out_dir, inchikey + '.out').encode("ascii")), '-oxyz'], stdout=open(xyz_out, 'w'))
-            # Open Babel prints the input geometry instead of the optimized for some reason. Ugh.
-            self.moo_to_xyz(os.path.relpath(os.path.join(out_dir, inchikey + '.out').encode("ascii")), xyz_out)
+            # Open Babel prints input geometry instead of 
+            # the optimized for some reason. Ugh.
+            self.moo_to_xyz(os.path.relpath(out_file).encode("ascii")), xyz_out)
             if self.check(out_file, xyz_out):
                 self.import_properties(inchikey, p.path_id, out_file)
         else:
@@ -80,7 +89,9 @@ class Method(AbstractMethod):
             pass
         # moo check
         try:
-            tail = subprocess.Popen(['tail', '-n 2', moo_out], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            tail = subprocess.Popen(['tail', '-n 2', moo_out], 
+                                    stdout=subprocess.PIPE, 
+                                    stderr=subprocess.PIPE)
             if (tail.stdout.read().strip() == '== MOPAC DONE =='):
                 moo_check = True
         except:
@@ -94,9 +105,12 @@ class Method(AbstractMethod):
     
     def log(self, args, inchikey_dir):
         base_log_path = os.path.join(inchikey_dir, args['inchikey'] + '.log')
-        method_log_path = os.path.join(inchikey_dir, args['method_dir'], args['inchikey'] + '.log')
-        self.add_messages_to_log(base_log_path, self.method_name, ['status: ' + self.status])
-        self.add_messages_to_log(method_log_path, self.method_name, ['status: ' + self.status])
+        method_log_path = os.path.join(inchikey_dir, args['method_dir'], 
+                                       args['inchikey'] + '.log')
+        self.add_messages_to_log(base_log_path, self.method_name, 
+                                 ['status: ' + self.status])
+        self.add_messages_to_log(method_log_path, self.method_name, 
+                                 ['status: ' + self.status])
 
     def setup_parameters(self):
         self.insert_method_parameter('PM7', '')
@@ -146,7 +160,8 @@ class Method(AbstractMethod):
                         # no properties after, might as well skip ahead
                         break
         except IOError:
-            sys.exit('Expected ' + moo_out + ' to be a valid path. Check method code.')
+            sys.exit('Expected ' + moo_out + 
+                     ' to be a valid path. Check method code.')
         # insert properties into db
         try:
             self.insert_property_value(
@@ -218,7 +233,7 @@ class Method(AbstractMethod):
                 # parse xyz
                 s = line.split()
                 try:
-                    if (int(s[0]) + 1 > 0): # check if first col is actually a number
+                    if (int(s[0]) + 1 > 0): # check if first col is a number
                         xyz_coords.append((s[1], s[2], s[4], s[6]))
                 except (IndexError, ValueError, TypeError):
                     pass # not a coordinate line

@@ -1,8 +1,5 @@
-#!/usr/bin/env python
-# encoding: utf-8
-# Victor Amin 2013
-
 # generate 3d structure with balloon
+# Victor Amin 2013
 
 import binascii
 import math
@@ -55,7 +52,7 @@ class Method(AbstractMethod):
                 os.remove(sdf_out)
             except OSError:
                 pass
-            balloon = subprocess.Popen(['/home/victor/software/balloon_x86_64/balloon', '-v', '1', '--maxtime', '256', '--randomSeed', str(seed), '--nGenerations', '1024', '--singleconf', '--fullforce', '--stripSalts', '-n', smiles['smiles'], sdf_out], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            balloon = subprocess.Popen(['/home/victor/software/balloon_x86_64/balloon', '-v', '1', '--maxtime', '256', '--randomSeed', str(seed), '--nGenerations', '1024', '--singleconf', '--fullforce', '--stripSalts', smiles['smiles'], sdf_out], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             balloon_stdout = balloon.stdout.read()
             balloon_stderr = balloon.stderr.read()
             try:

@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-# Victor Amin 2013
-
 import os
 import sqlite3
 import sys
@@ -10,7 +6,8 @@ class MessDB(object):
     def __init__(self):
         # connect to db
         try:
-            self.conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), '../db/mess.db'))
+            self.conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 
+                                        '../db/mess.db'))
         except IOError:
             sys.exit('could not find mess.db')
         self.conn.row_factory = sqlite3.Row

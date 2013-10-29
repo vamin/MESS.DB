@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-# Victor Amin 2013
-
 import argparse
 import glob
 import os
@@ -13,7 +9,8 @@ from _tools import AbstractTool
 
 class Check(AbstractTool):
     def __init__(self):
-        self.description = 'check integrity of mess.db and concordance with molecules/ dir'
+        self.description = ('check integrity of mess.db and concordance with '
+                            'molecules/ dir')
     
     def subparse(self, subparser):
         #subparser.add_argument('x', help='desc')
@@ -39,16 +36,19 @@ class Check(AbstractTool):
             db_inchikeys.add(row['inchikey'])
         # get list of inchikeys from molecules/ dir
         dir_inchikeys = set()
-        inchis = glob.glob(os.path.join(os.path.dirname(__file__), '../molecules/*/*/*/', '*.inchi'))
+        inchis = glob.glob(os.path.join(os.path.dirname(__file__), 
+                           '../molecules/*/*/*/', '*.inchi'))
         for i in inchis:
             s = i.split('/')[-1]
             dir_inchikeys.add(s.split('.')[0])
         # compare inchikeys from db vs dir
         in_db_not_dir = db_inchikeys - dir_inchikeys
         in_dir_not_db = dir_inchikeys - db_inchikeys
-        print str(len(in_db_not_dir)) + ' InChIKeys in mess.db that are not in molecules dir:'
+        print str(len(in_db_not_dir)) + (' InChIKeys in mess.db that are not '
+                                         'in molecules dir:')
         print "\n".join(i for i in in_db_not_dir)
-        print str(len(in_dir_not_db)) + ' InChIKeys in molecules dir that are not in mess.db:'
+        print str(len(in_dir_not_db)) + (' InChIKeys in molecules dir that are '
+                                         'not in mess.db:')
         print "\n".join(i for i in in_dir_not_db)
     
     def check_db_dir_method_concordance(self, c):

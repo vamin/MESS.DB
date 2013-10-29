@@ -1,8 +1,5 @@
-#!/usr/bin/env python
-# encoding: utf-8
-# Victor Amin 2013
-
 # import molecule into mess.db
+# Victor Amin 2013
 
 import csv
 import math
@@ -77,7 +74,8 @@ class Method(AbstractMethod):
         try:
             with open(inchi) as f:
                 inchi_str = f.readline().split('=')[1].strip()
-                row = self.c.execute('SELECT inchikey FROM molecule WHERE inchi=?', (inchi_str,)).fetchone()
+                q = 'SELECT inchikey FROM molecule WHERE inchi=?'
+                row = self.c.execute(q, (inchi_str,)).fetchone()
                 try:
                     if (row['inchikey'] != inchikey):
                         self.status = 'import failed'
@@ -104,11 +102,13 @@ class Method(AbstractMethod):
         ob_logs_raw = []
         ob_logs = []
         for i in range(3):
-            ob_logs_raw.append(pybel.ob.obErrorLog.GetMessagesOfLevel(i)) # (0-error, 1-warning, 2-info, 3-audit)
+            # (0-error, 1-warning, 2-info, 3-audit)
+            ob_logs_raw.append(pybel.ob.obErrorLog.GetMessagesOfLevel(i))
         for ll in ob_logs_raw:
             for l in ll:
                 ob_logs.append(l)
-        self.add_messages_to_log(base_log_path, self.method_name, ['status: ' + self.status])
+        self.add_messages_to_log(base_log_path, self.method_name, 
+                                 ['status: ' + self.status])
         pybel.ob.obErrorLog.ClearLog()
     
     def setup_parameters(self):
@@ -121,17 +121,17 @@ class Method(AbstractMethod):
                 continue
             self.insert_property_value(
                 inchikey, '', method_path_id,
-                property_name, 'Open Babel descriptor value', type(property_value).__name__,
-                property_value, '')
+                property_name, 'Open Babel descriptor value', 
+                type(property_value).__name__, property_value, '')
         # insert Open Babel molecule attributes
         self.insert_property_value(
             inchikey, '', method_path_id,
-            'charge', 'Open Babel molecule attribute', type(mol.charge).__name__,
-            mol.charge, '')
+            'charge', 'Open Babel molecule attribute', 
+            type(mol.charge).__name__, mol.charge, '')
         self.insert_property_value(
             inchikey, '', method_path_id,
-            'exactmass', 'Open Babel molecule attribute', type(mol.exactmass).__name__,
-            mol.exactmass, 'g/mol')
+            'exactmass', 'Open Babel molecule attribute', 
+            type(mol.exactmass).__name__, mol.exactmass, 'g/mol')
         self.insert_property_value(
             inchikey, '', method_path_id,
             'molwt', 'Open Babel descriptor value', type(mol.molwt).__name__,
@@ -146,14 +146,16 @@ class Method(AbstractMethod):
         # insert/update molecule synonyms
         synonyms = self.cir_request(inchikey, 'names')
         if (synonyms):
+            q = ('INSERT OR IGNORE INTO molecule_synonym (inchikey, name) '
+                 'VALUES (?, ?)')
             for synonym in (synonyms.split("\n")):
-                self.c.execute("INSERT OR IGNORE INTO molecule_synonym \
-                        (inchikey, name) VALUES (?, ?)", \
-                        (inchikey, synonym))
+                self.c.execute(q, (inchikey, synonym))
         # calculate identifiers with ob/cir, unless entry exists
-        inchikey_check_row = self.c.execute("SELECT inchi FROM molecule WHERE inchikey=?", (inchikey,)).fetchone()
+        q = 'SELECT inchi FROM molecule WHERE inchikey=?'
+        inchikey_check_row = self.c.execute(q, (inchikey,)).fetchone()
         inchi = mol.write('inchi').rstrip().split('=')[1]
-        if inchikey_check_row is not None and inchikey_check_row['inchi'] == inchi:
+        if (inchikey_check_row is not None and 
+            inchikey_check_row['inchi'] == inchi):
             self.status = 'updated'
             return 0 # this molecule is already correct in the db
         smiles = mol.write('can').rstrip() # canonical smiles
@@ -161,13 +163,14 @@ class Method(AbstractMethod):
         # get identifiers from CIR
         try:
             iupacs = self.cir_request(inchikey, 'iupac_name').splitlines(True)
-            iupac = max(iupacs, key=len).rstrip() # if multiple iupacs, take the longest (most specific) one
-            if (len(iupacs) > 1): # if multiple iupacs entered, add others as synonym
+            # if multiple iupacs, take the longest (most specific) one
+            iupac = max(iupacs, key=len).rstrip()
+            if (len(iupacs) > 1): # if multiple iupacs, add others as synonym
+                q = ('INSERT OR IGNORE INTO molecule_synonym (inchikey, name) '
+                     'VALUES (?, ?)')
                 for i in iupacs:
                     if i != max(iupacs, key=len):
-                        self.c.execute("INSERT OR IGNORE INTO molecule_synonym \
-                                (inchikey, name) VALUES (?, ?)", \
-                                (inchikey, i.rstrip()))
+                        self.c.execute(q, (inchikey, i.rstrip()))
         except AttributeError:
             iupac = ''
         # insert molecule identifiers
@@ -190,7 +193,8 @@ class Method(AbstractMethod):
                 return None
         except AttributeError:
             self.cir = True
-        url = 'http://cactus.nci.nih.gov/chemical/structure/' + inchikey + '/' + representation
+        url = 'http://cactus.nci.nih.gov/chemical/structure/' + inchikey + 
+              '/' + representation
         time.sleep(0.1) # protect cactus from hammering
         try:
             r = urllib2.urlopen(url)
@@ -199,6 +203,8 @@ class Method(AbstractMethod):
         except urllib2.URLError as e:
             if hasattr(e, 'reason'):
                 print >> sys.stderr, e.reason
-                print >> sys.stderr, 'CIR is down. Proceeding without importing IUPAC names or other synonyms.'
+                print >> sys.stderr, ('CIR is down. Proceeding without '
+                                      'importing IUPAC names '
+                                      'or other synonyms.')
                 self.cir = False
         return None

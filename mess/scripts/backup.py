@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-# Victor Amin 2013
-
 import argparse
 import os
 import subprocess
@@ -11,19 +7,25 @@ import StringIO
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Backup (or restore) a mess.db/molecules dir pair.",
+        description='Backup (or restore) a mess.db/molecules dir pair.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-r", "--restore", help="restore from the specified mess.db/molecules dir tgz file")
+    parser.add_argument('-r', '--restore', help=('restore from the specified '
+                                                 'mess.db/molecules dir '
+                                                 'tgz file'))
     args = parser.parse_args()
-    mess_db_path = os.path.relpath(os.path.join(os.path.dirname(__file__), '../../db/mess.db'))
-    molecules_path = os.path.relpath(os.path.join(os.path.dirname(__file__), '../../molecules'))
-    backups_path = os.path.relpath(os.path.join(os.path.dirname(__file__), '../../backups'))
+    mess_db_path = os.path.relpath(os.path.join(os.path.dirname(__file__), 
+                                   '../../db/mess.db'))
+    molecules_path = os.path.relpath(os.path.join(os.path.dirname(__file__), 
+                                     '../../molecules'))
+    backups_path = os.path.relpath(os.path.join(os.path.dirname(__file__), 
+                                   '../../backups'))
 
     if (args.restore):
         mess_db_check = 0
         molecules_dir_check = 0
         try:
-            output = check_output(['tar', '-tzf', os.path.relpath(args.restore)])
+            output = check_output(['tar', '-tzf', 
+                                  os.path.relpath(args.restore)])
         except subprocess.CalledProcessError:
             sys.exit(args.restore + ' is not a valid backup file')
         for line in StringIO.StringIO(output):
@@ -42,10 +44,12 @@ def main():
         sys.exit(args.restore + ' is not a valid backup file')
     else:
         timestamp = str(time.time())
-        subprocess.call(['tar', '-czvf', backups_path + '/' + 'messdb.' + timestamp + '.tgz', mess_db_path, molecules_path])
+        subprocess.call(['tar', '-czvf', 
+                         backups_path + '/' + 'messdb.' + timestamp + '.tgz', 
+                         mess_db_path, molecules_path])
 
 def check_output(*popenargs, **kwargs):
-    r"""Run command with arguments and return its output as a byte string.
+    """Run command with arguments and return its output as a byte string.
 
     Backported from Python 2.7 as it's implemented as pure python on stdlib.
 

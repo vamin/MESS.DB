@@ -9,7 +9,8 @@ class ToolsManager(object):
         subparsers = parser.add_subparsers(help='tools', dest='subparser_name')
         for tool_name in __all__:
             tool = self.load_tool(tool_name)
-            tool_subparser = subparsers.add_parser(tool_name, help=tool.description)
+            tool_subparser = subparsers.add_parser(tool_name, 
+                                                   help=tool.description)
             tool.subparse(tool_subparser)
     
     def load_tool(self, tool_name):
@@ -20,7 +21,7 @@ class ToolsManager(object):
             tool = self.__tools[tool_name]
         except KeyError:
             # load the plugin only if not loaded yet
-            module = __import__("mess." + tool_name, fromlist=["tools"])
+            module = __import__('mess.' + tool_name, fromlist=['tools'])
             tool = module.load()
             self.__tools[tool_name] = tool
         return tool
@@ -35,15 +36,16 @@ class AbstractTool(object):
     
     def subparse(self, subparser):
         # this method sets tool-specific arguments for argparser
-        raise NotImplementedError( "every tool needs a 'subparse' method" )
+        raise NotImplementedError("every tool needs a 'subparse' method")
 
     def check_dependencies(self):
-        raise NotImplementedError( "every tool needs a 'check_dependencies' method" )
+        raise NotImplementedError(("every tool needs a 'check_dependencies'"
+                                   'method'))
     
     def execute(self, args):
         # all tools should have a method that executes its tasks
         # based on the given commands
-        raise NotImplementedError( "every tool needs an 'execute' method" )
+        raise NotImplementedError("every tool needs an 'execute' method")
 
 # each tool must provide a load method at module level that will be
 # used to instantiate the plugin (e.g. def load():\ return Tool())
