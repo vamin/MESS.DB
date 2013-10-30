@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS
         --FOREIGN KEY(inchikey) REFERENCES molecule(inchikey),
         source_id INTEGER,
         --FOREIGN KEY(source_id) REFERENCES source(source_id),
-        identifier TEXT
+        identifier TEXT,
+        UNIQUE(inchikey, source_id, identifier)
     );
 CREATE INDEX IF NOT EXISTS ix_molecule_souce_identifier ON molecule_source (identifier);
 

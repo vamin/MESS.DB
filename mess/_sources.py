@@ -2,6 +2,7 @@ import csv
 import os
 import re
 import sqlite3
+import string
 import sys
 
 class Source(object):
@@ -42,7 +43,7 @@ class Source(object):
         return os.listdir(self.source)
     
     def update_molecule_source(self, inchikey, identifier):
-        q = ('INSERT OR REPLACE INTO molecule_source '
+        q = ('INSERT OR IGNORE INTO molecule_source '
              '(inchikey, source_id, identifier) '
              'VALUES (?, ?, ?)')
         return self.c.execute(q, (inchikey, self.id, identifier))
@@ -58,12 +59,13 @@ class Source(object):
                 source_present = False
                 for row in sources_in:
                     try:
-                        if (row[1] == self.dirname):
+                        if (row[1] == self.dirname and row[2] == identifier):
                             source_present = True
                     except IndexError:
                         pass
                 if not source_present:
-                    if (self.url_template):
+                    if (self.url_template and 
+                        not 'from:' in identifier):
                         url_split = re.split(r"\[|\]", self.url_template)
                         (match, replace) = re.split(r",\s?", url_split[1])
                         url_identifier = re.sub(match, replace, identifier)
@@ -74,3 +76,17 @@ class Source(object):
                         source_identifier_url = None
                     sources_out.writerow([self.name, self.dirname, identifier, 
                                           source_identifier_url])
+
+    def is_inchikey(self, inchikey):
+        if ('=' in inchikey):
+            inchikey = inchikey.split('=')[1]
+        if (len(inchikey) == 27):
+            s = inchikey.split('-')
+            try:
+                if (len(s[0]) == 14 and len(s[1]) == 10 and len(s[2]) == 1):
+                    if (s[0].isalpha() and s[1].isalpha() and s[2].isalpha()):
+                        if (s[1][-2] == 'S' and s[2] in string.uppercase[:14]):
+                            return True
+            except IndexError:
+                pass
+        return False

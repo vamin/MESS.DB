@@ -39,28 +39,34 @@ class Method(AbstractMethod):
         inchikey_dir = self.get_inchikey_dir(inchikey)
         inchikey_basename = os.path.join(inchikey_dir, inchikey)
         self.setup_dir(inchikey_dir)
+        try:
+            identifier = args['parent']
+        except KeyError:
+            identifier = mol.title
+        # import basic properties
         if not self.check(inchikey, inchikey_dir):
             # import
-            identifier = mol.title
             mol.title = ''
             mol.write('inchi', inchikey_basename + '.inchi', overwrite=True)
             if not os.path.exists(inchikey_basename + '.png'):
                 mol.write('_png2', inchikey_basename + '.png')
-            #mol.title = identifier
             self.touch(inchikey_basename + '.log')
             self.touch(inchikey_basename + '.notes')
             self.touch(os.path.join(inchikey_dir, 'sources.tsv'))
             # insert molecule to db
             self.update_molecule(inchikey, mol)
+            self.import_properties(inchikey, p.path_id, mol)
             # update source catalog in db
             s.update_molecule_source(inchikey, identifier)
             # update source list tsv
             s.update_source_tsv(inchikey_dir, identifier)
-            # import basic properties
-            self.import_properties(inchikey, p.path_id, mol)
             self.check(inchikey, inchikey_dir)
         else:
-            self.status = 'skipped'
+            # update source catalog in db
+            s.update_molecule_source(inchikey, identifier)
+            # update source list tsv
+            s.update_source_tsv(inchikey_dir, identifier)
+            self.status = 'updated'
         self.log(args, inchikey_dir)
         self.db.commit()
         return self.status
@@ -193,8 +199,8 @@ class Method(AbstractMethod):
                 return None
         except AttributeError:
             self.cir = True
-        url = 'http://cactus.nci.nih.gov/chemical/structure/' + inchikey + 
-              '/' + representation
+        url = ('http://cactus.nci.nih.gov/chemical/structure/' + inchikey + 
+              '/' + representation)
         time.sleep(0.1) # protect cactus from hammering
         try:
             r = urllib2.urlopen(url)

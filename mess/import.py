@@ -57,22 +57,51 @@ class Import(AbstractTool):
         # turn off pybel logging
         pybel.ob.obErrorLog.StopLogging() 
         for f in s.files():
-            if (f.split('.')[-1] == 'sql' or f.split('.')[-1] == 'txt'):
+            if (f.split('.')[-1] == 'sql' or 
+                f.split('.')[-1] == 'txt' or
+                f[-1] == '~'):
                 continue
             for mol in pybel.readfile(f.split('.')[-1], 
                                       os.path.join(args.source, f)):
-                #ob_logs = []
-                # generate inchikey
                 pybel.ob.obErrorLog.StartLogging()
                 inchikey = mol.write('inchikey').rstrip()
                 pybel.ob.obErrorLog.StopLogging()
-                method_args = {}
-                method_args['inchikey'] = inchikey
-                method_args['mol'] = mol
-                method_args['source'] = s
-                method_args['path'] = p
-                status = m.execute(method_args)
-                print method_args['inchikey'] + ': ' + status
+                cansmi = mol.write('can').split()[0]
+                frag_count = cansmi.count('.') + 1
+                for f in cansmi.split('.'):
+                    method_args = {}
+                    if (frag_count > 1):
+                        frag = pybel.readstring('can', f)
+                        # neutralize fragments
+                        #if (frag.charge != 0):
+                        #    for atom in frag.atoms:
+                        #        atom.OBAtom.SetFormalCharge(0)
+                        pybel.ob.obErrorLog.ClearLog()
+                        pybel.ob.obErrorLog.StartLogging()
+                        frag_inchikey = frag.write('inchikey').rstrip()
+                        if not s.is_inchikey(frag_inchikey):
+                            sys.stderr.write("'" + 
+                                             f + 
+                                             "' is not an importable " +
+                                             'molecule.\n')
+                            continue
+                        pybel.ob.obErrorLog.StopLogging()
+                        method_args['parent'] = 'from:' + mol.title
+                        method_args['inchikey'] = frag_inchikey
+                        method_args['mol'] = frag
+                    else:
+                        if not s.is_inchikey(inchikey):
+                            sys.stderr.write("'" + 
+                                             f + 
+                                             "' is not an importable " +
+                                             'molecule.\n')
+                            continue
+                        method_args['inchikey'] = inchikey
+                        method_args['mol'] = mol
+                    method_args['source'] = s
+                    method_args['path'] = p
+                    status = m.execute(method_args)
+                    print method_args['inchikey'] + ': ' + status
 
 
 def load():
