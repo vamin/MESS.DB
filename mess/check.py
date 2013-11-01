@@ -9,12 +9,11 @@ from _tools import AbstractTool
 
 class Check(AbstractTool):
     def __init__(self):
-        self.description = ('check integrity of mess.db and concordance with '
-                            'molecules/ dir')
+        self.description = ('Check integrity of mess.db and concordance with '
+                            'molecules dir')
+        self.epilog = ''
     
     def subparse(self, subparser):
-        #subparser.add_argument('x', help='desc')
-        #subparser.add_argument('-x', '--x', type=str, help='desc')
         pass
 
     def check_dependencies(self):

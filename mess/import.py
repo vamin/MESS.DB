@@ -15,8 +15,9 @@ from _sources import Source
 
 class Import(AbstractTool):
     def __init__(self):
-        self.description = ('imports molecule file, multi-molecule file, '
-                            'or dir of molecules into mess.db')
+        self.description = ('Import molecule file, multi-molecule file, '
+                            'or dir of molecules into MESS.DB')
+        self.epilog = ''
             
     def subparse(self, subparser):
         subparser.add_argument('source', 

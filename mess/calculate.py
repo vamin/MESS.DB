@@ -14,7 +14,8 @@ from _tools import AbstractTool
 
 class Calculate(AbstractTool):
     def __init__(self):
-        self.description = 'applys a method to a set of molecules'
+        self.description = 'Calculate properties for a set of molecules'
+        self.epilog = ''
     
     def subparse(self, subparser):
         subparser.add_argument('inchikeys', nargs='?', 

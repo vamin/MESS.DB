@@ -85,7 +85,7 @@ class Source(object):
             try:
                 if (len(s[0]) == 14 and len(s[1]) == 10 and len(s[2]) == 1):
                     if (s[0].isalpha() and s[1].isalpha() and s[2].isalpha()):
-                        if (s[1][-2] == 'S' and s[2] in string.uppercase[:14]):
+                        if (s[1][-2] == 'S'):
                             return True
             except IndexError:
                 pass

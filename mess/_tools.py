@@ -7,10 +7,13 @@ class ToolsManager(object):
     
     def populate_parser(self, parser):
         subparsers = parser.add_subparsers(help='tools', dest='subparser_name')
+        __all__.sort() # so they show up alphabetized in help
         for tool_name in __all__:
             tool = self.load_tool(tool_name)
             tool_subparser = subparsers.add_parser(tool_name, 
-                                                   help=tool.description)
+                                                   help=tool.description,
+                                                   description=tool.description,
+                                                   epilog=tool.epilog)
             tool.subparse(tool_subparser)
     
     def load_tool(self, tool_name):
@@ -33,6 +36,11 @@ class ToolsManager(object):
 
 class AbstractTool(object):
     # all tools should inherit from this class
+    def __init__(self):
+        self.description = ''
+        self.epilog = ''
+        raise NotImplementedError(('every tool needs an __init_ that specifies '
+                                   'a description and epilog attribute'))
     
     def subparse(self, subparser):
         # this method sets tool-specific arguments for argparser

@@ -9,8 +9,9 @@ from _tools import AbstractTool
 
 class Select(AbstractTool):
     def __init__(self):
-        self.description = ('returns a list of molecules '
-                            'based on SQL query on mess.db')
+        self.description = ('Select a list of molecules '
+                            'based on SQL query')
+        self.epilog = ''
     
     def subparse(self, subparser):
         subparser.add_argument('sql', help=('an SQL statement or file that '

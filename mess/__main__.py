@@ -13,7 +13,7 @@ from _tools import ToolsManager
 def main():
     toolsmanager = ToolsManager()
     parser = argparse.ArgumentParser(
-        description="A collection of tools for interacting with the mess db.",
+        description="A collection of tools for interacting with MESS.DB",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)#,
 	    #add_help=False)
     toolsmanager.populate_parser(parser)
