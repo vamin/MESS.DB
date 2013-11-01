@@ -19,4 +19,5 @@ class MessDB(object):
         return self.conn.commit()
     
     def __del__(self):
+        self.conn.commit()
         self.conn.close()
