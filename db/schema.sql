@@ -27,14 +27,6 @@ CREATE TABLE IF NOT EXISTS
     );
 CREATE INDEX IF NOT EXISTS ix_molecule_synonym_name ON molecule_synonym (name);
 
---DROP TABLE state;
-CREATE TABLE IF NOT EXISTS
-    state( --descriptors for various electronic/conformational states that can be applied to a molecule
-        state_id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL, --e.g. anion, cation, triplet, protonated, etc.
-        UNIQUE(name)
-    );
-
 --DROP TABLE source;
 CREATE TABLE IF NOT EXISTS
     source( --catalogs where molecules exist and might be purchased
@@ -170,18 +162,16 @@ CREATE TABLE IF NOT EXISTS
         UNIQUE(name, description, format)
     );
 
---DROP TABLE molecule_state_method_property;
+--DROP TABLE molecule_method_property;
 CREATE TABLE IF NOT EXISTS
-    molecule_state_method_property( --links molecule, state, method_path, and property; assigns value (i.e. 'result')
+    molecule_method_property( --links molecule, method_path, and property; assigns value (i.e. 'result')
         inchikey TEXT NOT NULL,
         --FOREIGN KEY(inchikey) REFERENCES molecule(inchikey),
-        state_id INTEGER NOT NULL,
-        --FOREIGN KEY(state_id) REFERENCES state(state_id),
         method_path_id INTEGER NOT NULL,
         --FOREIGN KEY(method_path_id) REFERENCES method_path(method_path_id),
         property_id INTEGER NOT NULL,
         --FOREIGN KEY(property_id) REFERENCES property(property_id),
         units TEXT NOT NULL,
         result BLOB,
-        UNIQUE(inchikey, state_id, method_path_id, property_id, units)
+        UNIQUE(inchikey, method_path_id, property_id, units)
     );

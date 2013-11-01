@@ -165,55 +165,55 @@ class Method(AbstractMethod):
         # insert properties into db
         try:
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'HEAT OF FORMATION', 'MOPAC property', 'float',
                 heat_of_formation_kcal, 'kcal/mol')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'HEAT OF FORMATION', 'MOPAC property', 'float',
                 heat_of_formation_kJ, 'kJ/mol')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'TOTAL ENERGY', 'MOPAC property', 'float',
                 total_energy, 'eV')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'ELECTRONIC ENERGY', 'MOPAC property', 'float',
                 electronic_energy, 'eV')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'POINT GROUP', 'MOPAC property', 'str',
                 point_group, '')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'CORE-CORE REPULSION', 'MOPAC property', 'float',
                 core_repulsion, 'eV')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'COSMO AREA', 'MOPAC property', 'float',
                 cosmo_area, 'A^2')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'COSMO VOLUME', 'MOPAC property', 'float',
                 cosmo_volume, 'A^3')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'GRADIENT NORM', 'MOPAC property', 'float',
                 gradient_norm, '')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'IONIZATION POTENTIAL', 'MOPAC property', 'float',
                 ionization_potential, 'eV')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'HOMO', 'MOPAC property', 'float',
                 homo, 'eV')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'LUMO', 'MOPAC property', 'float',
                 lumo, 'eV')
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 'FILLED LEVELS', 'MOPAC property', 'int',
                 filled_levels, '')
         except UnboundLocalError:

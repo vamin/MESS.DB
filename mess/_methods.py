@@ -133,18 +133,18 @@ class AbstractMethod(object):
              'VALUES (?, ?, ?);')
         return self.c.execute(q, (name, description, format))
     
-    def insert_property_value(self, inchikey, state_id, method_path_id, 
+    def insert_property_value(self, inchikey, method_path_id, 
                               property_name, property_description, 
                               property_format, value, units):
         self.insert_property(property_name, property_description, 
                              property_format)
-        q = ('INSERT OR REPLACE INTO molecule_state_method_property '
-             '(inchikey, state_id, method_path_id, property_id, units, result) '
-             'SELECT ?, ?, ?, property.property_id, ?, ? '
+        q = ('INSERT OR REPLACE INTO molecule_method_property '
+             '(inchikey, method_path_id, property_id, units, result) '
+             'SELECT ?, ?, property.property_id, ?, ? '
              'FROM property '
              'WHERE '
              'property.name=? AND property.description=? AND property.format=?')
-        return self.c.execute(q, (inchikey, state_id, method_path_id, units, 
+        return self.c.execute(q, (inchikey, method_path_id, units, 
                                   value, property_name, property_description, 
                                   property_format))
     

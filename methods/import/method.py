@@ -126,24 +126,24 @@ class Method(AbstractMethod):
             if (math.isnan(property_value)):
                 continue
             self.insert_property_value(
-                inchikey, '', method_path_id,
+                inchikey, method_path_id,
                 property_name, 'Open Babel descriptor value', 
                 type(property_value).__name__, property_value, '')
         # insert Open Babel molecule attributes
         self.insert_property_value(
-            inchikey, '', method_path_id,
+            inchikey, method_path_id,
             'charge', 'Open Babel molecule attribute', 
             type(mol.charge).__name__, mol.charge, '')
         self.insert_property_value(
-            inchikey, '', method_path_id,
+            inchikey, method_path_id,
             'exactmass', 'Open Babel molecule attribute', 
             type(mol.exactmass).__name__, mol.exactmass, 'g/mol')
         self.insert_property_value(
-            inchikey, '', method_path_id,
+            inchikey, method_path_id,
             'molwt', 'Open Babel descriptor value', type(mol.molwt).__name__,
             mol.molwt, 'g/mol')
         self.insert_property_value(
-            inchikey, '', method_path_id,
+            inchikey, method_path_id,
             'spin', 'Open Babel descriptor value', type(mol.spin).__name__,
             mol.spin, '')
         self.db.commit()
