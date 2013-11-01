@@ -32,11 +32,14 @@ class Remove(AbstractTool):
             try:
                 inchikey_dir = self.get_inchikey_dir(inchikey)
                 shutil.rmtree(inchikey_dir)
-                parent = os.path.relpath(os.path.join(inchikey_dir, '../'))
-                os.removedirs(parent)
                 sys.stderr.write(inchikey + ' dir removed\n')
             except OSError:
                 sys.stderr.write(inchikey + ' did not have a directory\n')
+            try:
+                parent = os.path.relpath(os.path.join(inchikey_dir, '../'))
+                os.removedirs(parent)
+            except OSError:
+                pass
             records = 0
             q = 'DELETE from molecule WHERE inchikey=?'
             c.execute(q, (inchikey,))
