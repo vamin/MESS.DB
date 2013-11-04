@@ -48,6 +48,8 @@ class Method(AbstractMethod):
                                                 inchikey + '.sdf'))
         balloon_stdout = ''
         balloon_stderr = ''
+        pwd = os.getcwd()
+        os.chdir(os.path.join(os.path.dirname(__file__), '../../molecules')
         if not self.check(xyz_out):
             q = 'SELECT smiles FROM molecule WHERE inchikey=?'
             smiles = self.c.execute(q, (inchikey,)).next()
@@ -70,7 +72,7 @@ class Method(AbstractMethod):
                 mol = pybel.readfile('sdf', str(sdf_out)).next()
             except IOError:
                 sdf_bad = os.path.join(os.path.dirname(__file__), 
-                                       '../../', inchikey + '_bad.sdf')
+                                       '../../molecules', inchikey + '_bad.sdf')
                 sdf_out = os.path.join(out_dir, inchikey + '_bad.sdf')
                 os.rename(sdf_bad, sdf_out)
                 mol = pybel.readfile('sdf', str(sdf_out)).next()
@@ -81,6 +83,7 @@ class Method(AbstractMethod):
             self.status = 'skipped'
         self.log(args, inchikey_dir, [balloon_stdout, balloon_stderr])
         self.db.commit()
+        os.chdir(pwd)
         return self.status
 
     def check(self, xyz_out):
