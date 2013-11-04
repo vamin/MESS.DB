@@ -21,7 +21,10 @@ class Import(AbstractTool):
             
     def subparse(self, subparser):
         subparser.add_argument('source', 
-                               help='A molecule source file or directory.')
+                               help='a molecule source file or directory')
+        subparser.add_argument('-s', '--skip-cir', action='store_true', 
+                               help=('do not use CIR web service to import '
+                                     'IUPAC names and other synonyms'))
 
     def check_dependencies(self):
         try:
@@ -101,6 +104,7 @@ class Import(AbstractTool):
                         method_args['mol'] = mol
                     method_args['source'] = s
                     method_args['path'] = p
+                    method_args['skip_cir'] = args.skip_cir
                     status = m.execute(method_args)
                     print method_args['inchikey'] + ': ' + status
 

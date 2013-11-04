@@ -36,6 +36,7 @@ class Method(AbstractMethod):
         mol = args['mol']
         s = args['source']
         p = args['path']
+        skip_cir = args['skip_cir']
         inchikey_dir = self.get_inchikey_dir(inchikey)
         inchikey_basename = os.path.join(inchikey_dir, inchikey)
         self.setup_dir(inchikey_dir)
@@ -54,7 +55,7 @@ class Method(AbstractMethod):
             self.touch(inchikey_basename + '.notes')
             self.touch(os.path.join(inchikey_dir, 'sources.tsv'))
             # insert molecule to db
-            self.update_molecule(inchikey, mol)
+            self.update_molecule(inchikey, mol, skip_cir)
             self.import_properties(inchikey, p.path_id, mol)
             # update source catalog in db
             s.update_molecule_source(inchikey, identifier)
@@ -148,43 +149,52 @@ class Method(AbstractMethod):
             mol.spin, '')
         self.db.commit()
 
-    def update_molecule(self, inchikey, mol):
-        # insert/update molecule synonyms
-        synonyms = self.cir_request(inchikey, 'names')
-        if (synonyms):
-            q = ('INSERT OR IGNORE INTO molecule_synonym (inchikey, name) '
-                 'VALUES (?, ?)')
-            for synonym in (synonyms.split("\n")):
-                self.c.execute(q, (inchikey, synonym))
+    def update_molecule(self, inchikey, mol, skip_cir=False):
         # calculate identifiers with ob/cir, unless entry exists
         q = 'SELECT inchi FROM molecule WHERE inchikey=?'
         inchikey_check_row = self.c.execute(q, (inchikey,)).fetchone()
         inchi = mol.write('inchi').rstrip().split('=')[1]
         if (inchikey_check_row is not None and 
             inchikey_check_row['inchi'] == inchi):
+            if not skip_cir:
+                self.update_synonyms(inchikey)
             self.status = 'updated'
             return 0 # this molecule is already correct in the db
         smiles = mol.write('can').rstrip() # canonical smiles
         formula = mol.formula
+        iupacs = []
+        iupac = ''
         # get identifiers from CIR
-        try:
-            iupacs = self.cir_request(inchikey, 'iupac_name').splitlines(True)
-            # if multiple iupacs, take the longest (most specific) one
-            iupac = max(iupacs, key=len).rstrip()
-            if (len(iupacs) > 1): # if multiple iupacs, add others as synonym
-                q = ('INSERT OR IGNORE INTO molecule_synonym (inchikey, name) '
-                     'VALUES (?, ?)')
-                for i in iupacs:
-                    if i != max(iupacs, key=len):
-                        self.c.execute(q, (inchikey, i.rstrip()))
-        except AttributeError:
-            iupac = ''
+        if not skip_cir:
+            self.update_synonyms(inchikey)
+            try:
+                iupacs = self.cir_request(inchikey, 
+                                          'iupac_name').splitlines(True)
+                # if multiple iupacs, take the longest (most specific) one
+                iupac = max(iupacs, key=len).rstrip()
+            except AttributeError:
+                pass
         # insert molecule identifiers
         self.c.execute("INSERT OR IGNORE INTO molecule \
                 (inchikey, inchi, smiles, formula, iupac) \
                 VALUES \
                 (?, ?, ?, ?, ?)", \
                 (inchikey, inchi, smiles, formula, iupac))
+        if (len(iupacs) > 1): # if multiple, add others as synonym
+            q = ('INSERT OR IGNORE INTO molecule_synonym '
+                 '(inchikey, name) '
+                 'VALUES (?, ?)')
+            for i in iupacs:
+                if i != max(iupacs, key=len):
+                    self.c.execute(q, (inchikey, i.rstrip()))
+    
+    def update_synonyms(self, inchikey):
+        synonyms = self.cir_request(inchikey, 'names')
+        if (synonyms):
+            q = ('INSERT OR IGNORE INTO molecule_synonym (inchikey, name) '
+                 'VALUES (?, ?)')
+            for synonym in (synonyms.split("\n")):
+                self.c.execute(q, (inchikey, synonym))
     
     def touch(self, fname, times=None):
         fhandle = file(fname, 'a')
