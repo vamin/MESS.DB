@@ -1,9 +1,14 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import codecs
 import csv
 import os
 import re
 import sqlite3
 import string
 import sys
+import cStringIO
 
 class Source(object):
     def __init__(self, db):
@@ -26,18 +31,18 @@ class Source(object):
             sys.exit(('All sources must have a corresponding sql file '
                       'in their directory.'))
         # insert/update source in the database
-        self.c.executescript(open(source_sql).read())
+        self.c.executescript(codecs.open(source_sql, encoding='utf-8').read())
         # get source id
         q = ('SELECT source_id, name, dirname, url, url_template, last_update '
              'FROM source WHERE dirname=?')
         source_row = self.c.execute(q, (source_basename,)).fetchone()
         # set attributes
-        self.id = source_row['source_id']
-        self.name = source_row['name']
-        self.dirname = source_row['dirname']
-        self.url = source_row['url']
-        self.url_template = source_row['url_template']
-        self.last_update = source_row['last_update']
+        self.id = source_row.source_id
+        self.name = source_row.name
+        self.dirname = source_row.dirname
+        self.url = source_row.url
+        self.url_template = source_row.url_template
+        self.last_update = source_row.last_update
     
     def files(self):
         return os.listdir(self.source)
@@ -49,17 +54,20 @@ class Source(object):
         return self.c.execute(q, (inchikey, self.id, identifier))
     
     def update_source_tsv(self, inchikey_dir, identifier):
-        with open(os.path.join(inchikey_dir, 'sources.tsv'), 
-                  'r') as sources_in:
-            with open(os.path.join(inchikey_dir, 'sources.tsv'), 
-                      'a') as sources_out:
-                sources_in = csv.reader(sources_in, delimiter='\t')
-                sources_out = csv.writer(sources_out, delimiter='\t')
+        name = self.name.encode('ascii', 'replace')
+        dirname = self.dirname.encode('ascii', 'replace')
+        identifier = identifier.encode('ascii', 'replace')
+        with codecs.open(os.path.join(inchikey_dir, 'sources.tsv'), 
+                  'r', 'ascii') as sources_in:
+            with codecs.open(os.path.join(inchikey_dir, 'sources.tsv'), 
+                      'a', 'ascii') as sources_out:
+                sources_in = csv.reader(sources_in, delimiter=b'\t')
+                sources_out = csv.writer(sources_out, delimiter=b'\t')
                 # check if source has been recorded
                 source_present = False
                 for row in sources_in:
                     try:
-                        if (row[1] == self.dirname and row[2] == identifier):
+                        if (row[1] == dirname and row[2] == identifier):
                             source_present = True
                     except IndexError:
                         pass
@@ -73,9 +81,10 @@ class Source(object):
                         if (2 < len(url_split)):
                             source_identifier_url += url_split[2]
                     else:
-                        source_identifier_url = None
+                        source_identifier_url = ''
+                    sid_url = source_identifier_url.encode('ascii', 'replace')
                     sources_out.writerow([self.name, self.dirname, identifier, 
-                                          source_identifier_url])
+                                          sid_url])
 
     def is_inchikey(self, inchikey):
         if ('=' in inchikey):

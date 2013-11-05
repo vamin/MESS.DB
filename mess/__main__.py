@@ -2,6 +2,9 @@
 # encoding: utf-8
 # Victor Amin 2013
 
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import argparse
 import os
 import sys
@@ -13,9 +16,8 @@ from _tools import ToolsManager
 def main():
     toolsmanager = ToolsManager()
     parser = argparse.ArgumentParser(
-        description="A collection of tools for interacting with MESS.DB",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)#,
-	    #add_help=False)
+        description='A collection of tools for interacting with MESS.DB',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     toolsmanager.populate_parser(parser)
     args = parser.parse_args()
     tool = toolsmanager.load_tool(args.subparser_name)

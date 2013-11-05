@@ -1,7 +1,10 @@
 # import molecule into mess.db
 # Victor Amin 2013
 
-import csv
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import codecs
 import math
 import os
 import re
@@ -13,9 +16,12 @@ from datetime import datetime
 
 import pybel
 
+from _decorators import decorate, UnicodeDecorator
 from _methods import AbstractMethod
 from _paths import Path
 from _sources import Source
+
+decorate(pybel, UnicodeDecorator)
 
 class Method(AbstractMethod):
     # method info
@@ -43,14 +49,17 @@ class Method(AbstractMethod):
         try:
             identifier = args['parent']
         except KeyError:
-            identifier = mol.title
+            identifier = unicode(mol.title, 'utf-8', 'replace')
         # import basic properties
         if not self.check(inchikey, inchikey_dir):
             # import
-            mol.title = ''
-            mol.write('inchi', inchikey_basename + '.inchi', overwrite=True)
+            mol.title = b''
+            mol.write('inchi', 
+                      (inchikey_basename + '.inchi'), 
+                      overwrite=True)
             if not os.path.exists(inchikey_basename + '.png'):
-                mol.write('_png2', inchikey_basename + '.png')
+                mol.write('_png2', 
+                          (inchikey_basename + '.png'))
             self.touch(inchikey_basename + '.log')
             self.touch(inchikey_basename + '.notes')
             self.touch(os.path.join(inchikey_dir, 'sources.tsv'))
@@ -79,24 +88,24 @@ class Method(AbstractMethod):
         png = os.path.join(inchikey_dir, inchikey + '.png')
         sources = os.path.join(inchikey_dir, 'sources.tsv')
         try:
-            with open(inchi) as f:
+            with codecs.open(inchi, encoding='utf-8') as f:
                 inchi_str = f.readline().split('=')[1].strip()
                 q = 'SELECT inchikey FROM molecule WHERE inchi=?'
                 row = self.c.execute(q, (inchi_str,)).fetchone()
                 try:
-                    if (row['inchikey'] != inchikey):
+                    if (row.inchikey != inchikey):
                         self.status = 'import failed'
                         return False 
-                except TypeError:
+                except AttributeError:
                     self.status = 'import failed'
                     return False                         
-            with open(log):
+            with codecs.open(log, encoding='utf-8'):
                 pass
-            with open(notes):
+            with codecs.open(notes, encoding='utf-8'):
                 pass
-            with open(png):
+            with codecs.open(png, encoding='utf-8'):
                 pass
-            with open(sources):
+            with codecs.open(sources, encoding='utf-8'):
                 pass
             self.status = 'import successful'
             return True
@@ -155,7 +164,7 @@ class Method(AbstractMethod):
         inchikey_check_row = self.c.execute(q, (inchikey,)).fetchone()
         inchi = mol.write('inchi').rstrip().split('=')[1]
         if (inchikey_check_row is not None and 
-            inchikey_check_row['inchi'] == inchi):
+            inchikey_check_row.inchi == inchi):
             if not skip_cir:
                 self.update_synonyms(inchikey)
             self.status = 'updated'
@@ -218,9 +227,8 @@ class Method(AbstractMethod):
                 return r.read()
         except urllib2.URLError as e:
             if hasattr(e, 'reason'):
-                print >> sys.stderr, e.reason
-                print >> sys.stderr, ('CIR is down. Proceeding without '
-                                      'importing IUPAC names '
-                                      'or other synonyms.')
+                print(e.reason, file=sys.stderr)
+                print(('CIR is down. Proceeding without importing IUPAC names '
+                       'or other synonyms.'), file=sys.stderr)
                 self.cir = False
         return None

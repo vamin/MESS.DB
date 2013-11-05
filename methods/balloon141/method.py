@@ -1,7 +1,11 @@
 # generate 3d structure with balloon
 # Victor Amin 2013
 
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import binascii
+import codecs
 import math
 import os
 import sqlite3
@@ -12,7 +16,10 @@ from distutils.version import LooseVersion
 
 import pybel
 
+from _decorators import decorate, UnicodeDecorator
 from _methods import AbstractMethod
+
+decorate(pybel, UnicodeDecorator)
 
 class Method(AbstractMethod):
     # method info
@@ -49,10 +56,10 @@ class Method(AbstractMethod):
         balloon_stdout = ''
         balloon_stderr = ''
         pwd = os.getcwd()
-        os.chdir(os.path.join(os.path.dirname(__file__), '../../molecules')
+        os.chdir(os.path.join(os.path.dirname(__file__), '../../molecules'))
         if not self.check(xyz_out):
             q = 'SELECT smiles FROM molecule WHERE inchikey=?'
-            smiles = self.c.execute(q, (inchikey,)).next()
+            row = self.c.execute(q, (inchikey,)).next()
             # get positive 32-bit integer
             seed = binascii.crc32(inchikey) & 0xffffffff
             try:
@@ -63,21 +70,22 @@ class Method(AbstractMethod):
                                         '1024', '--randomSeed', str(seed), 
                                         '--nGenerations', '1024', 
                                         '--singleconf', '--fullforce', 
-                                        smiles['smiles'], sdf_out], 
+                                        row.smiles, sdf_out], 
                                        stdout=subprocess.PIPE, 
                                        stderr=subprocess.PIPE)
             balloon_stdout = balloon.stdout.read()
             balloon_stderr = balloon.stderr.read()
             try:
-                mol = pybel.readfile('sdf', str(sdf_out)).next()
+                mol = pybel.readfile('sdf', sdf_out).next()
             except IOError:
                 sdf_bad = os.path.join(os.path.dirname(__file__), 
                                        '../../molecules', inchikey + '_bad.sdf')
                 sdf_out = os.path.join(out_dir, inchikey + '_bad.sdf')
                 os.rename(sdf_bad, sdf_out)
-                mol = pybel.readfile('sdf', str(sdf_out)).next()
+                mol = pybel.readfile('sdf', sdf_out).next()
+            decorate(mol, UnicodeDecorator)
             mol.localopt(forcefield='mmff94s', steps=128)
-            mol.write('xyz', str(xyz_out))
+            mol.write('xyz', xyz_out)
             self.check(xyz_out)
         else:
             self.status = 'skipped'
@@ -88,7 +96,7 @@ class Method(AbstractMethod):
 
     def check(self, xyz_out):
         try:
-            with open(xyz_out) as f:
+            with codecs.open(xyz_out, encoding='utf-8') as f:
                 for i, l in enumerate(f):
                     if (i == 0):
                         atoms = l.strip()

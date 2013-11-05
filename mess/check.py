@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import argparse
 import glob
 import os
@@ -26,10 +29,10 @@ class Check(AbstractTool):
         self.db_inchikeys = set()
         # check that inchikeys are all valid
         for row in self.c:
-            if self.is_inchikey(row['inchikey']):
-                self.db_inchikeys.add(row['inchikey'])
+            if self.is_inchikey(row.inchikey):
+                self.db_inchikeys.add(row.inchikey)
             else:
-                print row['inchikey'] + ' is not a valid InChiKey!'
+                print(row.inchikey + ' is not a valid InChiKey!')
         self.check_dir_structure()
         self.check_db_structure()
         self.check_db_dir_inchikey_concordance()
@@ -45,12 +48,12 @@ class Check(AbstractTool):
         # compare inchikeys from db vs dir
         in_db_not_dir = self.db_inchikeys - dir_inchikeys
         in_dir_not_db = dir_inchikeys - self.db_inchikeys
-        print str(len(in_db_not_dir)) + (' InChIKeys in mess.db that are not '
-                                         'in molecules dir:')
-        print "\n".join(i for i in in_db_not_dir)
-        print str(len(in_dir_not_db)) + (' InChIKeys in molecules dir that '
-                                         'are not in mess.db:')
-        print "\n".join(i for i in in_dir_not_db)
+        print(str(len(in_db_not_dir)) + (' InChIKeys in mess.db that are not '
+                                         'in molecules dir:'))
+        print('\n'.join(i for i in in_db_not_dir))
+        print(str(len(in_dir_not_db)) + (' InChIKeys in molecules dir that '
+                                         'are not in mess.db:'))
+        print('\n'.join(i for i in in_dir_not_db))
     
     def check_dir_structure(self):
         pass

@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import codecs
 import os
 import sys
 from datetime import datetime
@@ -18,7 +22,7 @@ class AbstractMethod(object):
             self.prog_version
             self.prog_url
         except AttributeError as e:
-            sys.stderr.write(''.join([str(e), "\n"]))
+            print(''.join([str(e), '\n']), file=sys.stderr)
             sys.exit(('Each method class needs to define method_name, '
                       'method_description, method_level, geop, prog_name, '
                       'prog_version, and prog_url as attributes.'))
@@ -69,7 +73,7 @@ class AbstractMethod(object):
     
     def get_inchikey_dir(self, inchikey):
         molecules_dir = os.path.join(os.path.dirname(__file__), '../molecules/')
-        return os.path.relpath(os.path.join(molecules_dir, inchikey[:1], 
+        return os.path.abspath(os.path.join(molecules_dir, inchikey[:1], 
                                inchikey[1:3], inchikey[3:]))
     
     def setup_dir(self, directory):
@@ -77,17 +81,17 @@ class AbstractMethod(object):
             os.makedirs(directory)
     
     def add_messages_to_log(self, log_path, method_name, messages):
-        log = open(log_path, 'a')
-        log.write(": ".join([datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
+        log = codecs.open(log_path, 'a', 'utf-8')
+        log.write(': '.join([datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
                              method_name]))
-        log.write("\n")
-        log.write(" ".join(sys.argv))
-        log.write("\n")
+        log.write('\n')
+        log.write(' '.join(sys.argv))
+        log.write('\n')
         for m in messages:
             log.write(m)
-            log.write("\n")
-        log.write("-" * 80)
-        log.write("\n")
+            log.write('\n')
+        log.write('-' * 79)
+        log.write('\n')
         log.close()
     
     def setup_method(self):
@@ -152,4 +156,4 @@ class AbstractMethod(object):
         q = ('SELECT method_id FROM method '
              'WHERE method.name = ?;')
         row = self.c.execute(q, (self.method_name,)).fetchone()
-        return row['method_id']
+        return row.method_id

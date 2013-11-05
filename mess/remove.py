@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import argparse
 import shutil
 import os
@@ -32,9 +35,9 @@ class Remove(AbstractTool):
             try:
                 inchikey_dir = self.get_inchikey_dir(inchikey)
                 shutil.rmtree(inchikey_dir)
-                sys.stderr.write(inchikey + ' dir removed\n')
+                print(inchikey + ' dir removed\n', file=sys.stderr)
             except OSError:
-                sys.stderr.write(inchikey + ' did not have a directory\n')
+                print(inchikey + ' did not have a directory\n', file=sys.stderr)
             try:
                 parent = os.path.relpath(os.path.join(inchikey_dir, '../'))
                 os.removedirs(parent)
@@ -54,9 +57,9 @@ class Remove(AbstractTool):
             c.execute(q, (inchikey,))
             records += c.rowcount
             #db.commit()
-            sys.stderr.write(str(records) + ' ' + inchikey + 
-                             ' records removed from db\n')
-            sys.stderr.write('\n')
+            print(str(records) + ' ' + inchikey + ' records removed from db\n',
+                  file=sys.stderr)
+            print('\n', file=sys.stderr)
 
 
 

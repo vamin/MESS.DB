@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import argparse
 import imp
 import os
@@ -52,7 +55,7 @@ class Calculate(AbstractTool):
                                      os.path.join(os.path.dirname( __file__ ), 
                                      '..', 'methods', args.method, 'method.py'))
         except IOError:
-            sys.exit(args.method + " is not a valid method.")
+            sys.exit(args.method + ' is not a valid method.')
         m = method.Method(db)
         m.setup()
         method_id = m.get_method_id()
@@ -87,7 +90,7 @@ class Calculate(AbstractTool):
         for row in args.inchikeys:
             method_args['inchikey'] = row.split()[0].strip()
             status = m.execute(method_args)
-            print method_args['inchikey'] + ': ' + status
+            print(method_args['inchikey'] + ': ' + status)
         
 
 def load():

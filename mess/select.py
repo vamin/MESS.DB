@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import codecs
 import csv
 import os
 import re
@@ -38,7 +42,7 @@ class Select(AbstractTool):
         db = MessDB()
         c = db.cursor()
         try:
-            c.execute(open(args.sql).read())
+            c.execute(codecs.open(args.sql, encoding='utf-8').read())
         except sqlite3.OperationalError:
             sys.exit('"' + args.sql + '" does not contain valid sql.')
         except IOError:
@@ -51,7 +55,7 @@ class Select(AbstractTool):
         if not (c.description[0][0].lower() == 'inchikey'):
             sys.exit('SQL must return inchikey in first column.')
         # print inchikeys
-        writer = csv.writer(sys.stdout, delimiter = args.delimiter)
+        writer = csv.writer(sys.stdout, delimiter=args.delimiter)
         if (args.headers):
             writer.writerow(list(h[0] for h in c.description))
         for row in c:

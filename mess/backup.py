@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import argparse
 import os
 import subprocess
@@ -32,9 +35,9 @@ class Backup(AbstractTool):
                                      'messdb/backups dir'))
 
     def check_dependencies(self):
-        python_version = ".".join(str(x) for x in sys.version_info)
+        python_version = '.'.join(str(x) for x in sys.version_info)
         if (LooseVersion(python_version) < LooseVersion('2.7')):
-                sys.exit("The backup tool requres Python >=2.7.") 
+                sys.exit('The backup tool requres Python >=2.7.') 
         return True
     
     def execute(self, args):

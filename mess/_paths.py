@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import sqlite3
 import sys
 
@@ -26,10 +29,10 @@ class Path(object):
                                                ).fetchone()
             try:
                 self.path_length = 1
-                self.parent_method_name = import_method_row['name']
-                self.parent_method_id = import_method_row['method_id']
+                self.parent_method_name = import_method_row.name
+                self.parent_method_id = import_method_row.method_id
                 self.superparent_method_id = ''
-            except TypeError:
+            except AttributeError:
                 sys.exit('It seems like import has not been run yet.')
         elif (parent_path_id):
             q = ('SELECT '
@@ -50,11 +53,11 @@ class Path(object):
                                              (self.parent_path_id,)
                                              ).fetchone()
             try:
-                self.path_length = parent_path_row['length'] + 1
-                self.parent_method_name = parent_path_row['method_name']
-                self.parent_method_id = parent_path_row['child_method_id']
-                self.superparent_method_id = parent_path_row['parent_method_id']
-            except TypeError:
+                self.path_length = parent_path_row.length + 1
+                self.parent_method_name = parent_path_row.method_name
+                self.parent_method_id = parent_path_row.child_method_id
+                self.superparent_method_id = parent_path_row.parent_method_id
+            except AttributeError:
                 sys.exit(parent_path_id + (' is an invalid path id (i.e., '
                                            'it does not have a valid record '
                                            'in the database).'))
@@ -70,8 +73,8 @@ class Path(object):
                                                 (method_id, parent_path_id)
                                                 ).fetchone()
         try:
-            self.path_id = method_path_parent_row['method_path_id']
-        except TypeError:
+            self.path_id = method_path_parent_row.method_path_id
+        except AttributeError:
             # insert new path
             q = 'INSERT INTO method_path (length) VALUES (?);'
             self.c.execute(q, (self.path_length,))
@@ -106,14 +109,14 @@ class Path(object):
                                                 (self.superparent_method_id,)
                                                 ).fetchone()
         try:
-            self.parent_method_name = parent_method_row['method_name']
-            self.parent_level = parent_method_row['level_name']
-        except TypeError:
+            self.parent_method_name = parent_method_row.method_name
+            self.parent_level = parent_method_row.level_name
+        except AttributeError:
             self.parent_method_name = ''
             self.parent_level = ''
         try:
-            self.superparent_method_name = superparent_method_row['name']
-        except TypeError:
+            self.superparent_method_name = superparent_method_row.name
+        except AttributeError:
             self.superparent_method_name = ''
         self.db.commit()
     

@@ -2,7 +2,11 @@
 # encoding: utf-8
 # Victor Amin 2013
 
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import argparse
+import codecs
 import os
 import sqlite3
 import sys
@@ -20,12 +24,14 @@ def main():
         try:
             os.remove(mess_db_path)
         except OSError:
-            print >> sys.stderr, mess_db_path + (' not deleted because '
-                                                 'it already does not exist')
+            print(mess_db_path + 
+                  ' not deleted because it already does not exist', 
+                  file=sys.stderr)
     mess_db_conn = sqlite3.connect(mess_db_path)
     c = mess_db_conn.cursor()
-    c.executescript(open(os.path.join(os.path.dirname(__file__), 
-                    '../../db/schema.sql')).read())  
+    c.executescript(codecs.open(os.path.join(os.path.dirname(__file__), 
+                                             '../../db/schema.sql'), 
+                                encoding='utf-8').read())  
 
 if __name__ == '__main__':
     main()
