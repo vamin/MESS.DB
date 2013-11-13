@@ -46,8 +46,8 @@ class Path(object):
         method['id'] = method_id
         method['name'] = r.name
         method['hash'] = r.hash
-        q = ('SELECT p.name, pp.setting FROM parameter p '
-             'JOIN program_parameter pp ON p.parameter_id = pp.parameter_id '
+        q = ('SELECT p.name, mp.setting FROM parameter p '
+             'JOIN method_parameter mp ON p.parameter_id = mp.parameter_id '
              'JOIN method_tag mt ON p.parameter_id = mt.parameter_id '
              'WHERE mt.method_id = ?')
         method['tags'] = []

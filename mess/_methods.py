@@ -93,14 +93,12 @@ class AbstractMethod(object):
     def insert_parameter(self, name, setting):
         q = ('INSERT OR IGNORE INTO parameter (name) VALUES (?)')
         r = self.c.execute(q, (name, ))
-        q = ('INSERT OR IGNORE INTO program_parameter '
-             '(program_id, parameter_id, setting) '
-             'SELECT program.program_id, parameter.parameter_id, ? '
+        q = ('INSERT OR IGNORE INTO method_parameter '
+             '(method_id, parameter_id, setting) '
+             'SELECT ?, parameter.parameter_id, ? '
              'FROM program, parameter '
-             'WHERE program.name=? AND program.version=? AND '
-             'parameter.name=?;')
-        return self.c.execute(q, (setting, self.prog_name, self.prog_version, 
-                                  name))
+             'WHERE parameter.name=?')
+        return self.c.execute(q, (self.method_id, setting, name))
 
     def insert_property(self, inchikey, method_path_id, 
                               name, description, 

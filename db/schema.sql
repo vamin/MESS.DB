@@ -65,7 +65,6 @@ CREATE TABLE IF NOT EXISTS
         url TEXT,
         UNIQUE(name, version)
     );
---CREATE UNIQUE INDEX IF NOT EXISTS ux_program_name ON program (name);
 
 --DROP TABLE parameter
 CREATE TABLE IF NOT EXISTS
@@ -75,15 +74,15 @@ CREATE TABLE IF NOT EXISTS
     );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_parameter_name ON parameter (name);
 
---DROP TABLE program_parameter;
+--DROP TABLE method_parameter;
 CREATE TABLE IF NOT EXISTS
-    program_parameter( --links methods to their parameters and records the parameter setting
-        program_id INTEGER NOT NULL,
-        --FOREIGN KEY(program_id) REFERENCES program(program_id),
+    method_parameter( --links methods to their parameters and records the parameter setting
+        method_id INTEGER NOT NULL,
+        --FOREIGN KEY(method_id) REFERENCES method(method_id),
         parameter_id INTEGER NOT NULL,
         --FOREIGN KEY(parameter_id) REFERENCES parameter(parameter_id),
         setting TEXT,
-        UNIQUE(program_id, parameter_id, setting)
+        UNIQUE(method_id, parameter_id, setting)
     );
 
 --DROP TABLE method;
