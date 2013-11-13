@@ -14,7 +14,7 @@ from _db import MessDB
 from _decorators import decorate, UnicodeDecorator
 from _paths import Path
 from _tools import AbstractTool
-from _utils import load_method
+from _utils import is_inchikey, load_method 
 
 decorate(pybel, UnicodeDecorator)
 
@@ -58,6 +58,8 @@ class Calculate(AbstractTool):
         method_args['path'] = p
         for row in args.inchikeys:
             method_args['inchikey'] = row.split()[0].strip()
+            if not is_inchikey(method_args['inchikey'], enforce_standard=True):
+                sys.exit(method_args['inchikey'] + ' is not a valid InChIKey.')
             status = m.execute(method_args)
             print(method_args['inchikey'] + ': ' + status)
         
