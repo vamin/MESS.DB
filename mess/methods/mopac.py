@@ -51,7 +51,7 @@ class Mopac(AbstractMethod):
     def execute(self, args):
         p = args['path']
         parent_method_dir = p.parent_method_dir
-        if parent_method_dir is None:
+        if parent_method_dir is '':
             sys.exit(('This method requires a parent path with a valid '
                       'xyz file (i.e., it cannot accept an InChI).'))
         method_dir = p.method_dir
@@ -79,21 +79,21 @@ class Mopac(AbstractMethod):
                  "WHERE p.name='charge' AND mpp.inchikey=?")
             r = self.c.execute(q, (inchikey,)).fetchone()
             keywords += 'CHARGE=' + str(r.charge)
-            subprocess.Popen(['obabel', '-ixyz', xyz_in, '-omop', 
-                              '-xk' + keywords], 
-                             stdout=codecs.open(mop_file, 'w', 'utf-8'), 
-                             stderr=codecs.open(os.devnull, 'w', 
-                                                'utf-8')).wait()
+            babel = subprocess.Popen(['obabel', '-ixyz', xyz_in, '-omop', 
+                                      '-xk' + keywords], 
+                                     stdout=codecs.open(mop_file, 'w', 
+                                                        'utf-8'), 
+                                     stderr=subprocess.PIPE)
+            babel_stderr = babel.stderr.read()
             pwd = os.getcwd()
             os.chdir(out_dir) # mopac unhappy if not run in same dir as input
             subprocess.Popen(['MOPAC2012.exe', inchikey + '.mop']).wait()
             os.chdir(pwd)
-            #subprocess.call(['obabel', '-imoo', os.path.relpath(os.path.join(out_dir, inchikey + '.out').encode("ascii")), '-oxyz'], stdout=open(xyz_out, 'w'))
-            # Open Babel prints input geometry instead of 
-            # the optimized for some reason. Ugh.
             self.moo_to_xyz(os.path.abspath(out_file), xyz_out)
             if self.check(out_file, xyz_out):
                 self.import_properties(inchikey, p.path_id, out_file)
+            else:
+                print(babel_stderr, sys.stderr)
         else:
             self.status = 'calculation skipped'
             self.import_properties(inchikey, p.path_id, out_file)
