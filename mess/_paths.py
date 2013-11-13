@@ -28,7 +28,6 @@ class Path(object):
             q = 'SELECT method_path_id FROM method_path WHERE length=?'
             r = self.c.execute(q, (0, )).fetchone()
             parent_path_id = r.method_path_id
-            # does not yet handle multiple import methods!
         # check if path exists, add if not
         self.path_id = self.insert_path(method, parent_method, parent_path_id, 
                                    path_length)
@@ -125,7 +124,7 @@ class Path(object):
             self.populate_edges(method['id'], parent_method['id'], path_id,
                                 parent_path_id, path_length)
         return path_id
-    
+
     def get_dir(self, method, parent_method, path_id):
         try:
             d = method['name']

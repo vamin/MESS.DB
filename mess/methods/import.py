@@ -30,7 +30,7 @@ class Import_(AbstractMethod):
     geop = 0
     # program info
     prog_name = 'Open Babel'
-    prog_version = pybel.ob.OBReleaseVersion()
+    prog_version = ''
     prog_url = 'http://openbabel.org/wiki/Main_Page'
     # parameters
     parameters = {}
