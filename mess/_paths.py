@@ -5,120 +5,80 @@ import sqlite3
 import sys
 
 class Path(object):
-    # After calling setup, the following attributes will be set:
-    # method_id
-    # path_id
-    # path_length
-    # parent_path_id
-    # parent_method_id
-    # parent_method_name
-    # parent_level
-    # superparent_method_id
-    # superparent_method_name
     def __init__(self, db):
         self.db = db
         self.c = db.cursor()
-    
-    def setup(self, method_id, parent_path_id = '', parent_method_name = None):
-        self.method_id = method_id
-        self.parent_path_id = parent_path_id
-        if (parent_method_name and parent_method_name == 'import'):
+
+    def setup(self, method_id, parent_path_id = ''):
+        method = self.setup_method(method_id)
+        if (parent_path_id):
+            (parent_method, 
+             superparent_method,
+             path_length) = self.setup_parent_path(parent_path_id)
+        elif (method['name'] == 'import'):
+            parent_method = method
+            superparent_method = {}
+            path_length = 0
+        else: # assume parent is import
             q = 'SELECT method_id, name FROM method WHERE name = ?'
-            import_method_row = self.c.execute(q, 
-                                               (parent_method_name,)
-                                               ).fetchone()
-            try:
-                self.path_length = 1
-                self.parent_method_name = import_method_row.name
-                self.parent_method_id = import_method_row.method_id
-                self.superparent_method_id = ''
-            except AttributeError:
-                sys.exit('It seems like import has not been run yet.')
-        elif (parent_path_id):
-            q = ('SELECT '
-                 'mp.length, '
-                 'me.parent_method_id, me.child_method_id, '
-                 'm.name method_name, '
-                 'l.name level_name '
-                 'FROM method_path mp '
-                 'JOIN method_path_edge mpe '
-                 'ON mpe.distance = mp.length AND '
-                 'mpe.method_path_id = mp.method_path_id '
-                 'JOIN method_edge me '
-                 'ON me.method_edge_id = mpe.method_edge_id '
-                 'JOIN method m ON me.child_method_id = m.method_id '
-                 'JOIN level l ON l.level_id = m.level_id '
-                 'WHERE mp.method_path_id= ?;')
-            parent_path_row = self.c.execute(q, 
-                                             (self.parent_path_id,)
-                                             ).fetchone()
-            try:
-                self.path_length = parent_path_row.length + 1
-                self.parent_method_name = parent_path_row.method_name
-                self.parent_method_id = parent_path_row.child_method_id
-                self.superparent_method_id = parent_path_row.parent_method_id
-            except AttributeError:
-                sys.exit(parent_path_id + (' is an invalid path id (i.e., '
+            r = self.c.execute(q, ('import',)).fetchone()
+            parent_method = self.setup_method(r.method_id)
+            superparent_method = {}
+            path_length = 1
+            q = 'SELECT method_path_id FROM method_path WHERE length=?'
+            r = self.c.execute(q, (0, )).fetchone()
+            parent_path_id = r.method_path_id
+            # does not yet handle multiple import methods!
+        # check if path exists, add if not
+        self.path_id = self.insert_path(method, parent_method, parent_path_id, 
+                                   path_length)
+        self.db.commit()
+        # set dir
+        self.method_dir = self.get_dir(method, parent_method, self.path_id)
+        # set parent dir
+        self.parent_method_dir = self.get_dir(parent_method, 
+                                              superparent_method,
+                                              parent_path_id)
+
+    def setup_method(self, method_id):
+        q = 'SELECT name, hash FROM method WHERE method_id = ?'
+        r = self.c.execute(q, (method_id, )).fetchone()
+        method = {}
+        method['id'] = method_id
+        method['name'] = r.name
+        method['hash'] = r.hash
+        q = ('SELECT p.name, pp.setting FROM parameter p '
+             'JOIN program_parameter pp ON p.parameter_id = pp.parameter_id '
+             'JOIN method_tag mt ON p.parameter_id = mt.parameter_id '
+             'WHERE mt.method_id = ?')
+        method['tags'] = []
+        for r in self.c.execute(q, (method_id, )).fetchall():
+            if (r.setting):
+                method['tags'].append(r.name + '=' + r.setting)
+            else:
+                method['tags'].append(r.name)
+        method['tags'].sort()
+        return method
+
+    def setup_parent_path(self, parent_path_id):
+        q = ('SELECT mp.length, me.parent_method_id, me.child_method_id, '
+             'm.hash hash '
+             'FROM method_path mp '
+             'JOIN method_path_edge mpe ON mpe.distance = mp.length AND '
+             'mpe.method_path_id = mp.method_path_id '
+             'JOIN method_edge me ON me.method_edge_id = mpe.method_edge_id '
+             'JOIN method m ON me.child_method_id = m.method_id '
+             'WHERE mp.method_path_id= ?')
+        r = self.c.execute(q, (parent_path_id, )).fetchone()
+        try:
+            path_length = r.length + 1
+            parent_method = self.setup_method(r.child_method_id)
+            superparent_method = self.setup_method(r.parent_method_id)
+            return (parent_method, superparent_method, path_length)
+        except AttributeError:
+            sys.exit(parent_path_id + (' is an invalid path id (i.e., '
                                            'it does not have a valid record '
                                            'in the database).'))
-        else: # path root (i.e. import)
-            self.path_length = 0
-            self.parent_method_name = ''
-            self.parent_method_id = method_id
-            self.superparent_method_id = ''
-        # check if path exists
-        q = ('SELECT method_path_id FROM method_path_parent '
-             'WHERE method_id=? AND parent_method_path_id=?')
-        method_path_parent_row = self.c.execute(q, 
-                                                (method_id, parent_path_id)
-                                                ).fetchone()
-        try:
-            self.path_id = method_path_parent_row.method_path_id
-        except AttributeError:
-            # insert new path
-            q = 'INSERT INTO method_path (length) VALUES (?);'
-            self.c.execute(q, (self.path_length,))
-            self.path_id = self.c.lastrowid
-            q = ('INSERT INTO method_path_parent '
-                 '(method_path_id, parent_method_path_id, method_id) '
-                 'VALUES (?, ?, ?);')
-            self.c.execute(q, 
-                           (self.path_id, self.parent_path_id, self.method_id))
-            # insert edges
-            self.insert_edges(self.method_id, self.parent_method_id)
-            # populate path edges
-            q = ('INSERT OR IGNORE INTO method_path_edge '
-                 '(method_path_id, method_edge_id, distance) '
-                 'SELECT ?, method_edge_id, distance '
-                 'FROM method_path_edge WHERE method_path_id = ? '
-                 'UNION ALL SELECT ?, method_edge_id, ? '
-                 'FROM method_edge '
-                 'WHERE parent_method_id = ? AND child_method_id = ?')
-            self.c.execute(q, (self.path_id, self.path_id, self.path_id, 
-                               self.path_length, self.parent_method_id, 
-                               self.method_id))
-        # get parent method name and level of theory
-        q = ('SELECT m.name method_name, l.name level_name '
-             'FROM method m JOIN level l ON l.level_id = m.level_id '
-             'WHERE m.method_id = ?')
-        parent_method_row = self.c.execute(q, 
-                                           (self.parent_method_id,)
-                                           ).fetchone()
-        q = 'SELECT name FROM method WHERE method_id = ?'
-        superparent_method_row = self.c.execute(q, 
-                                                (self.superparent_method_id,)
-                                                ).fetchone()
-        try:
-            self.parent_method_name = parent_method_row.method_name
-            self.parent_level = parent_method_row.level_name
-        except AttributeError:
-            self.parent_method_name = ''
-            self.parent_level = ''
-        try:
-            self.superparent_method_name = superparent_method_row.name
-        except AttributeError:
-            self.superparent_method_name = ''
-        self.db.commit()
     
     def insert_edges(self, child_method_id, parent_method_id):
         q = ('INSERT OR IGNORE INTO method_edge '
@@ -127,3 +87,54 @@ class Path(object):
              'WHERE child_method_id = ? UNION ALL SELECT ?, ?;')
         return self.c.execute(q, (child_method_id, parent_method_id, 
                                   child_method_id, child_method_id))
+
+    def populate_edges(self, method_id, parent_method_id, path_id, 
+                       parent_path_id, path_length):
+        q = ('INSERT OR IGNORE INTO method_path_edge '
+             '(method_path_id, method_edge_id, distance) '
+             'SELECT ?, method_edge_id, distance '
+             'FROM method_path_edge WHERE method_path_id = ? '
+             'UNION ALL SELECT ?, method_edge_id, ? '
+             'FROM method_edge '
+             'WHERE parent_method_id = ? AND child_method_id = ? '
+             'UNION ALL SELECT ?, method_edge_id, distance '
+             'FROM method_path_edge WHERE method_path_id = ?')
+        return self.c.execute(q, (path_id, path_id, path_id, path_length, 
+                                  parent_method_id, method_id, path_id, 
+                                  parent_path_id))
+
+    def insert_path(self, method, parent_method, parent_path_id, path_length):
+        # check if path exists
+        q = ('SELECT method_path_id FROM method_path_parent '
+             'WHERE method_id=? AND parent_method_path_id=?')
+        r = self.c.execute(q, (method['id'], parent_path_id)).fetchone()
+        try:
+            path_id = r.method_path_id
+        except AttributeError:
+            # insert new path
+            q = 'INSERT INTO method_path (length) VALUES (?);'
+            self.c.execute(q, (path_length,))
+            path_id = self.c.lastrowid
+            q = ('INSERT INTO method_path_parent '
+                 '(method_path_id, parent_method_path_id, method_id) '
+                 'VALUES (?, ?, ?);')
+            self.c.execute(q, (path_id, parent_path_id, method['id']))
+            # insert edges
+            self.insert_edges(method['id'], parent_method['id'])
+            # populate path edges
+            self.populate_edges(method['id'], parent_method['id'], path_id,
+                                parent_path_id, path_length)
+        return path_id
+    
+    def get_dir(self, method, parent_method, path_id):
+        try:
+            d = method['name']
+            if (method['tags']):
+                d += '_' + '_'.join(method['tags'])
+            d += '_' + method['hash'][:7] + '_FROM_' + parent_method['name']
+            if (parent_method['tags']):
+                d += '_'.join(parent_method['tags'])
+            d += '_' + parent_method['hash'][:7] + '_PATH_' + str(path_id)
+            return d
+        except KeyError:
+            return ''

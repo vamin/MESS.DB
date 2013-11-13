@@ -5,6 +5,8 @@ import collections
 import functools
 import inspect
 
+from _utils import unicode_replace
+
 def decorate(object_, decorator):
     """Apply a decorator to all callable functions of an object.
 
@@ -29,8 +31,8 @@ def decorate(object_, decorator):
 
 
 class UnicodeDecorator(object):
-    """Make sure that unicode inputs are encoded and that all return values are
-    converted back to unicode.
+    """Make sure that unicode inputs are encoded and that all return values 
+    are converted back to unicode.
 
     """
     def __init__(self, func):
@@ -45,7 +47,7 @@ class UnicodeDecorator(object):
         functools.update_wrapper(self, func)
 
     def __call__(self, *args, **kwargs):
-        """Decorated (i.e. converted to unicode) function output.
+        """Call decorated (i.e. converted to unicode) function.
 
         Args:
             *args: Arguments of func which will be converted to bytes.
@@ -74,26 +76,9 @@ class UnicodeDecorator(object):
                 encoded_kwargs[encoded_k] = v
         r = self.func(*encoded_args, **encoded_kwargs)
         if isinstance(r, (list, set)):
-            r = type(r)(map(self.unicode_replace, r))
+            r = type(r)(map(unicode_replace, r))
         elif isinstance(r, collections.Mapping):
-            r = dict(map(self.unicode_replace, r.iteritems()))
+            r = dict(map(unicode_replace, r.iteritems()))
         elif isinstance(r, str):
-            r = self.unicode_replace(r)
+            r = unicode_replace(r)
         return r
-
-    def unicode_replace(self, x, enc='utf-8', err='replace'):
-        """Convert str to unicode.
-
-        Args:
-            x: A string.
-            enc: Encoding of input string, defaults to 'utf-8'.
-            err: What to do on unicode conversion error, defaults to 'replace'.
-
-        Returns:
-            Unicode string if x is str, x otherwise.
-
-        """
-        if isinstance(x, str):
-            return unicode(x, enc, err)
-        else:
-            return x

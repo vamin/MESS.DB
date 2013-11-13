@@ -6,31 +6,36 @@ import os
 import sys
 from datetime import datetime
 
+from _utils import hash_dict
+
 class AbstractMethod(object):
-    # all tools should inherit from this class
+    """All methods should inherit from this class."""
     def __init__(self, db):
         self.db = db
         self.c = db.cursor()
+        self.method_name = self.get_method_name()
         self.status = 'not set'
         self.is_setup = False
         try:
-            self.method_name
-            self.method_description
-            self.method_level # level of theory (e.g. dft, semiempirical, etc.)
+            self.description
             self.geop # flag indicates method results in new xyz coordinates
             self.prog_name
             self.prog_version
             self.prog_url
+            self.parameters
+            self.tags
         except AttributeError as e:
             print(''.join([str(e), '\n']), file=sys.stderr)
-            sys.exit(('Each method class needs to define method_name, '
-                      'method_description, method_level, geop, prog_name, '
-                      'prog_version, and prog_url as attributes.'))
+            sys.exit(('Each method class needs to define description, geop, '
+                      'prog_name, prog_version, prog_url, '
+                      'parameters, tags as attributes.'))
         self.check_dependencies()
+        self.setup()
     
     def setup(self):
         if not self.is_setup:
             self.setup_method()
+            self.set_method_id()
             self.setup_parameters()
             self.db.commit()
             self.is_setup = True
@@ -58,27 +63,12 @@ class AbstractMethod(object):
         # and to record method-specific messages into the method log
         raise NotImplementedError("every method needs a 'log' method")
     
-    def setup_parameters(self):
-        # this method sets up parameters
-        raise NotImplementedError(("every method needs a 'setup_parameters' "
-                                   'method'))
-        self.db.commit() # make sure you implement commit
-    
     def import_properties(self):
         # this method reads molecule-proprty values from calc
         # into db
         raise NotImplementedError(("every method needs an 'import_properties' "
                                    'method'))
         self.db.commit() # make sure you implement commit
-    
-    def get_inchikey_dir(self, inchikey):
-        molecules_dir = os.path.join(os.path.dirname(__file__), '../molecules/')
-        return os.path.abspath(os.path.join(molecules_dir, inchikey[:1], 
-                               inchikey[1:3], inchikey[3:]))
-    
-    def setup_dir(self, directory):
-        if not os.path.isdir(directory):
-            os.makedirs(directory)
     
     def add_messages_to_log(self, log_path, method_name, messages):
         log = codecs.open(log_path, 'a', 'utf-8')
@@ -93,67 +83,72 @@ class AbstractMethod(object):
         log.write('-' * 79)
         log.write('\n')
         log.close()
-    
-    def setup_method(self):
-        self.insert_program()
-        self.insert_theory_level()
-        q = ('INSERT OR IGNORE INTO method '
-             '(level_id, program_id, geop, name, description) '
-             'SELECT level.level_id, program.program_id, ?, ?, ? '
-             'FROM level, program '
-             'WHERE level.name=? AND program.name=? AND program.version=?;')
-        return self.c.execute(q, (self.geop, self.method_name, 
-                                  self.method_description, self.method_level, 
-                                  self.prog_name, self.prog_version))
-            
+
     def insert_program(self):
         q = ('INSERT OR IGNORE INTO program (name, version, url) '
-             'VALUES (?, ?, ?);')
+             'VALUES (?, ?, ?)')
         return self.c.execute(q, (self.prog_name, self.prog_version, 
                                   self.prog_url))
-    
-    def insert_theory_level(self):
-        q = 'INSERT OR IGNORE INTO level (name) VALUES (?);'
-        return self.c.execute(q, (self.method_level,))
-    
-    def insert_parameter(self, parameter_name, parameter_description):
-        q = ('INSERT OR IGNORE INTO parameter (name, description) '
-             'VALUES (?, ?);')
-        return self.c.execute(q, (parameter_name, parameter_description))
-    
-    def insert_method_parameter(self, parameter_name, parameter_setting, 
-                                parameter_description=''):
-        self.insert_parameter(parameter_name, parameter_description)
-        q = ('INSERT OR IGNORE INTO method_parameter '
-             '(method_id, parameter_id, setting) '
-             'SELECT method.method_id, parameter.parameter_id, ? '
-             'FROM method, parameter '
-             'WHERE method.name=? AND parameter.name=?;')
-        return self.c.execute(q, (parameter_setting, self.method_name, 
-                                  parameter_name))
-    
-    def insert_property(self, name, description, format):
+
+    def insert_parameter(self, name, setting):
+        q = ('INSERT OR IGNORE INTO parameter (name) VALUES (?)')
+        r = self.c.execute(q, (name, ))
+        q = ('INSERT OR IGNORE INTO program_parameter '
+             '(program_id, parameter_id, setting) '
+             'SELECT program.program_id, parameter.parameter_id, ? '
+             'FROM program, parameter '
+             'WHERE program.name=? AND program.version=? AND '
+             'parameter.name=?;')
+        return self.c.execute(q, (setting, self.prog_name, self.prog_version, 
+                                  name))
+
+    def insert_property(self, inchikey, method_path_id, 
+                              name, description, 
+                              format, value, units):
         q = ('INSERT OR IGNORE INTO property (name, description, format) '
              'VALUES (?, ?, ?);')
-        return self.c.execute(q, (name, description, format))
-    
-    def insert_property_value(self, inchikey, method_path_id, 
-                              property_name, property_description, 
-                              property_format, value, units):
-        self.insert_property(property_name, property_description, 
-                             property_format)
+        r = self.c.execute(q, (name, description, format))
         q = ('INSERT OR REPLACE INTO molecule_method_property '
              '(inchikey, method_path_id, property_id, units, result) '
              'SELECT ?, ?, property.property_id, ?, ? '
              'FROM property '
              'WHERE '
-             'property.name=? AND property.description=? AND property.format=?')
+             'property.name=? AND property.description=? AND '
+             'property.format=?')
         return self.c.execute(q, (inchikey, method_path_id, units, 
-                                  value, property_name, property_description, 
-                                  property_format))
+                                  value, name, description, format))
+
+    def insert_tags(self):
+        q = ('INSERT OR IGNORE INTO method_tag (method_id, parameter_id) '
+             'SELECT ?, parameter.parameter_id FROM parameter '
+             'WHERE parameter.name= ?')
+        for t in self.tags:
+            self.c.execute(q, (self.method_id, t))
+
+    def setup_parameters(self):
+        for k, v in self.parameters.items():
+            self.insert_parameter(k, v)
+        self.insert_tags()
     
-    def get_method_id(self):
+    def setup_method(self):
+        self.insert_program()
+        self.param_hash = hash_dict(self.parameters)
+        name = self.get_method_name()
+        q = ('INSERT OR IGNORE INTO method '
+             '(program_id, geop, name, hash) '
+             'SELECT program.program_id, ?, ?, ? '
+             'FROM program '
+             'WHERE program.name=? AND program.version=?')
+        return self.c.execute(q, (self.geop, name, self.param_hash, 
+                                  self.prog_name, self.prog_version))
+    
+    def set_method_id(self):
         q = ('SELECT method_id FROM method '
-             'WHERE method.name = ?;')
-        row = self.c.execute(q, (self.method_name,)).fetchone()
-        return row.method_id
+             'WHERE hash = ?;')
+        row = self.c.execute(q, (self.param_hash,)).fetchone()
+        self.method_id = row.method_id
+
+    @classmethod
+    def get_method_name(cls):
+        """Return the name of the method, derived from the subclass name."""
+        return cls.__name__.replace('_', '').lower()

@@ -12,13 +12,12 @@ import subprocess
 import sys
 
 from _methods import AbstractMethod
+from _utils import get_inchikey_dir, setup_dir
 
-class Method(AbstractMethod):
+class Mopac(AbstractMethod):
     # method info
-    method_name = 'pm7_mopac2012'
-    method_description = ('precise pm7 geometry optimization, '
-                          'energies, and bond order analysis using mopac')
-    method_level = 'semiempirical'
+    description = ('semiempirical geometry optimization, energies, and bond '
+                   'order analysis')
     geop = 1
     # program info
     prog_name = 'MOPAC'
@@ -36,6 +35,7 @@ class Method(AbstractMethod):
                   'MMOK': '',
                   'DDMIN': 0.0,
                   'T': '1W'}
+    tags = ['PM7']
     threads = 1
     
     def check_dependencies(self):
@@ -49,16 +49,16 @@ class Method(AbstractMethod):
         return True
 
     def execute(self, args):
-        if args['parent_method_dir'] is None:
+        p = args['path']
+        parent_method_dir = p.parent_method_dir
+        if parent_method_dir is None:
             sys.exit(('This method requires a parent path with a valid '
                       'xyz file (i.e., it cannot accept an InChI).'))
+        method_dir = p.method_dir
         inchikey = args['inchikey']
-        method_dir = args['method_dir']
-        parent_method_dir = args['parent_method_dir']
-        p = args['path']
-        inchikey_dir = self.get_inchikey_dir(inchikey)
+        inchikey_dir = get_inchikey_dir(inchikey)
         out_dir = os.path.realpath(os.path.join(inchikey_dir, method_dir))
-        self.setup_dir(out_dir)
+        setup_dir(out_dir)
         mop_file = os.path.join(out_dir, inchikey + '.mop')
         out_file = os.path.join(out_dir, inchikey + '.out')
         xyz_in = os.path.abspath(os.path.join(inchikey_dir, parent_method_dir, 
@@ -82,7 +82,8 @@ class Method(AbstractMethod):
             subprocess.Popen(['obabel', '-ixyz', xyz_in, '-omop', 
                               '-xk' + keywords], 
                              stdout=codecs.open(mop_file, 'w', 'utf-8'), 
-                             stderr=codecs.open(os.devnull, 'w', 'utf-8')).wait()
+                             stderr=codecs.open(os.devnull, 'w', 
+                                                'utf-8')).wait()
             pwd = os.getcwd()
             os.chdir(out_dir) # mopac unhappy if not run in same dir as input
             subprocess.Popen(['MOPAC2012.exe', inchikey + '.mop']).wait()
@@ -134,22 +135,17 @@ class Method(AbstractMethod):
     
     def log(self, args, inchikey_dir):
         base_log_path = os.path.join(inchikey_dir, args['inchikey'] + '.log')
-        method_log_path = os.path.join(inchikey_dir, args['method_dir'], 
+        method_log_path = os.path.join(inchikey_dir, args['path'].method_dir, 
                                        args['inchikey'] + '.log')
         self.add_messages_to_log(base_log_path, self.method_name, 
                                  ['status: ' + self.status])
         self.add_messages_to_log(method_log_path, self.method_name, 
                                  ['status: ' + self.status])
-
-    def setup_parameters(self):
-        for k, v in self.parameters.items():
-            self.insert_method_parameter(k, v)
     
     def import_properties(self, inchikey, method_path_id, moo_out):
         try: # moo check
             with codecs.open(moo_out, encoding='utf-8') as f:
                 # parse out properties
-                print(inchikey)
                 for line in f:
                     if ('FINAL HEAT OF FORMATION' in line):
                         s = line.split()
@@ -191,11 +187,11 @@ class Method(AbstractMethod):
                      ' to be a valid path. Check method code.')
         # insert properties into db
         try:
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'HEAT OF FORMATION', 'MOPAC property', 'float',
                 heat_of_formation_kcal, 'kcal/mol')
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'HEAT OF FORMATION', 'MOPAC property', 'float',
                 heat_of_formation_kJ, 'kJ/mol')
@@ -203,7 +199,7 @@ class Method(AbstractMethod):
             print(e, sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'TOTAL ENERGY', 'MOPAC property', 'float',
                 total_energy, 'eV')
@@ -211,7 +207,7 @@ class Method(AbstractMethod):
             print(e, sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'ELECTRONIC ENERGY', 'MOPAC property', 'float',
                 electronic_energy, 'eV')
@@ -219,7 +215,7 @@ class Method(AbstractMethod):
             print(e, sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'POINT GROUP', 'MOPAC property', 'str',
                 point_group, '')
@@ -227,7 +223,7 @@ class Method(AbstractMethod):
             print(e, sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'CORE-CORE REPULSION', 'MOPAC property', 'float',
                 core_repulsion, 'eV')
@@ -235,11 +231,11 @@ class Method(AbstractMethod):
             print(e, sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'COSMO AREA', 'MOPAC property', 'float',
                 cosmo_area, 'A^2')
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'COSMO VOLUME', 'MOPAC property', 'float',
                 cosmo_volume, 'A^3')
@@ -247,7 +243,7 @@ class Method(AbstractMethod):
             print(e, sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'GRADIENT NORM', 'MOPAC property', 'float',
                 gradient_norm, '')
@@ -255,7 +251,7 @@ class Method(AbstractMethod):
             print(e, sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'IONIZATION POTENTIAL', 'MOPAC property', 'float',
                 ionization_potential, 'eV')
@@ -263,11 +259,11 @@ class Method(AbstractMethod):
             print(e, sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'HOMO', 'MOPAC property', 'float',
                 homo, 'eV')
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'LUMO', 'MOPAC property', 'float',
                 lumo, 'eV')
@@ -275,7 +271,7 @@ class Method(AbstractMethod):
             print(e, sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 'FILLED LEVELS', 'MOPAC property', 'int',
                 filled_levels, '')
@@ -314,3 +310,8 @@ class Method(AbstractMethod):
                         for a in xyz_coords:
                             x.write("\t".join(a) + "\n")
                     break
+
+
+def load(db):
+    # loads the current plugin
+    return Mopac(db)

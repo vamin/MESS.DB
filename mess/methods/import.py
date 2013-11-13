@@ -20,19 +20,21 @@ from _decorators import decorate, UnicodeDecorator
 from _methods import AbstractMethod
 from _paths import Path
 from _sources import Source
+from _utils import get_inchikey_dir, setup_dir, touch
 
 decorate(pybel, UnicodeDecorator)
 
-class Method(AbstractMethod):
+class Import_(AbstractMethod):
     # method info
-    method_name = 'import'
-    method_description = 'initial import'
-    method_level = ''
+    description = 'initial import'
     geop = 0
     # program info
     prog_name = 'Open Babel'
-    prog_version = ''
+    prog_version = pybel.ob.OBReleaseVersion()
     prog_url = 'http://openbabel.org/wiki/Main_Page'
+    # parameters
+    parameters = {}
+    tags = []
 
     def check_dependencies(self):
         return True
@@ -43,9 +45,9 @@ class Method(AbstractMethod):
         s = args['source']
         p = args['path']
         skip_cir = args['skip_cir']
-        inchikey_dir = self.get_inchikey_dir(inchikey)
+        inchikey_dir = get_inchikey_dir(inchikey)
         inchikey_basename = os.path.join(inchikey_dir, inchikey)
-        self.setup_dir(inchikey_dir)
+        setup_dir(inchikey_dir)
         try:
             identifier = args['parent']
         except KeyError:
@@ -60,9 +62,9 @@ class Method(AbstractMethod):
             if not os.path.exists(inchikey_basename + '.png'):
                 mol.write('_png2', 
                           (inchikey_basename + '.png'))
-            self.touch(inchikey_basename + '.log')
-            self.touch(inchikey_basename + '.notes')
-            self.touch(os.path.join(inchikey_dir, 'sources.tsv'))
+            touch(inchikey_basename + '.log')
+            touch(inchikey_basename + '.notes')
+            touch(os.path.join(inchikey_dir, 'sources.tsv'))
             # insert molecule to db
             self.update_molecule(inchikey, mol, skip_cir)
             self.import_properties(inchikey, p.path_id, mol)
@@ -127,32 +129,29 @@ class Method(AbstractMethod):
                                  ['status: ' + self.status])
         pybel.ob.obErrorLog.ClearLog()
     
-    def setup_parameters(self):
-        pass
-    
     def import_properties(self, inchikey, method_path_id, mol):
         # insert Open Babel descriptors
         for property_name, property_value in mol.calcdesc().iteritems():
             if (math.isnan(property_value)):
                 continue
-            self.insert_property_value(
+            self.insert_property(
                 inchikey, method_path_id,
                 property_name, 'Open Babel descriptor value', 
                 type(property_value).__name__, property_value, '')
         # insert Open Babel molecule attributes
-        self.insert_property_value(
+        self.insert_property(
             inchikey, method_path_id,
             'charge', 'Open Babel molecule attribute', 
             type(mol.charge).__name__, mol.charge, '')
-        self.insert_property_value(
+        self.insert_property(
             inchikey, method_path_id,
             'exactmass', 'Open Babel molecule attribute', 
             type(mol.exactmass).__name__, mol.exactmass, 'g/mol')
-        self.insert_property_value(
+        self.insert_property(
             inchikey, method_path_id,
             'molwt', 'Open Babel descriptor value', type(mol.molwt).__name__,
             mol.molwt, 'g/mol')
-        self.insert_property_value(
+        self.insert_property(
             inchikey, method_path_id,
             'spin', 'Open Babel descriptor value', type(mol.spin).__name__,
             mol.spin, '')
@@ -205,13 +204,6 @@ class Method(AbstractMethod):
             for synonym in (synonyms.split("\n")):
                 self.c.execute(q, (inchikey, synonym))
     
-    def touch(self, fname, times=None):
-        fhandle = file(fname, 'a')
-        try:
-            os.utime(fname, times)
-        finally:
-            fhandle.close()
-    
     def cir_request(self, inchikey, representation):
         try:
             if not self.cir:
@@ -232,3 +224,8 @@ class Method(AbstractMethod):
                        'or other synonyms.'), file=sys.stderr)
                 self.cir = False
         return None
+
+
+def load(db):
+    # loads the current plugin
+    return Import_(db)

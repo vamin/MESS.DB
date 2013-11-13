@@ -4,7 +4,7 @@ uncommenting the foreign key declarations is recommended.
 */
 
 /*
-Describing molecules, their names, and where to get them.
+Describing molecules, their names, and where to get them
 */
 
 --DROP TABLE molecule;
@@ -53,16 +53,8 @@ CREATE TABLE IF NOT EXISTS
 CREATE INDEX IF NOT EXISTS ix_molecule_souce_identifier ON molecule_source (identifier);
 
 /*
-Describing methods to calculate properties of molecules and their relationships.
+Describing methods to calculate properties of molecules
 */
-
---DROP TABLE level;
-CREATE TABLE IF NOT EXISTS
-    level( --level of theory, used to classify methods
-        level_id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL --e.g. empirical, semiempirical, dft, hf, etc
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_level_name ON level (name);
 
 --DROP TABLE program;
 CREATE TABLE IF NOT EXISTS
@@ -75,37 +67,50 @@ CREATE TABLE IF NOT EXISTS
     );
 --CREATE UNIQUE INDEX IF NOT EXISTS ux_program_name ON program (name);
 
+--DROP TABLE parameter
+CREATE TABLE IF NOT EXISTS
+    parameter( --description of parameters that are specified in programs
+        parameter_id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL
+    );
+CREATE UNIQUE INDEX IF NOT EXISTS ux_parameter_name ON parameter (name);
+
+--DROP TABLE program_parameter;
+CREATE TABLE IF NOT EXISTS
+    program_parameter( --links methods to their parameters and records the parameter setting
+        program_id INTEGER NOT NULL,
+        --FOREIGN KEY(program_id) REFERENCES program(program_id),
+        parameter_id INTEGER NOT NULL,
+        --FOREIGN KEY(parameter_id) REFERENCES parameter(parameter_id),
+        setting TEXT,
+        UNIQUE(program_id, parameter_id, setting)
+    );
+
 --DROP TABLE method;
 CREATE TABLE IF NOT EXISTS
     method( --methods for calculating properties
         method_id INTEGER PRIMARY KEY,
-        level_id INTEGER,
-        --FOREIGN KEY(level_id) REFERENCES level(level_id),
         program_id INTEGER,
         --FOREIGN KEY(program_id) REFERENCES program(program_id),
+        name TEXT,
         geop INTEGER, --flag, indicates whether method generates new geometry
-        name TEXT NOT NULL,
-        description TEXT
+        hash TEXT NOT NULL --sha1 hash of program parameter settings
     );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_method_name ON method (name);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_method_hash ON method (hash);
 
---DROP TABLE parameter
+--DROP TABLE method_tags;
 CREATE TABLE IF NOT EXISTS
-    parameter( --description of parameters that are specified in methods
-        parameter_id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        description TEXT
-    );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_parameter_name ON parameter (name);
-
---DROP TABLE method_parameter;
-CREATE TABLE IF NOT EXISTS
-    method_parameter( --links methods to their parameters and records the parameter setting
-        method_id INTEGER NOT NULL,
-        parameter_id INTEGER NOT NULL,
-        setting TEXT,
+    method_tag(
+        method_id INTEGER,
+        --FOREIGN KEY(parent_method_id) REFERENCES method(method_id),
+        parameter_id INTEGER,
+        --FOREIGN KEY(parameter_id) REFERENCES parameter(parameter_id),
         UNIQUE(method_id, parameter_id)
     );
+
+/*
+Describing method relationships.
+*/
 
 --DROP TABLE method_edge;
 CREATE TABLE IF NOT EXISTS
@@ -149,7 +154,7 @@ CREATE TABLE IF NOT EXISTS
     );
 
 /*
-Describing properties of molecules.
+Describing properties of molecules
 */
 
 --DROP TABLE property;

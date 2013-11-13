@@ -5,7 +5,6 @@ import argparse
 import imp
 import os
 import sqlite3
-import subprocess
 import sys
 from distutils.version import LooseVersion
 
@@ -14,8 +13,9 @@ import pybel
 from _db import MessDB
 from _decorators import decorate, UnicodeDecorator
 from _paths import Path
-from _tools import AbstractTool
 from _sources import Source
+from _tools import AbstractTool
+from _utils import is_inchikey, load_method
 
 decorate(pybel, UnicodeDecorator)
 
@@ -34,36 +34,26 @@ class Import(AbstractTool):
 
     def check_dependencies(self):
         try:
-            babel = subprocess.Popen(['babel', '-V'], 
-                                     stdout=subprocess.PIPE, 
-                                     stderr=subprocess.PIPE)
-            babel_version = babel.stdout.read().split()[2]
-            if (LooseVersion(babel_version) < LooseVersion('2.3.0')):
+            if (LooseVersion(pybel.ob.OBReleaseVersion()) < 
+                LooseVersion('2.3.0')):
                 sys.exit(('This tool requires Open Babel (and its python '
-                         'module, pybel) version >=2.3.0.'))
+                          'module, pybel) version >=2.3.0.'))
         except OSError:
             sys.exit(('This tool requires Open Babel (and its python module, '
                       'pybel) version >=2.3.0.'))
         return True
     
     def execute(self, args):
-        self.db = MessDB()
-        self.c = self.db.cursor()
+        db = MessDB()
+        c = db.cursor()
         # setup import method
-        try:
-            method = imp.load_source('method', 
-                                     os.path.join(os.path.dirname( __file__ ), 
-                                     '..', 'methods', 'import', 'method.py'))
-        except IOError:
-            sys.exit("Can't find 'import' method in the 'methods' directory.")
-        m = method.Method(self.db)
-        m.setup()
+        m = load_method('import', db)
         # setup source
-        s = Source(self.db)
+        s = Source(db)
         s.setup(args.source)
         # setup path
-        p = Path(self.db)
-        p.setup(m.get_method_id())
+        p = Path(db)
+        p.setup(m.method_id)
         # turn off pybel logging
         pybel.ob.obErrorLog.StopLogging()
         for f in s.files():
@@ -91,7 +81,7 @@ class Import(AbstractTool):
                         pybel.ob.obErrorLog.ClearLog()
                         pybel.ob.obErrorLog.StartLogging()
                         frag_inchikey = frag.write('inchikey').rstrip()
-                        if not s.is_inchikey(frag_inchikey):
+                        if not is_inchikey(frag_inchikey):
                             print("'" + f + "' is not an importable " +
                                   'molecule.\n', file=sys.stderr)
                             continue
@@ -102,7 +92,7 @@ class Import(AbstractTool):
                         method_args['inchikey'] = frag_inchikey
                         method_args['mol'] = frag
                     else:
-                        if not s.is_inchikey(inchikey):
+                        if not is_inchikey(inchikey):
                             print("'" + f + "' is not an importable " +
                                   'molecule.\n', file=sys.stderr)
                             continue

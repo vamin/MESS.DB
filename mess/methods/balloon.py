@@ -18,38 +18,47 @@ import pybel
 
 from _decorators import decorate, UnicodeDecorator
 from _methods import AbstractMethod
+from _utils import get_inchikey_dir, setup_dir
 
 decorate(pybel, UnicodeDecorator)
 
-class Method(AbstractMethod):
+class Balloon(AbstractMethod):
     # method info
-    method_name = 'balloon141'
-    method_description = 'generate 3d structures from InChI with balloon'
-    method_level = 'mm'
+    description = 'generate 3d structures from InChI with balloon'
     geop = 1
     # program info
     prog_name = 'Balloon'
-    prog_version = '1.4.1'
+    prog_version = '' # set dynamically by property method
     prog_url = 'http://users.abo.fi/mivainio/balloon/'
+    # parameters
+    parameters = {'-v': '1',
+                  '--maxtime': '1024',
+                  '--nGenerations': '1024',
+                  '--singleconf': '',
+                  '--randomSeed': '>>>crc32(inchikey)',
+                  ">>>pybel mol.localopt(forcefield='uff', steps=128)": ''}
+    tags = []
 
-    def check_dependencies(self):
+    @property
+    def prog_version(self):
         try:
             balloon = subprocess.Popen(['balloon'], stdout=subprocess.PIPE, 
                                        stderr=subprocess.PIPE)
-            balloon_version = balloon.stdout.read().split()[2]
-            if (LooseVersion(balloon_version) < LooseVersion('1.4.1')):
-                sys.exit("Balloon version must be >=1.4.1.")
+            return balloon.stdout.read().split()[2]
         except OSError:
             sys.exit('The ' + self.method_name + ' method requires balloon (' + 
                      self.prog_url + ').')
+
+    def check_dependencies(self):
+        # setting prog_version checks for Balloon
         return True
     
     def execute(self, args):
         inchikey = args['inchikey']
-        method_dir = args['method_dir']
-        inchikey_dir = self.get_inchikey_dir(inchikey)
+        method_dir = args['path'].method_dir
+        inchikey_dir = get_inchikey_dir(inchikey)
         out_dir = os.path.realpath(os.path.join(inchikey_dir, method_dir))
-        self.setup_dir(out_dir)
+        setup_dir(out_dir)
         xyz_out = os.path.join(out_dir, inchikey + '.xyz')
         sdf_out = os.path.realpath(os.path.join(inchikey_dir, method_dir, 
                                                 inchikey + '.sdf'))
@@ -66,11 +75,15 @@ class Method(AbstractMethod):
                 os.remove(sdf_out)
             except OSError:
                 pass
-            balloon = subprocess.Popen(['balloon', '-v', '1', '--maxtime', 
-                                        '1024', '--randomSeed', str(seed), 
-                                        '--nGenerations', '1024', 
-                                        '--singleconf', '--fullforce', 
-                                        row.smiles, sdf_out], 
+            balloon_cmd = ['balloon']
+            for k, v in self.parameters.items():
+                if k.startswith('>>>') or v.startswith('>>>'):
+                    continue
+                balloon_cmd.append(k)
+                if (v):
+                    balloon_cmd.append(v)
+            balloon_cmd += ['--randomSeed', str(seed), row.smiles, sdf_out]
+            balloon = subprocess.Popen(balloon_cmd, 
                                        stdout=subprocess.PIPE, 
                                        stderr=subprocess.PIPE)
             balloon_stdout = balloon.stdout.read()
@@ -113,7 +126,7 @@ class Method(AbstractMethod):
     
     def log(self, args, inchikey_dir, messages):
         base_log_path = os.path.join(inchikey_dir, args['inchikey'] + '.log')
-        method_log_path = os.path.join(inchikey_dir, args['method_dir'], 
+        method_log_path = os.path.join(inchikey_dir, args['path'].method_dir, 
                                        args['inchikey'] + '.log')
         self.add_messages_to_log(base_log_path, self.method_name, 
                                  ['status: ' + self.status])
@@ -121,14 +134,10 @@ class Method(AbstractMethod):
             self.add_messages_to_log(method_log_path, self.method_name, 
                                      messages)
     
-    def setup_parameters(self):
-        self.insert_method_parameter('-v', '1')
-        self.insert_method_parameter('--maxtime', '1024')
-        self.insert_method_parameter('--randomSeed', 'crc32(inchikey)')
-        self.insert_method_parameter('--nGenerations', '1024')
-        self.insert_method_parameter('--singleconf', '')
-        self.insert_method_parameter("pybel mol.localopt(forcefield='uff', \
-                                     steps=128)", '')
-        
     def import_properties(self):
         pass
+
+
+def load(db):
+    # loads the current plugin
+    return Balloon(db)

@@ -62,13 +62,6 @@ class Remove(AbstractTool):
             print('\n', file=sys.stderr)
 
 
-
-    # dirty! need to set up a separate class for helper code like this
-    def get_inchikey_dir(self, inchikey):
-        molecules_dir = os.path.join(os.path.dirname(__file__), '../molecules/')
-        return os.path.relpath(os.path.join(molecules_dir, inchikey[:1], 
-                               inchikey[1:3], inchikey[3:]))
-
 def load():
     # loads the current plugin
     return Remove()

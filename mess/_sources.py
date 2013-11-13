@@ -85,17 +85,3 @@ class Source(object):
                     sid_url = source_identifier_url.encode('ascii', 'replace')
                     sources_out.writerow([self.name, self.dirname, identifier, 
                                           sid_url])
-
-    def is_inchikey(self, inchikey):
-        if ('=' in inchikey):
-            inchikey = inchikey.split('=')[1]
-        if (len(inchikey) == 27):
-            s = inchikey.split('-')
-            try:
-                if (len(s[0]) == 14 and len(s[1]) == 10 and len(s[2]) == 1):
-                    if (s[0].isalpha() and s[1].isalpha() and s[2].isalpha()):
-                        if (s[1][-2] == 'S'):
-                            return True
-            except IndexError:
-                pass
-        return False

@@ -10,6 +10,7 @@ import sys
 
 from _db import MessDB
 from _tools import AbstractTool
+from _utils import xstr
 
 class Select(AbstractTool):
     def __init__(self):
@@ -63,12 +64,7 @@ class Select(AbstractTool):
                 (args.subset and row[0].startswith(args.subset)) or 
                 (args.regex_subset and re.match(args.regex_subset, row[0], 
                                                 re.IGNORECASE))):
-                writer.writerow(list(self.xstr(v).decode('utf-8') for v in row))
-
-    def xstr(self, s):
-        if s is None:
-            return ''
-        return str(s)
+                writer.writerow(list(xstr(v).decode('utf-8') for v in row))
 
 
 def load():
