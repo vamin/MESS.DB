@@ -9,7 +9,7 @@ class Path(object):
         self.db = db
         self.c = db.cursor()
 
-    def setup(self, method_id, parent_path_id = ''):
+    def setup(self, method_id, parent_path_id = None):
         method = self.setup_method(method_id)
         if (parent_path_id):
             (parent_method, 
@@ -20,14 +20,14 @@ class Path(object):
             superparent_method = {}
             path_length = 0
         else: # assume parent is import
+            q = 'SELECT method_path_id FROM method_path WHERE length=?'
+            r = self.c.execute(q, (0, )).fetchone()
+            parent_path_id = r.method_path_id
             q = 'SELECT method_id, name FROM method WHERE name = ?'
             r = self.c.execute(q, ('import',)).fetchone()
             parent_method = self.setup_method(r.method_id)
             superparent_method = {}
             path_length = 1
-            q = 'SELECT method_path_id FROM method_path WHERE length=?'
-            r = self.c.execute(q, (0, )).fetchone()
-            parent_path_id = r.method_path_id
         # check if path exists, add if not
         self.path_id = self.insert_path(method, parent_method, parent_path_id, 
                                    path_length)
@@ -114,10 +114,12 @@ class Path(object):
             q = 'INSERT INTO method_path (length) VALUES (?);'
             self.c.execute(q, (path_length,))
             path_id = self.c.lastrowid
+            if not parent_path_id:
+                parent_path_id = path_id
             q = ('INSERT INTO method_path_parent '
-                 '(method_path_id, parent_method_path_id, method_id) '
+                 '(method_id, parent_method_path_id, method_path_id) '
                  'VALUES (?, ?, ?);')
-            self.c.execute(q, (path_id, parent_path_id, method['id']))
+            self.c.execute(q, (method['id'], parent_path_id, path_id))
             # insert edges
             self.insert_edges(method['id'], parent_method['id'])
             # populate path edges

@@ -38,7 +38,7 @@ class Import(AbstractTool):
                 LooseVersion('2.3.0')):
                 sys.exit(('This tool requires Open Babel (and its python '
                           'module, pybel) version >=2.3.0.'))
-        except OSError:
+        except AttributeError, OSError:
             sys.exit(('This tool requires Open Babel (and its python module, '
                       'pybel) version >=2.3.0.'))
         return True

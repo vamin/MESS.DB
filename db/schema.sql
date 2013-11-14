@@ -145,11 +145,11 @@ CREATE TABLE IF NOT EXISTS
     method_path_parent( --this table tracks path parents and the ending method id for convenience of some queries
         method_id INTEGER NOT NULL, --method id of the lastest method in the path
         --FOREIGN KEY(method_id) REFERENCES method(method_id),
-        method_path_id INTEGER NOT NULL,
-        --FOREIGN KEY(method_path_id) REFERENCES method_path(method_path_id),
         parent_method_path_id INTEGER NOT NULL,
         --FOREIGN KEY(parent_method_path_id) REFERENCES method_path(method_path_id),
-        UNIQUE(method_path_id, parent_method_path_id, method_id)
+        method_path_id INTEGER NOT NULL,
+        --FOREIGN KEY(method_path_id) REFERENCES method_path(method_path_id),
+        UNIQUE(method_id, parent_method_path_id, method_path_id)
     );
 
 /*
