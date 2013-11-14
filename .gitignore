@@ -16,5 +16,6 @@ db/mess.db
 # ignore folder contents
 backups/*
 molecules/*
+searches/*
 sources/*/
 test/*
