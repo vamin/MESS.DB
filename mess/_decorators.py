@@ -4,10 +4,12 @@ from __future__ import unicode_literals
 import collections
 import functools
 import inspect
+import sqlite3
+import types
 
 from _utils import unicode_replace
 
-def decorate(object_, decorator):
+def decorate(object_, decorator, *args, **kwargs):
     """Apply a decorator to all callable functions of an object.
 
     Args:
@@ -23,10 +25,42 @@ def decorate(object_, decorator):
                 if callable(getattr(object_, attr)):
                     try:
                         setattr(object_, attr, 
-                                decorator(getattr(object_, attr)))
+                                decorator(getattr(object_, attr)), *args, **kwargs)
                     except TypeError:
                         pass
             except AttributeError:
+                pass
+    return object_
+
+class ExceptionDecorator(object):
+    def __init__(self, func, exceptions, replacement=None):
+        """Inits ExceptionDecorator with function to be decorated and updates
+        wrapper.
+
+        Args:
+            func: A function to be decorated.
+            exception: The exception(s) to be caught.
+            replacement: A function that accepts the decorated function,
+                         or a return value.
+
+        """
+        self.func = func
+        self.exceptions = exceptions
+        self.replacement = replacement
+        functools.update_wrapper(self, func)
+
+    def __call__(self, *args, **kwargs):
+        if self.func is None:
+            self.func = args[0]
+            return self
+        try:
+            return self.func(*args, **kwargs)
+        except self.exceptions:
+            if (isinstance(self.replacement, types.FunctionType)):
+                return replacement(self.func)
+            elif (self.replacement):
+                return self.replacement
+            else:
                 pass
 
 
@@ -81,4 +115,4 @@ class UnicodeDecorator(object):
             r = dict(map(unicode_replace, r.iteritems()))
         elif isinstance(r, str):
             r = unicode_replace(r)
-        return r
+        return r        
