@@ -65,6 +65,7 @@ class Select(AbstractTool):
                 (args.regex_subset and re.match(args.regex_subset, row[0], 
                                                 re.IGNORECASE))):
                 writer.writerow(list(xstr(v).decode('utf-8') for v in row))
+        db.close() # must be closed manually to prevent db locking during pipe
 
 
 def load():
