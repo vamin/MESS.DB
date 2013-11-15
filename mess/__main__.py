@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 import argparse
 import os
 import sys
+from signal import signal, SIGPIPE, SIG_DFL
 
 sys.path.append(os.path.join(os.path.dirname( __file__ ), '..' )) # add parent
                                                                   # dir to path
@@ -25,4 +26,5 @@ def main():
         tool.execute(args)
 
 if __name__ == '__main__':
+    signal(SIGPIPE, SIG_DFL) # ignore SIG_PIPE, don't throw exception about it
     main()
