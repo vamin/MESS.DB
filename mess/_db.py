@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import os
 import sqlite3
 import sys
+import traceback
 from collections import namedtuple
 
 class MessDB(object):
@@ -11,7 +12,7 @@ class MessDB(object):
     def __init__(self):
         """Initialize db connection and row factory."""
         self.tries = 0
-        self.max_tries = 5
+        self.max_tries = 3
         try:
             self.conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 
                                         '../db/mess.db'))
@@ -31,6 +32,7 @@ class MessDB(object):
             except sqlite3.OperationalError:
                 print('Database is locked, trying again.', file=sys.stderr)
                 self.tries += 1
+        traceback.print_stack()
         sys.exit('Database is still locked after %d tries.' % self.tries)
 
     def cursor(self):
