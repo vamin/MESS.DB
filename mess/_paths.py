@@ -16,6 +16,13 @@ class Path(object):
              superparent_method,
              path_length) = self.setup_parent_path(parent_path_id)
         elif (method['name'] == 'import'):
+            q = ('SELECT method_path_id FROM method_path_parent '
+                 'WHERE method_id=? AND parent_method_path_id=method_path_id')
+            r = self.c.execute(q, (method['id'], )).fetchone()
+            try:
+                parent_path_id = r.method_path_id
+            except AttributeError:
+                pass
             parent_method = method
             superparent_method = {}
             path_length = 0
