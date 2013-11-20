@@ -6,6 +6,7 @@ import csv
 import os
 import re
 import sqlite3
+import string
 import sys
 
 from _db import MessDB
@@ -19,15 +20,17 @@ class Select(AbstractTool):
         self.epilog = ''
     
     def subparse(self, subparser):
-        subparser.add_argument('sql', help=('an SQL statement or file that '
-                                            'returns inchikeys in '
-                                            'first column'))
-        subparser.add_argument('-s', '--subset', type=str, 
-                               help=('subset the output by first letter(s) '
-                                     'of inchikey'))
+        subparser.add_argument('sql', nargs='?', 
+                               default='SELECT inchikey FROM molecule',
+                               help=('an SQL statement or file that returns '
+                                     'inchikeys in first column'))
+        subparser.add_argument('-p', '--part', type=int, 
+                               help='subset, --part n --of N subsets')
+        subparser.add_argument('-f', '--of', type=int, 
+                               help='subset, --part n --of N subsets')
         subparser.add_argument('-r', '--regex-subset', type=str, 
                                help=('subset the output by regex on inchikey '
-                                     '(superceded by subset)'))
+                                     '(cumulative with -p/-f)'))
         subparser.add_argument('-d', '--delimiter', type=str, default='\t', 
                                help=('choose a delimiter for output files, '
                                      'tab is default'))
@@ -40,31 +43,50 @@ class Select(AbstractTool):
         return True
     
     def execute(self, args):
-        db = MessDB()
+        if (args.part or args.of) and not (args.part and args.of):
+            sys.exit(('If you specify a --part n, you must also specify --of '
+                      'N (e.g. something like --part 1 --of 5).'))
+        if args.part and args.of:
+            if args.part > args.of:
+                sys.exit('--part must be smaller than --of.')
+            if args.part < 1:
+                sys.exit('--part must be >=1.')
+            alpha = string.ascii_uppercase
+            alpha3 = [''.join([a,b,c]) for a in alpha 
+                                       for b in alpha 
+                                       for c in alpha] # AAA to ZZZ
+            if args.of > len(alpha3):
+                sys.exit(('MESS.DB does not support subsetting into more than '
+                          '%i parts.' % len(alpha3)))
+            subsets = [ alpha3[i::args.of] for i in xrange(args.of) ]
+            subset = subsets[args.part-1]
+        db = MessDB(isolation_level='DEFERRED')
         c = db.cursor()
         try:
             c.execute(codecs.open(args.sql, encoding='utf-8').read())
         except sqlite3.OperationalError:
-            sys.exit('"' + args.sql + '" does not contain valid sql.')
+            sys.exit("'%s' does not contain valid sql." % args.sql)
         except IOError:
             try:
                 c.execute(args.sql)
             except sqlite3.OperationalError:
-                sys.exit('"' + args.sql + ('" is neither valid sql nor a path '
-                                           'to a file containing valid sql.'))
+                sys.exit(("'%s' is neither valid sql nor a path "
+                          'to a file containing valid sql.') % args.sql)
         # check that sql returns inchikey in first column
-        if not (c.description[0][0].lower() == 'inchikey'):
-            sys.exit('SQL must return inchikey in first column.')
-        # print inchikeys
+        if not c.description[0][0].lower() == 'inchikey':
+            sys.exit('Query must return inchikey in first column.')
+        # print table
         writer = csv.writer(sys.stdout, delimiter=args.delimiter)
-        if (args.headers):
+        if args.headers:
             writer.writerow(list(h[0] for h in c.description))
-        for row in c:
-            if ((not args.subset and not args.regex_subset) or 
-                (args.subset and row[0].startswith(args.subset)) or 
-                (args.regex_subset and re.match(args.regex_subset, row[0], 
-                                                re.IGNORECASE))):
-                writer.writerow(list(xstr(v).decode('utf-8') for v in row))
+        for r in c:
+            if args.regex_subset and not re.match(args.regex_subset, r[0], 
+                                                  re.IGNORECASE):
+                continue
+            if args.part and args.of:
+                if not any(r[0].startswith(a) for a in subset):
+                    continue
+            writer.writerow(list(xstr(v).decode('utf-8') for v in r))
         db.close() # must be closed manually to prevent db locking during pipe
 
 
