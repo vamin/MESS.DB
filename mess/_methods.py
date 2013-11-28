@@ -35,6 +35,7 @@ class AbstractMethod(object):
     def setup(self):
         if not self.is_setup:
             self.setup_method()
+            self.db.commit()
             self.set_method_id()
             self.setup_parameters()
             self.db.commit()
@@ -49,7 +50,6 @@ class AbstractMethod(object):
         # based on the given commands
         raise NotImplementedError("every method needs an 'execute' method")
         self.log(args) # all methods should record logs
-        self.db.commit()
         return self.status # should be set by self.check()
     
     def check(self, args):
@@ -68,7 +68,6 @@ class AbstractMethod(object):
         # into db
         raise NotImplementedError(("every method needs an 'import_properties' "
                                    'method'))
-        self.db.commit() # make sure you implement commit
     
     def add_messages_to_log(self, log_path, method_name, messages):
         log = codecs.open(log_path, 'a', 'utf-8')
