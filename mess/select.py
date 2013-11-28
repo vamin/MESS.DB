@@ -20,11 +20,19 @@ class Select(AbstractTool):
         self.epilog = ''
     
     def subparse(self, subparser):
-        subparser.add_argument('sql', nargs='?', 
-                               default='SELECT inchikey FROM molecule',
+        subparser.add_argument('-s', '--sql', type=str, 
                                help=('an SQL statement or file that returns '
                                      'inchikeys in first column'))
-        subparser.add_argument('-p', '--part', type=int, 
+        #subparser.add_argument('-n', '--property-name', type=str, 
+        #                       help='name of propery')
+        #subparser.add_argument('-o', '--property-operator', type=str, 
+        #                       help='operator (>, <, =, etc.)')
+        #subparser.add_argument('-v', '--property-value', type=str, 
+        #                       help='value of property')
+        #subparser.add_argument('-p', '--path', type=int, default=0, 
+        #                       help=('Specify a path id to restrict to a '
+        #                             'particular calculation.'))
+        subparser.add_argument('-t', '--part', type=int, 
                                help='subset, --part n --of N subsets')
         subparser.add_argument('-f', '--of', type=int, 
                                help='subset, --part n --of N subsets')
@@ -62,16 +70,29 @@ class Select(AbstractTool):
             subset = subsets[args.part-1]
         db = MessDB(isolation_level='DEFERRED')
         c = db.cursor()
-        try:
-            c.execute(codecs.open(args.sql, encoding='utf-8').read())
-        except sqlite3.OperationalError:
-            sys.exit("'%s' does not contain valid sql." % args.sql)
-        except IOError:
+        self.columns = ['molecule.inchikey']
+        self.joins = set()
+        self.wheres = ['1=1']
+        if args.sql:
             try:
-                c.execute(args.sql)
+                c.execute(codecs.open(args.sql, encoding='utf-8').read())
             except sqlite3.OperationalError:
-                sys.exit(("'%s' is neither valid sql nor a path "
-                          'to a file containing valid sql.') % args.sql)
+                sys.exit("'%s' does not contain valid sql." % args.sql)
+            except IOError:
+                try:
+                    c.execute(args.sql)
+                except sqlite3.OperationalError:
+                    sys.exit(("'%s' is neither valid sql nor a path "
+                              'to a file containing valid sql.') % args.sql)
+        #elif args.property_name and args.property_operator and (args.property_value or args.property_value == 0):
+        #    self.joins.add(('JOIN molecule_method_property '
+        #                    'ON molecule_method_property.inchikey = '
+        #                    'molecule.inchikey'))
+        #    self.add_condition(args.property_name, args.property_operator)
+        #    c.execute(self.generate_sql(), (args.property_name, 
+        #                                    args.property_value))
+        else:
+            c.execute(self.generate_sql())
         # check that sql returns inchikey in first column
         if not c.description[0][0].lower() == 'inchikey':
             sys.exit('Query must return inchikey in first column.')
@@ -89,7 +110,24 @@ class Select(AbstractTool):
             writer.writerow(list(xstr(v).decode('utf-8') for v in r))
         db.close() # must be closed manually to prevent db locking during pipe
 
+    def generate_sql(self):
+        return ''.join(['SELECT ', 
+                         ', '.join(self.columns),
+                         ' ', 
+                         'FROM molecule ', 
+                         ' '.join(self.joins), 
+                         ' ',
+                         'WHERE ', 
+                         '(', ') AND ('.join(self.wheres), ')'])
+
+    def add_condition(self, property, condition):
+        self.columns.append('molecule_method_property.result as %s' % property)
+        self.joins.add(('JOIN property ON property.property_id = '
+                           'molecule_method_property.property_id'))
+        self.wheres.append(('property.name = ? '
+                            'AND molecule_method_property.result '
+                            '%s ?') % condition)
+
 
 def load():
-    # loads the current plugin
     return Select()
