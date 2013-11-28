@@ -21,20 +21,28 @@ decorate(pybel, UnicodeDecorator)
 
 class Import(AbstractTool):
     def __init__(self):
+        """Set description of tool."""
         self.description = ('Import molecule file, multi-molecule file, '
                             'or dir of molecules into MESS.DB')
         self.epilog = ''
-            
+    
     def subparse(self, subparser):
-        subparser.add_argument('source', 
-                               help='a molecule source file or directory')
-        subparser.add_argument('-s', '--skip-cir', action='store_true', 
-                               help=('do not use CIR web service to import '
+        """Set tool-specific argparse arguments."""
+        subparser.add_argument('source',
+                               help='A molecule source file or directory')
+        subparser.add_argument('-s', '--skip-cir', action='store_true',
+                               help=('Do not use CIR web service to import '
                                      'IUPAC names and other synonyms'))
-
+    
     def check_dependencies(self):
+        """Check for dependencies (Open Babel >=2.3).
+        
+        Returns:
+            True if all dependencies are met.
+        
+        """
         try:
-            if (LooseVersion(pybel.ob.OBReleaseVersion()) < 
+            if (LooseVersion(pybel.ob.OBReleaseVersion()) <
                 LooseVersion('2.3.0')):
                 sys.exit(('This tool requires Open Babel (and its python '
                           'module, pybel) version >=2.3.0.'))
@@ -44,24 +52,21 @@ class Import(AbstractTool):
         return True
     
     def execute(self, args):
+        """Run import method for every molecule in source."""
         db = MessDB()
         c = db.cursor()
-        # setup import method
         m = load_method('import', db)
-        # setup source
         s = Source(db)
         s.setup(args.source)
-        # setup path
         p = Path(db)
         p.setup(m.method_id)
-        # turn off pybel logging
         pybel.ob.obErrorLog.StopLogging()
         for f in s.files():
-            if (f.split('.')[-1] == 'sql' or 
+            if (f.split('.')[-1] == 'sql' or
                 f.split('.')[-1] == 'txt' or
                 f[-1] == '~'):
                 continue
-            for mol in pybel.readfile(f.split('.')[-1], 
+            for mol in pybel.readfile(f.split('.')[-1],
                                       os.path.join(args.source, f)):
                 decorate(mol, UnicodeDecorator)
                 pybel.ob.obErrorLog.StartLogging()
@@ -82,19 +87,19 @@ class Import(AbstractTool):
                         pybel.ob.obErrorLog.StartLogging()
                         frag_inchikey = frag.write('inchikey').rstrip()
                         if not is_inchikey(frag_inchikey):
-                            print("'" + f + "' is not an importable " +
-                                  'molecule.\n', file=sys.stderr)
+                            print("'%s' is not an importable molecule.\n" % f, 
+                                  file=sys.stderr)
                             continue
                         pybel.ob.obErrorLog.StopLogging()
-                        method_args['parent'] = ('from:' + 
-                                                 unicode(mol.title, 
+                        method_args['parent'] = ('from: %s' % 
+                                                 unicode(mol.title,
                                                          'utf-8', 'replace'))
                         method_args['inchikey'] = frag_inchikey
                         method_args['mol'] = frag
                     else:
                         if not is_inchikey(inchikey):
-                            print("'" + f + "' is not an importable " +
-                                  'molecule.\n', file=sys.stderr)
+                            print("'%s' is not an importable molecule.\n" % f, 
+                                  file=sys.stderr)
                             continue
                         method_args['inchikey'] = inchikey
                         method_args['mol'] = mol
@@ -102,9 +107,9 @@ class Import(AbstractTool):
                     method_args['path'] = p
                     method_args['skip_cir'] = args.skip_cir
                     status = m.execute(method_args)
-                    print(method_args['inchikey'] + ': ' + status)
+                    print('%s: %s' % (method_args['inchikey'], status))
 
 
 def load():
-    # loads the current plugin
+    """Load Import()."""
     return Import()

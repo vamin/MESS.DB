@@ -15,42 +15,45 @@ from _utils import xstr
 
 class Select(AbstractTool):
     def __init__(self):
-        self.description = ('Select a list of molecules '
-                            'based on SQL query')
+        """Set description of tool."""
+        self.description = 'Select a list of molecules based on SQL query'
         self.epilog = ''
     
     def subparse(self, subparser):
-        subparser.add_argument('-s', '--sql', type=str, 
-                               help=('an SQL statement or file that returns '
+        """Set tool-specific argparse arguments."""
+        subparser.add_argument('-s', '--sql', type=str,
+                               help=('An SQL statement or file that returns '
                                      'inchikeys in first column'))
-        #subparser.add_argument('-n', '--property-name', type=str, 
+        #subparser.add_argument('-n', '--property-name', type=str,
         #                       help='name of propery')
-        #subparser.add_argument('-o', '--property-operator', type=str, 
+        #subparser.add_argument('-o', '--property-operator', type=str,
         #                       help='operator (>, <, =, etc.)')
-        #subparser.add_argument('-v', '--property-value', type=str, 
+        #subparser.add_argument('-v', '--property-value', type=str,
         #                       help='value of property')
-        #subparser.add_argument('-p', '--path', type=int, default=0, 
+        #subparser.add_argument('-p', '--path', type=int, default=0,
         #                       help=('Specify a path id to restrict to a '
         #                             'particular calculation.'))
-        subparser.add_argument('-t', '--part', type=int, 
-                               help='subset, --part n --of N subsets')
-        subparser.add_argument('-f', '--of', type=int, 
-                               help='subset, --part n --of N subsets')
-        subparser.add_argument('-r', '--regex-subset', type=str, 
-                               help=('subset the output by regex on inchikey '
+        subparser.add_argument('-t', '--part', type=int,
+                               help='Subset, --part n --of N subsets')
+        subparser.add_argument('-f', '--of', type=int,
+                               help='Subset, --part n --of N subsets')
+        subparser.add_argument('-r', '--regex-subset', type=str,
+                               help=('Subset the output by regex on inchikey '
                                      '(cumulative with -p/-f)'))
-        subparser.add_argument('-d', '--delimiter', type=str, default='\t', 
-                               help=('choose a delimiter for output files, '
+        subparser.add_argument('-d', '--delimiter', type=str, default='\t',
+                               help=('Choose a delimiter for output files, '
                                      'tab is default'))
-        subparser.add_argument('-hd', '--headers', action='store_true', 
-                               help=('include headers in output, not '
+        subparser.add_argument('-hd', '--headers', action='store_true',
+                               help=('Include headers in output, not '
                                      'recommended if piping to '
                                      "'mess calculate'"))
-
+    
     def check_dependencies(self):
+        """Return true, no dependencies for this tool."""
         return True
     
     def execute(self, args):
+        """Run select query, output table."""
         if (args.part or args.of) and not (args.part and args.of):
             sys.exit(('If you specify a --part n, you must also specify --of '
                       'N (e.g. something like --part 1 --of 5).'))
@@ -60,8 +63,8 @@ class Select(AbstractTool):
             if args.part < 1:
                 sys.exit('--part must be >=1.')
             alpha = string.ascii_uppercase
-            alpha3 = [''.join([a,b,c]) for a in alpha 
-                                       for b in alpha 
+            alpha3 = [''.join([a,b,c]) for a in alpha
+                                       for b in alpha
                                        for c in alpha] # AAA to ZZZ
             if args.of > len(alpha3):
                 sys.exit(('MESS.DB does not support subsetting into more than '
@@ -89,7 +92,7 @@ class Select(AbstractTool):
         #                    'ON molecule_method_property.inchikey = '
         #                    'molecule.inchikey'))
         #    self.add_condition(args.property_name, args.property_operator)
-        #    c.execute(self.generate_sql(), (args.property_name, 
+        #    c.execute(self.generate_sql(), (args.property_name,
         #                                    args.property_value))
         else:
             c.execute(self.generate_sql())
@@ -101,7 +104,7 @@ class Select(AbstractTool):
         if args.headers:
             writer.writerow(list(h[0] for h in c.description))
         for r in c:
-            if args.regex_subset and not re.match(args.regex_subset, r[0], 
+            if args.regex_subset and not re.match(args.regex_subset, r[0],
                                                   re.IGNORECASE):
                 continue
             if args.part and args.of:
@@ -109,18 +112,27 @@ class Select(AbstractTool):
                     continue
             writer.writerow(list(xstr(v).decode('utf-8') for v in r))
         db.close() # must be closed manually to prevent db locking during pipe
-
+    
     def generate_sql(self):
-        return ''.join(['SELECT ', 
+        """Combine columns, joins, and wheres into single SQL query.
+        
+        Returns:
+            A valid sql statement.
+        
+        """
+        return ''.join(['SELECT ',
                          ', '.join(self.columns),
-                         ' ', 
-                         'FROM molecule ', 
-                         ' '.join(self.joins), 
                          ' ',
-                         'WHERE ', 
+                         'FROM molecule ',
+                         ' '.join(self.joins),
+                         ' ',
+                         'WHERE ',
                          '(', ') AND ('.join(self.wheres), ')'])
-
+    
     def add_condition(self, property, condition):
+        """Add columns, join phrase, and where phrase for a property/condition.
+        
+        """
         self.columns.append('molecule_method_property.result as %s' % property)
         self.joins.add(('JOIN property ON property.property_id = '
                            'molecule_method_property.property_id'))
@@ -130,4 +142,5 @@ class Select(AbstractTool):
 
 
 def load():
+    """Load Select()."""
     return Select()

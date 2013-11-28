@@ -10,24 +10,28 @@ import sys
 from _db import MessDB
 from _tools import AbstractTool
 
-### TODO: handle source, method (level, program, method*, parameter, 
-### property) pruning 
+### TODO: handle source, method (level, program, method*, parameter,
+### property) pruning
 
 class Remove(AbstractTool):
     def __init__(self):
+        """Set description of tool."""
         self.description = ('Remove molecules from MESS.DB')
         self.epilog = ''
     
     def subparse(self, subparser):
-        subparser.add_argument('inchikeys', nargs='?', 
-                               type=argparse.FileType('r'), default=sys.stdin, 
+        """Set tool-specific argparse arguments."""
+        subparser.add_argument('inchikeys', nargs='?',
+                               type=argparse.FileType('r'), default=sys.stdin,
                                help=('A list of inchikeys, file or passed in '
                                      'through STDIN'))
-
+    
     def check_dependencies(self):
+        """Return true, no dependencies for this tool."""
         return True
     
     def execute(self, args):
+        """Remove specified elements."""
         db = MessDB()
         c = db.cursor()
         for row in args.inchikeys:
@@ -35,9 +39,10 @@ class Remove(AbstractTool):
             try:
                 inchikey_dir = self.get_inchikey_dir(inchikey)
                 shutil.rmtree(inchikey_dir)
-                print(inchikey + ' dir removed\n', file=sys.stderr)
+                print('%s dir removed\n' % inchikey, file=sys.stderr)
             except OSError:
-                print(inchikey + ' did not have a directory\n', file=sys.stderr)
+                print('%s did not have a directory\n' % inchikey, 
+                      file=sys.stderr)
             try:
                 parent = os.path.relpath(os.path.join(inchikey_dir, '../'))
                 os.removedirs(parent)
@@ -56,12 +61,11 @@ class Remove(AbstractTool):
             q = 'DELETE from molecule_state_method_property WHERE inchikey=?'
             c.execute(q, (inchikey,))
             records += c.rowcount
-            #db.commit()
-            print(str(records) + ' ' + inchikey + ' records removed from db\n',
+            db.commit()
+            print('%i %s records removed from db\n\n' % (records, inchikey),
                   file=sys.stderr)
-            print('\n', file=sys.stderr)
 
 
 def load():
-    # loads the current plugin
+    """Load Remove()."""
     return Remove()

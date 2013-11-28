@@ -11,6 +11,7 @@ from _utils import hash_dict
 class AbstractMethod(object):
     """All methods should inherit from this class."""
     def __init__(self, db):
+        """Set up db, check for attributes, dependencies, and setup."""
         self.db = db
         self.c = db.cursor()
         self.method_name = self.get_method_name()
@@ -33,6 +34,7 @@ class AbstractMethod(object):
         self.setup()
     
     def setup(self):
+        """Set up method."""
         if not self.is_setup:
             self.setup_method()
             self.db.commit()
@@ -40,12 +42,14 @@ class AbstractMethod(object):
             self.setup_parameters()
             self.db.commit()
             self.is_setup = True
-
+    
     def check_dependencies(self):
+        """If check_dependencies is not implemented, raise error."""
         raise NotImplementedError(("every method needs a 'check_dependencies' "
                                    'method'))
     
     def execute(self, args):
+        """If execute is not implemented, raise error."""
         # all methods should have a method that executes its tasks
         # based on the given commands
         raise NotImplementedError("every method needs an 'execute' method")
@@ -53,25 +57,36 @@ class AbstractMethod(object):
         return self.status # should be set by self.check()
     
     def check(self, args):
-        # the check method should be called before a calculation (so 
+        """If check is not implemented, raise error."""
+        # the check method should be called before a calculation (so
         # calculations are not repeated) and after (to verify success)
         raise NotImplementedError("every method needs a 'check' method")
     
     def log(self, args):
+        """If log is not implemented, raise error."""
         # the log method should be called at the end of every execute method
         # to record that a calculation has been attempted (in the main log)
         # and to record method-specific messages into the method log
         raise NotImplementedError("every method needs a 'log' method")
     
     def import_properties(self):
+        """If import_properties is not implemented, raise error."""
         # this method reads molecule-proprty values from calc
         # into db
         raise NotImplementedError(("every method needs an 'import_properties' "
                                    'method'))
     
     def add_messages_to_log(self, log_path, method_name, messages):
+        """Write messages to a log.
+        
+        Args:
+            log_path: Path to the log to be written to.
+            method_name: Name of the method doing the logging.
+            messages: List of messages to write to the log.
+        
+        """
         log = codecs.open(log_path, 'a', 'utf-8')
-        log.write(': '.join([datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
+        log.write(': '.join([datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                              method_name]))
         log.write('\n')
         log.write(' '.join(sys.argv))
@@ -82,14 +97,22 @@ class AbstractMethod(object):
         log.write('-' * 79)
         log.write('\n')
         log.close()
-
+    
     def insert_program(self):
+        """Adds row to program table in mess.db."""
         q = ('INSERT OR IGNORE INTO program (name, version, url) '
              'VALUES (?, ?, ?)')
-        return self.c.execute(q, (self.prog_name, self.prog_version, 
+        return self.c.execute(q, (self.prog_name, self.prog_version,
                                   self.prog_url))
-
+    
     def insert_parameter(self, name, setting):
+        """Adds parameter to mess.db.
+        
+        Args:
+            name: Name of parameter.
+            setting: The value the parameter is set to.
+        
+        """
         q = ('INSERT OR IGNORE INTO parameter (name) VALUES (?)')
         r = self.c.execute(q, (name, ))
         q = ('INSERT OR IGNORE INTO method_parameter '
@@ -98,10 +121,23 @@ class AbstractMethod(object):
              'FROM program, parameter '
              'WHERE parameter.name=?')
         return self.c.execute(q, (self.method_id, setting, name))
-
-    def insert_property(self, inchikey, method_path_id, 
-                              name, description, 
+    
+    def insert_property(self, inchikey, method_path_id,
+                              name, description,
                               format, value, units):
+        """Adds property value to mess.db.
+        
+        Args:
+            inchikey: The inchikey of a molecule in MESS.DB.
+            method_path_id: Path id for the calculations that generated the
+                            property.
+            name: The property name.
+            description: A description of the property.
+            format: A description of the format the property is in.
+            value: The calculated property.
+            units: Units for the property value.
+        
+        """
         q = ('INSERT OR IGNORE INTO property (name, description, format) '
              'VALUES (?, ?, ?);')
         r = self.c.execute(q, (name, description, format))
@@ -112,22 +148,25 @@ class AbstractMethod(object):
              'WHERE '
              'property.name=? AND property.description=? AND '
              'property.format=?')
-        return self.c.execute(q, (inchikey, method_path_id, units, 
+        return self.c.execute(q, (inchikey, method_path_id, units,
                                   value, name, description, format))
-
+    
     def insert_tags(self):
+        """Add tags to method_tag table in mess.db."""
         q = ('INSERT OR IGNORE INTO method_tag (method_id, parameter_id) '
              'SELECT ?, parameter.parameter_id FROM parameter '
              'WHERE parameter.name= ?')
         for t in self.tags:
             self.c.execute(q, (self.method_id, t))
-
+    
     def setup_parameters(self):
+        """Import paramaters dict to mess.db."""
         for k, v in self.parameters.items():
             self.insert_parameter(k, v)
         self.insert_tags()
     
     def setup_method(self):
+        """Set insert program to db, set up hash, and insert method to db."""
         self.insert_program()
         self.param_hash = hash_dict(self.parameters)
         name = self.get_method_name()
@@ -136,15 +175,16 @@ class AbstractMethod(object):
              'SELECT program.program_id, ?, ?, ? '
              'FROM program '
              'WHERE program.name=? AND program.version=?')
-        return self.c.execute(q, (self.geop, name, self.param_hash, 
+        return self.c.execute(q, (self.geop, name, self.param_hash,
                                   self.prog_name, self.prog_version))
     
     def set_method_id(self):
+        """Set the object's method_id attribute."""
         q = ('SELECT method_id FROM method '
              'WHERE hash = ?;')
         row = self.c.execute(q, (self.param_hash,)).fetchone()
         self.method_id = row.method_id
-
+    
     @classmethod
     def get_method_name(cls):
         """Return the name of the method, derived from the subclass name."""

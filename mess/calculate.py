@@ -14,56 +14,64 @@ from _db import MessDB
 from _decorators import decorate, UnicodeDecorator
 from _paths import Path
 from _tools import AbstractTool
-from _utils import is_inchikey, load_method 
+from _utils import is_inchikey, load_method
 
 decorate(pybel, UnicodeDecorator)
 
 class Calculate(AbstractTool):
     def __init__(self):
+        """Set description of tool."""
         self.description = 'Calculate properties for a set of molecules'
         self.epilog = ''
     
     def subparse(self, subparser):
-        subparser.add_argument('inchikeys', nargs='?', 
-                               type=argparse.FileType('r'), default=sys.stdin, 
+        """Set tool-specific argparse arguments."""
+        subparser.add_argument('inchikeys', nargs='?',
+                               type=argparse.FileType('r'), default=sys.stdin,
                                help=('A list of inchikeys, file or passed in '
                                      'through STDIN'))
-        subparser.add_argument('-m', '--method', required=True, 
-                               help='A method name.')
-        subparser.add_argument('-p', '--parent-path', default='', 
+        subparser.add_argument('-m', '--method', type=str, required=True,
+                               help='A method name')
+        subparser.add_argument('-p', '--parent-path', type=int, default=0,
                                help=('Specify a parent path id. If not set, '
-                                     'start from InChI.'))
+                                     'start from InChI'))
     
     def check_dependencies(self):
+        """Check for dependencies (Open Babel >=2.3).
+        
+        Returns:
+            True if all dependencies are met.
+        
+        """
         try:
-            if (LooseVersion(pybel.ob.OBReleaseVersion()) < 
+            if (LooseVersion(pybel.ob.OBReleaseVersion()) <
                 LooseVersion('2.3.0')):
                 sys.exit(('This tool requires Open Babel (and its python '
                           'module, pybel) version >=2.3.0.'))
-        except OSError:
+        except AttributeError, OSError:
             sys.exit(('This tool requires Open Babel (and its python module, '
                       'pybel) version >=2.3.0.'))
         return True
     
     def execute(self, args):
+        """Run calculations."""
         db = MessDB()
         c = db.cursor()
-        # setup import method
         m = load_method(args.method, db)
-        # setup path
         p = Path(db)
         p.setup(m.method_id, args.parent_path)
-        pybel.ob.obErrorLog.StopLogging() 
+        pybel.ob.obErrorLog.StopLogging()
         method_args = {}
         method_args['path'] = p
         for row in args.inchikeys:
             method_args['inchikey'] = row.split()[0].strip()
             if not is_inchikey(method_args['inchikey'], enforce_standard=True):
-                sys.exit(method_args['inchikey'] + ' is not a valid InChIKey.')
+                sys.exit('%s is not a valid InChIKey.' % 
+                         method_args['inchikey'])
             status = m.execute(method_args)
-            print(method_args['inchikey'] + ': ' + status)
-        
+            print('%s: %s' % (method_args['inchikey'], status))
+
 
 def load():
-    # loads the current plugin
+    """Load Calculate()."""
     return Calculate()

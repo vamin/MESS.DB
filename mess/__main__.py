@@ -15,6 +15,9 @@ sys.path.append(os.path.join(os.path.dirname( __file__ ), '..' )) # add parent
 from _tools import ToolsManager
 
 def main():
+    """Parse args and load the specified tool.
+    
+    """
     toolsmanager = ToolsManager()
     parser = argparse.ArgumentParser(
         description='A collection of tools for interacting with MESS.DB',

@@ -11,11 +11,11 @@ from _utils import unicode_replace
 
 def decorate(object_, decorator, *args, **kwargs):
     """Apply a decorator to all callable functions of an object.
-
+    
     Args:
         object_: An object containing callable functions to be decorated.
         decorator: A decorator.
-
+    
     """
     for attr in dir(object_):
         if not '__' in attr:
@@ -24,8 +24,9 @@ def decorate(object_, decorator, *args, **kwargs):
                     continue
                 if callable(getattr(object_, attr)):
                     try:
-                        setattr(object_, attr, 
-                                decorator(getattr(object_, attr)), *args, **kwargs)
+                        setattr(object_, attr,
+                                decorator(getattr(object_, attr)), *args,
+                                          **kwargs)
                     except TypeError:
                         pass
             except AttributeError:
@@ -36,19 +37,19 @@ class ExceptionDecorator(object):
     def __init__(self, func, exceptions, replacement=None):
         """Inits ExceptionDecorator with function to be decorated and updates
         wrapper.
-
+        
         Args:
             func: A function to be decorated.
             exception: The exception(s) to be caught.
             replacement: A function that accepts the decorated function,
                          or a return value.
-
+        
         """
         self.func = func
         self.exceptions = exceptions
         self.replacement = replacement
         functools.update_wrapper(self, func)
-
+    
     def __call__(self, *args, **kwargs):
         if self.func is None:
             self.func = args[0]
@@ -65,32 +66,32 @@ class ExceptionDecorator(object):
 
 
 class UnicodeDecorator(object):
-    """Make sure that unicode inputs are encoded and that all return values 
+    """Make sure that unicode inputs are encoded and that all return values
     are converted back to unicode.
-
+    
     """
     def __init__(self, func):
         """Inits UnicodeDecorator with function to be decorated and updates
         wrapper.
-
+        
         Args:
             func: A function to be decorated.
-
+        
         """
         self.func = func
         functools.update_wrapper(self, func)
-
+    
     def __call__(self, *args, **kwargs):
         """Call decorated (i.e. converted to unicode) function.
-
+        
         Args:
             *args: Arguments of func which will be converted to bytes.
-            **kwargs: Keyword arguments of func, which will be converted to 
+            **kwargs: Keyword arguments of func, which will be converted to
                       bytes.
-
+        
         Returns:
             The output of func, converted to unicode if possible.
-
+        
         """
         encoded_args = []
         encoded_kwargs = {}

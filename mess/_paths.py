@@ -6,14 +6,16 @@ import sys
 
 class Path(object):
     def __init__(self, db):
+        """Initialize db cursor."""
         self.db = db
         self.c = db.cursor()
-
+    
     def setup(self, method_id, parent_path_id = None):
+        """Setup path in mess.db."""
         method = self.setup_method(method_id)
         self.db.commit()
         if (parent_path_id):
-            (parent_method, 
+            (parent_method,
              superparent_method,
              path_length) = self.setup_parent_path(parent_path_id)
             self.db.commit()
@@ -39,17 +41,26 @@ class Path(object):
             superparent_method = {}
             path_length = 1
         # check if path exists, add if not
-        self.path_id = self.insert_path(method, parent_method, parent_path_id, 
+        self.path_id = self.insert_path(method, parent_method, parent_path_id,
                                    path_length)
         self.db.commit()
         # set dir
         self.method_dir = self.get_dir(method, parent_method, self.path_id)
         # set parent dir
-        self.parent_method_dir = self.get_dir(parent_method, 
+        self.parent_method_dir = self.get_dir(parent_method,
                                               superparent_method,
                                               parent_path_id)
-
+    
     def setup_method(self, method_id):
+        """Set up method dict.
+        
+        Args:
+            method_id: The method id.
+        
+        Returns:
+            A dict containing the id, name, hash, and tags for the method.
+        
+        """
         q = 'SELECT name, hash FROM method WHERE method_id = ?'
         r = self.c.execute(q, (method_id, )).fetchone()
         method = {}
@@ -68,8 +79,18 @@ class Path(object):
                 method['tags'].append(r.name)
         method['tags'].sort()
         return method
-
+    
     def setup_parent_path(self, parent_path_id):
+        """Get parent method, superparent method, and path length.
+        
+        Args:
+            parent_path_id: The parent path id.
+        
+        Returns:
+            A tuple containing a parent method dict, a superparent method
+            dict, and a path length.
+        
+        """
         q = ('SELECT mp.length, me.parent_method_id, me.child_method_id, '
              'm.hash hash '
              'FROM method_path mp '
@@ -85,20 +106,29 @@ class Path(object):
             superparent_method = self.setup_method(r.parent_method_id)
             return (parent_method, superparent_method, path_length)
         except AttributeError:
-            sys.exit(parent_path_id + (' is an invalid path id (i.e., '
-                                           'it does not have a valid record '
-                                           'in the database).'))
+            sys.exit(('%s is an invalid path id (i.e., it does not have a '                           'valid record in the database).') % parent_path_id)
     
     def insert_edges(self, child_method_id, parent_method_id):
+        """Insert edge between vertecies (methods) in mess.db."""
         q = ('INSERT OR IGNORE INTO method_edge '
              '(parent_method_id, child_method_id) '
              'SELECT parent_method_id, ? FROM method_edge '
              'WHERE child_method_id = ? UNION ALL SELECT ?, ?;')
-        return self.c.execute(q, (child_method_id, parent_method_id, 
+        return self.c.execute(q, (child_method_id, parent_method_id,
                                   child_method_id, child_method_id))
-
-    def populate_edges(self, method_id, parent_method_id, path_id, 
+    
+    def populate_edges(self, method_id, parent_method_id, path_id,
                        parent_path_id, path_length):
+        """Specify a path using edges from DAG described in method_edge.
+        
+        Args:
+            method_id: Method id of the endpoint method.
+            parent_method_id: Method id of the parent to the endpoint.
+            path_id: Path id for the entire path.
+            parent_path_id: Path id for the path up to the parent method.
+            path_length: The length of the entire path.
+        
+        """
         q = ('INSERT OR IGNORE INTO method_path_edge '
              '(method_path_id, method_edge_id, distance) '
              'SELECT ?, method_edge_id, distance '
@@ -108,11 +138,20 @@ class Path(object):
              'WHERE parent_method_id = ? AND child_method_id = ? '
              'UNION ALL SELECT ?, method_edge_id, distance '
              'FROM method_path_edge WHERE method_path_id = ?')
-        return self.c.execute(q, (path_id, path_id, path_id, path_length, 
-                                  parent_method_id, method_id, path_id, 
+        return self.c.execute(q, (path_id, path_id, path_id, path_length,
+                                  parent_method_id, method_id, path_id,
                                   parent_path_id))
-
+    
     def insert_path(self, method, parent_method, parent_path_id, path_length):
+        """Insert a new path into mess.db.
+        
+        Args:
+            method: An endpoint method tuple (e.g. from setup_method).
+            parent_method: Method tuple for the parent of the endpoint method.
+            parent_path_id: Path id for the path up to the parent method.
+            path_length: The length of the entire path.
+        
+        """
         # check if path exists
         q = ('SELECT method_path_id FROM method_path_parent '
              'WHERE method_id=? AND parent_method_path_id=?')
@@ -136,8 +175,20 @@ class Path(object):
             self.populate_edges(method['id'], parent_method['id'], path_id,
                                 parent_path_id, path_length)
         return path_id
-
+    
     def get_dir(self, method, parent_method, path_id):
+        """Generate a directory name for a path.
+        
+        Args:
+            method: An endpoint method tuple (e.g. from setup_method)
+            parent_method: Method tuple for the parent of the endpoint method.
+            path_id: Path id for the entire path.
+        
+        Returns:
+            Directory name string of the form 
+            'mname_mtags_FROM_parentmname_parentmtags_PATH_pid'.
+        
+        """
         try:
             d = method['name']
             if (method['tags']):

@@ -12,10 +12,17 @@ import cStringIO
 
 class Source(object):
     def __init__(self, db):
+        """Initialize db cursor."""
         self.db = db
         self.c = db.cursor()
-            
+    
     def setup(self, source_path):
+        """Setup source in mess.db.
+        
+        Args:
+            source_path: A path to a directory containing source molecules.
+            
+        """
         self.source = source_path
         # check that the provided source is a real file in the right place
         if not (os.path.isdir(self.source)):
@@ -25,8 +32,8 @@ class Source(object):
             sys.exit("All sources must reside in the 'sources' directory.")
         source_basename = self.source.strip('/').split('/')[-1]
         source_basename = os.path.basename(source_basename)
-        source_sql = os.path.join(os.path.splitext(self.source)[0], 
-                                  source_basename + '.sql')
+        source_sql = os.path.join(os.path.splitext(self.source)[0],
+                                  '%s.sql' % source_basename)
         if not (os.path.isfile(source_sql)):
             sys.exit(('All sources must have a corresponding sql file '
                       'in their directory.'))
@@ -45,21 +52,36 @@ class Source(object):
         self.last_update = source_row.last_update
     
     def files(self):
+        """Returns a list of files in the source directory."""
         return os.listdir(self.source)
     
     def update_molecule_source(self, inchikey, identifier):
+        """Update the source in mess.db.
+        
+        Args:
+            inchikey: A molecule InChIKey.
+            identifier: A source identifier (usually a catalog number).
+        
+        """
         q = ('INSERT OR IGNORE INTO molecule_source '
              '(inchikey, source_id, identifier) '
              'VALUES (?, ?, ?)')
         return self.c.execute(q, (inchikey, self.id, identifier))
     
     def update_source_tsv(self, inchikey_dir, identifier):
+        """Update the sources.tsv file.
+        
+        Args:
+            inchikey_dir: Dir to a molecule in the molecules dir.
+            identifier: A source identifier (usually a catalog number).
+        
+        """
         name = self.name.encode('ascii', 'replace')
         dirname = self.dirname.encode('ascii', 'replace')
         identifier = identifier.encode('ascii', 'replace')
-        with codecs.open(os.path.join(inchikey_dir, 'sources.tsv'), 
+        with codecs.open(os.path.join(inchikey_dir, 'sources.tsv'),
                   'r', 'ascii') as sources_in:
-            with codecs.open(os.path.join(inchikey_dir, 'sources.tsv'), 
+            with codecs.open(os.path.join(inchikey_dir, 'sources.tsv'),
                       'a', 'ascii') as sources_out:
                 sources_in = csv.reader(sources_in, delimiter=b'\t')
                 sources_out = csv.writer(sources_out, delimiter=b'\t')
@@ -72,7 +94,7 @@ class Source(object):
                     except IndexError:
                         pass
                 if not source_present:
-                    if (self.url_template and 
+                    if (self.url_template and
                         not 'from:' in identifier):
                         url_split = re.split(r"\[|\]", self.url_template)
                         (match, replace) = re.split(r",\s?", url_split[1])
@@ -83,5 +105,5 @@ class Source(object):
                     else:
                         source_identifier_url = ''
                     sid_url = source_identifier_url.encode('ascii', 'replace')
-                    sources_out.writerow([self.name, self.dirname, identifier, 
+                    sources_out.writerow([self.name, self.dirname, identifier,
                                           sid_url])
