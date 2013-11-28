@@ -46,8 +46,8 @@ class Balloon(AbstractMethod):
                                        stderr=subprocess.PIPE)
             return balloon.stdout.read().split()[2]
         except OSError:
-            sys.exit('The ' + self.method_name + ' method requires balloon (' + 
-                     self.prog_url + ').')
+            sys.exit('The %s method requires balloon (%s).' % 
+                     (self.method_name, self.prog_url))
 
     def check_dependencies(self):
         # setting prog_version checks for Balloon
@@ -59,16 +59,14 @@ class Balloon(AbstractMethod):
         inchikey_dir = get_inchikey_dir(inchikey)
         out_dir = os.path.realpath(os.path.join(inchikey_dir, method_dir))
         setup_dir(out_dir)
+        sdf_out = os.path.realpath(os.path.join(out_dir, '%s.sdf' % inchikey))
         xyz_out = os.path.join(out_dir, inchikey + '.xyz')
-        sdf_out = os.path.realpath(os.path.join(inchikey_dir, method_dir, 
-                                                inchikey + '.sdf'))
-        balloon_stdout = ''
-        balloon_stderr = ''
+        messages = []
         pwd = os.getcwd()
         os.chdir(os.path.join(os.path.dirname(__file__), '../../molecules'))
         if not self.check(xyz_out):
             q = 'SELECT smiles FROM molecule WHERE inchikey=?'
-            row = self.c.execute(q, (inchikey,)).next()
+            r = self.c.execute(q, (inchikey,)).next()
             # get positive 32-bit integer
             seed = binascii.crc32(inchikey) & 0xffffffff
             try:
@@ -82,28 +80,26 @@ class Balloon(AbstractMethod):
                 balloon_cmd.append(k)
                 if (v):
                     balloon_cmd.append(v)
-            balloon_cmd += ['--randomSeed', str(seed), row.smiles, sdf_out]
-            balloon = subprocess.Popen(balloon_cmd, 
+            balloon_cmd.extend(['--randomSeed', str(seed), r.smiles, sdf_out])
+            balloon = subprocess.Popen(balloon_cmd, cwd=out_dir, 
+                                       stdin=subprocess.PIPE,
                                        stdout=subprocess.PIPE, 
                                        stderr=subprocess.PIPE)
-            balloon_stdout = balloon.stdout.read()
-            balloon_stderr = balloon.stderr.read()
+            balloon.stdin.write('Y') # in case balloon asks about overwrite
+            messages.append(balloon.stdout.read())
+            messages.append(balloon.stderr.read())
             try:
                 mol = pybel.readfile('sdf', sdf_out).next()
             except IOError:
-                sdf_bad = os.path.join(os.path.dirname(__file__), 
-                                       '../../molecules', inchikey + '_bad.sdf')
-                sdf_out = os.path.join(out_dir, inchikey + '_bad.sdf')
-                os.rename(sdf_bad, sdf_out)
-                mol = pybel.readfile('sdf', sdf_out).next()
+                sdf_bad = os.path.join(out_dir, '%s_bad.sdf' % inchikey)
+                mol = pybel.readfile('sdf', sdf_bad).next()
             decorate(mol, UnicodeDecorator)
             mol.localopt(forcefield='mmff94s', steps=128)
             mol.write('xyz', xyz_out)
             self.check(xyz_out)
         else:
             self.status = 'skipped'
-        self.log(args, inchikey_dir, [balloon_stdout, balloon_stderr])
-        self.db.commit()
+        self.log(args, inchikey_dir, messages)
         os.chdir(pwd)
         return self.status
 
