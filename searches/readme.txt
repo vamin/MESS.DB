@@ -1,1 +1,0 @@
-SQL statements in this directory can be passed to the "mess select" tool. It his highly recommended, to facilitate piping to "mess calculate" and other tools, that SQL statements return the inchikey as the first column.
