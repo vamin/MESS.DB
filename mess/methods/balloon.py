@@ -43,7 +43,7 @@ class Balloon(AbstractMethod):
                                        stderr=subprocess.PIPE)
             return balloon.stdout.read().split()[2]
         except OSError:
-            sys.exit('The %s method requires Balloon (%s).' %
+            sys.exit('The %s method requires Balloon (%s).' %\
                      (self.method_name, self.prog_url))
     
     def check_dependencies(self):

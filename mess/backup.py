@@ -80,8 +80,8 @@ class Backup(AbstractTool):
             sys.exit('%s is not a valid backup file' % args.restore)
         else:
             subprocess.call(['tar', '-czvf',
-                             os.path.join(backups_path, 
-                                          'MESS.DB.%s.tgz' % str(time.time()), 
+                             os.path.join(backups_path, 'MESS.DB.%s.tgz' % 
+                                                        str(time.time())), 
                              mess_db_path, mol_path])
 
 

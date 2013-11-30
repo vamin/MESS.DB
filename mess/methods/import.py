@@ -140,9 +140,13 @@ class Import_(AbstractMethod):
         for i in range(3):
             # (0-error, 1-warning, 2-info, 3-audit)
             ob_logs_raw.append(pybel.ob.obErrorLog.GetMessagesOfLevel(i))
-        for ll in ob_logs_raw:
-            for l in ll:
-                ob_logs.append(l)
+        for logs in ob_logs_raw:
+            for log in logs:
+                for line in iter(log.splitlines()):
+                    if not line.startswith('==='):
+                        ob_logs.append(line)
+        self.add_messages_to_log(base_log_path, self.method_name, 
+                                 ob_logs)
         self.add_messages_to_log(base_log_path, self.method_name, 
                                  ['status: %s' % self.status])
         pybel.ob.obErrorLog.ClearLog()
@@ -258,7 +262,7 @@ class Import_(AbstractMethod):
                 return None
         except AttributeError:
             self.cir = True
-        url = 'http://cactus.nci.nih.gov/chemical/structure/%s/%s' % 
+        url = 'http://cactus.nci.nih.gov/chemical/structure/%s/%s' %\
               (inchikey, representation)
         time.sleep(0.1) # protect cactus from hammering
         try:

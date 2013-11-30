@@ -86,11 +86,11 @@ class Import(AbstractTool):
                         pybel.ob.obErrorLog.ClearLog()
                         pybel.ob.obErrorLog.StartLogging()
                         frag_inchikey = frag.write('inchikey').rstrip()
+                        pybel.ob.obErrorLog.StopLogging()
                         if not is_inchikey(frag_inchikey):
                             print("'%s' is not an importable molecule.\n" % f, 
                                   file=sys.stderr)
                             continue
-                        pybel.ob.obErrorLog.StopLogging()
                         method_args['parent'] = ('from: %s' % 
                                                  unicode(mol.title,
                                                          'utf-8', 'replace'))
