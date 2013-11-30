@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import codecs
 import os
 import sqlite3
 import sys
@@ -24,8 +25,10 @@ class MessDB(object):
                                                      '../db/mess.db'),
                                         timeout=30, *self.args, **self.kwargs)
         except IOError:
-            sys.exit('could not find mess.db')
+            sys.exit('could not find/create mess.db')
         self.conn.row_factory = self.namedtuple_factory
+        if not self.check():
+            self.initialize()
     
     def reopen(self):
         """Commit, close, and open db connection."""
@@ -61,6 +64,21 @@ class MessDB(object):
         fields = [col[0] for col in cursor.description]
         Row = namedtuple('Row', fields)
         return Row(*row)
+    
+    def check(self):
+        """Check that mess.db has the right number of tables in it."""
+        q = 'SELECT count(*) count FROM sqlite_master WHERE type=?'
+        r = self.cursor().execute(q, ('table',)).next()
+        if (r.count != 15):
+            return False
+        return True
+    
+    def initialize(self):
+        """Load the mess.db schema."""
+        schema = os.path.join(os.path.dirname(__file__), '../db/schema.sql')
+        self.cursor().executescript(codecs.open(schema, 
+                                               encoding='utf-8').read())
+        print('New mess.db initialized.', file=sys.stderr)
     
     def __del__(self):
         """On deletion, commit transations and close the connection."""
