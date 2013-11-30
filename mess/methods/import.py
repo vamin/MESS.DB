@@ -1,6 +1,3 @@
-# import molecule into mess.db
-# Victor Amin 2013
-
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -12,7 +9,6 @@ import sqlite3
 import sys
 import time
 import urllib2
-from datetime import datetime
 
 import pybel
 
@@ -26,7 +22,7 @@ decorate(pybel, UnicodeDecorator)
 
 class Import_(AbstractMethod):
     # method info
-    description = 'initial import'
+    description = 'Initial import'
     geop = 0
     # program info
     prog_name = 'Open Babel'
@@ -37,9 +33,11 @@ class Import_(AbstractMethod):
     tags = []
 
     def check_dependencies(self):
+        """Return True, no external dependencies to check."""
         return True
 
     def execute(self, args):
+        """Import molecule into MESS.DB."""
         inchikey = args['inchikey']
         mol = args['mol']
         s = args['source']
@@ -54,7 +52,6 @@ class Import_(AbstractMethod):
             identifier = unicode(mol.title, 'utf-8', 'replace')
         # import basic properties
         if not self.check(inchikey, inchikey_dir):
-            # import
             mol.title = b''
             mol.write('inchi', 
                       (inchikey_basename + '.inchi'), 
@@ -84,6 +81,19 @@ class Import_(AbstractMethod):
         return self.status
 
     def check(self, inchikey, inchikey_dir):
+        """Check that a valid molecule folder was created.
+        
+        Args:
+            inchikey: The valid InChIKey for the molecule.
+            inchikey_dir: The full path to the molecule's dir.
+        
+        Sets:
+            self.status: Message describing whether import succeeded or failed.
+        
+        Returns:
+            True if everything is fine, False otherwise.
+        
+        """
         inchi = os.path.join(inchikey_dir, inchikey + '.inchi')
         log = os.path.join(inchikey_dir, inchikey + '.log')
         notes = os.path.join(inchikey_dir, inchikey + '.notes')
@@ -116,7 +126,15 @@ class Import_(AbstractMethod):
             return False
     
     def log(self, args, inchikey_dir):
-        base_log_path = os.path.join(inchikey_dir, args['inchikey'] + '.log')
+        """Log messages to base log and method log.
+        
+        Args:
+            args: The args parameter passed to the method (dict expected to
+                  contain 'inchikey')
+            inchikey_dir: Directory of molecule.
+        
+        """
+        base_log_path = os.path.join(inchikey_dir, '%s.log' % args['inchikey'])
         ob_logs_raw = []
         ob_logs = []
         for i in range(3):
@@ -126,10 +144,18 @@ class Import_(AbstractMethod):
             for l in ll:
                 ob_logs.append(l)
         self.add_messages_to_log(base_log_path, self.method_name, 
-                                 ['status: ' + self.status])
+                                 ['status: %s' % self.status])
         pybel.ob.obErrorLog.ClearLog()
     
     def import_properties(self, inchikey, method_path_id, mol):
+        """Load properties available in Open Babel into mess.db.
+        
+        Args:
+            inchikey: The molecule InChIKey.
+            method_path_id: Path id for import.
+            mol: A pybel mol object for the molecule.
+        
+        """
         # insert Open Babel descriptors
         for property_name, property_value in mol.calcdesc().iteritems():
             if (math.isnan(property_value)):
@@ -158,6 +184,14 @@ class Import_(AbstractMethod):
         self.db.commit()
 
     def update_molecule(self, inchikey, mol, skip_cir=False):
+        """Load basic molecule attributes into mess.db.
+        
+        Args:
+            inchikey: The molecule InChIKey.
+            mol: A pybel mol object for the molecule.
+            skip_cir: Set to true to skip querying the CIR web service.
+        
+        """
         # calculate identifiers with ob/cir, unless entry exists
         q = 'SELECT inchi FROM molecule WHERE inchikey=?'
         inchikey_check_row = self.c.execute(q, (inchikey,)).fetchone()
@@ -183,11 +217,10 @@ class Import_(AbstractMethod):
             except AttributeError:
                 pass
         # insert molecule identifiers
-        self.c.execute("INSERT OR IGNORE INTO molecule \
-                (inchikey, inchi, smiles, formula, iupac) \
-                VALUES \
-                (?, ?, ?, ?, ?)", \
-                (inchikey, inchi, smiles, formula, iupac))
+        q = ('INSERT OR IGNORE INTO molecule '
+             '(inchikey, inchi, smiles, formula, iupac) '
+             'VALUES (?, ?, ?, ?, ?)')
+        self.c.execute(q, (inchikey, inchi, smiles, formula, iupac))
         if (len(iupacs) > 1): # if multiple, add others as synonym
             q = ('INSERT OR IGNORE INTO molecule_synonym '
                  '(inchikey, name) '
@@ -197,21 +230,36 @@ class Import_(AbstractMethod):
                     self.c.execute(q, (inchikey, i.rstrip()))
     
     def update_synonyms(self, inchikey):
+        """Get synonyms from CIR and load them into mess.db."""
         synonyms = self.cir_request(inchikey, 'names')
         if (synonyms):
             q = ('INSERT OR IGNORE INTO molecule_synonym (inchikey, name) '
                  'VALUES (?, ?)')
-            for synonym in (synonyms.split("\n")):
+            for synonym in (synonyms.split('\n')):
                 self.c.execute(q, (inchikey, synonym))
     
     def cir_request(self, inchikey, representation):
+        """Make request to CIR (Chemical Information Resolver).
+        
+        Args:
+            inchikey: A valid InChIKey.
+            representation: The representation desired from CIR.
+        
+        Sets:
+            self.cir: Sets to True/False based on whether CIR is available to
+                      avoid waiting on timeouts.
+        
+        Returns:
+            CIR's response, or None if there isn't one.
+        
+        """
         try:
             if not self.cir:
                 return None
         except AttributeError:
             self.cir = True
-        url = ('http://cactus.nci.nih.gov/chemical/structure/' + inchikey + 
-              '/' + representation)
+        url = 'http://cactus.nci.nih.gov/chemical/structure/%s/%s' % 
+              (inchikey, representation)
         time.sleep(0.1) # protect cactus from hammering
         try:
             r = urllib2.urlopen(url)
@@ -227,5 +275,5 @@ class Import_(AbstractMethod):
 
 
 def load(db):
-    # loads the current plugin
+    """Load Import_(db)."""
     return Import_(db)
