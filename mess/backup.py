@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 from distutils.version import LooseVersion
+from StringIO import StringIO
 
 from _db import MessDB
 from _tools import AbstractTool
@@ -63,7 +64,7 @@ class Backup(AbstractTool):
                                        os.path.relpath(args.restore)])
             except subprocess.CalledProcessError:
                 sys.exit('%s is not a valid backup file' % args.restore)
-            for line in StringIO.StringIO(output):
+            for line in StringIO(output):
                 split = line.split('/')
                 if (split[0].strip() == 'molecules'):
                     molecules_dir_check = 1
