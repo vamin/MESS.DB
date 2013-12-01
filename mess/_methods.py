@@ -2,6 +2,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import codecs
+import hashlib
+import json
 import os
 import sys
 from datetime import datetime
@@ -15,7 +17,7 @@ class AbstractMethod(object):
         self.db = db
         self.c = db.cursor()
         self.method_name = self.get_method_name()
-        self.status = 'not set'
+        self.status = ''
         self.is_setup = False
         try:
             self.description
@@ -168,24 +170,36 @@ class AbstractMethod(object):
     def setup_method(self):
         """Set insert program to db, set up hash, and insert method to db."""
         self.insert_program()
-        self.param_hash = hash_dict(self.parameters)
+        self.hash = self.__hash__()
         name = self.get_method_name()
         q = ('INSERT OR IGNORE INTO method '
              '(program_id, geop, name, hash) '
              'SELECT program.program_id, ?, ?, ? '
              'FROM program '
              'WHERE program.name=? AND program.version=?')
-        return self.c.execute(q, (self.geop, name, self.param_hash,
+        return self.c.execute(q, (self.geop, name, self.hash,
                                   self.prog_name, self.prog_version))
     
     def set_method_id(self):
         """Set the object's method_id attribute."""
         q = ('SELECT method_id FROM method '
              'WHERE hash = ?;')
-        row = self.c.execute(q, (self.param_hash,)).fetchone()
+        row = self.c.execute(q, (self.hash,)).fetchone()
         self.method_id = row.method_id
     
     @classmethod
     def get_method_name(cls):
         """Return the name of the method, derived from the subclass name."""
         return cls.__name__.replace('_', '').lower()
+    
+    def __hash__(self):
+        """Hash based on method name and parameters.
+    
+        Returns:
+            A hex string of the sha1 hash of self.method_name plus 
+            JSON-serialized self.parameters. Keys are sorted.
+    
+        """
+        return hashlib.sha1(self.method_name + 
+                            json.dumps(self.parameters, 
+                                       sort_keys=True)).hexdigest()
