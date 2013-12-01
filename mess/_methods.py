@@ -87,18 +87,17 @@ class AbstractMethod(object):
             messages: List of messages to write to the log.
         
         """
-        log = codecs.open(log_path, 'a', 'utf-8')
-        log.write(': '.join([datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                             method_name]))
-        log.write('\n')
-        log.write(' '.join(sys.argv))
-        log.write('\n')
-        for m in messages:
-            log.write(m)
+        with codecs.open(log_path, 'a', 'utf-8') as log:
+            log.write(': '.join([datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                 method_name]))
             log.write('\n')
-        log.write('-' * 79)
-        log.write('\n')
-        log.close()
+            log.write(' '.join(sys.argv))
+            log.write('\n')
+            for m in messages:
+                log.write(m)
+                log.write('\n')
+            log.write('-' * 79)
+            log.write('\n')
     
     def insert_program(self):
         """Adds row to program table in mess.db."""
