@@ -67,7 +67,7 @@ class Import(AbstractTool):
                 f[-1] == '~'):
                 continue
             for mol in pybel.readfile(f.split('.')[-1],
-                                      os.path.join(args.source, f)):
+                                      os.path.join(s.source_dir, f)):
                 decorate(mol, UnicodeDecorator)
                 pybel.ob.obErrorLog.StartLogging()
                 inchikey = mol.write('inchikey').rstrip()
