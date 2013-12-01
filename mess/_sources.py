@@ -16,23 +16,28 @@ class Source(object):
         self.db = db
         self.c = db.cursor()
     
-    def setup(self, source_path):
+    def setup(self, source):
         """Setup source in mess.db.
         
         Args:
             source_path: A path to a directory containing source molecules.
             
         """
-        self.source = source_path
-        # check that the provided source is a real file in the right place
-        if not (os.path.isdir(self.source)):
-            sys.exit('This source is not a valid directory.')
-        source_path_parent = os.path.abspath(os.path.join(self.source + '/..'))
+        if not os.path.isdir(source):
+            self.source_dir = os.path.join(os.path.dirname( __file__ ), '../', 
+                                       'sources/', source)
+            if not os.path.isdir(self.source_dir):
+                sys.exit('%s is not a valid source or source directory.' %\
+                         source)
+        else:
+            self.source_dir = source
+        source_path_parent = os.path.abspath(os.path.join(self.source_dir, 
+                                                          '..'))
         if not (source_path_parent.split('/')[-1] == 'sources'):
             sys.exit("All sources must reside in the 'sources' directory.")
-        source_basename = self.source.strip('/').split('/')[-1]
+        source_basename = self.source_dir.strip('/').split('/')[-1]
         source_basename = os.path.basename(source_basename)
-        source_sql = os.path.join(os.path.splitext(self.source)[0],
+        source_sql = os.path.join(os.path.splitext(self.source_dir)[0],
                                   '%s.sql' % source_basename)
         if not (os.path.isfile(source_sql)):
             sys.exit(('All sources must have a corresponding sql file '
@@ -53,7 +58,7 @@ class Source(object):
     
     def files(self):
         """Returns a list of files in the source directory."""
-        return os.listdir(self.source)
+        return os.listdir(self.source_dir)
     
     def update_molecule_source(self, inchikey, identifier):
         """Update the source in mess.db.
