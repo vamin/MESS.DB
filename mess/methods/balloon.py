@@ -47,7 +47,11 @@ class Balloon(AbstractMethod):
                      (self.method_name, self.prog_url))
     
     def check_dependencies(self):
-        """Returns true, because setting prog_version checks for Balloon."""
+        """Check that $BALLOON_FORCEFIELD is set."""
+        # setting prog_version checks for balloon, so no need here
+        if not os.environ.get('BALLOON_FORCEFIELD'):
+            sys.exit(('You must set the $BALLOON_FORCEFIELD environment '
+                      'variable to the path to MMFF94.mff.'))
         return True
     
     def execute(self, args):
@@ -60,8 +64,6 @@ class Balloon(AbstractMethod):
         sdf_out = os.path.realpath(os.path.join(out_dir, '%s.sdf' % inchikey))
         xyz_out = os.path.join(out_dir, inchikey + '.xyz')
         messages = []
-        pwd = os.getcwd()
-        os.chdir(os.path.join(os.path.dirname(__file__), '../../molecules'))
         if not self.check(xyz_out):
             q = 'SELECT smiles FROM molecule WHERE inchikey=?'
             r = self.c.execute(q, (inchikey,)).next()
@@ -98,7 +100,6 @@ class Balloon(AbstractMethod):
         else:
             self.status = 'skipped'
         self.log(args, inchikey_dir, messages)
-        os.chdir(pwd)
         return self.status
     
     def check(self, xyz_out):
