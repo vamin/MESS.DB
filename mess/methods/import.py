@@ -31,11 +31,11 @@ class Import_(AbstractMethod):
     # parameters
     parameters = {}
     tags = []
-
+    
     def check_dependencies(self):
         """Return True, no external dependencies to check."""
         return True
-
+    
     def execute(self, args):
         """Import molecule into MESS.DB."""
         inchikey = args['inchikey']
@@ -53,33 +53,32 @@ class Import_(AbstractMethod):
         # import basic properties
         if not self.check(inchikey, inchikey_dir):
             mol.title = b''
-            mol.write('inchi', 
-                      (inchikey_basename + '.inchi'), 
+            mol.write('inchi',
+                      (inchikey_basename + '.inchi'),
                       overwrite=True)
             if not os.path.exists(inchikey_basename + '.png'):
-                mol.write('_png2', 
+                mol.write('_png2',
                           (inchikey_basename + '.png'))
             touch(inchikey_basename + '.log')
             touch(inchikey_basename + '.notes')
             touch(os.path.join(inchikey_dir, 'sources.tsv'))
-            # insert molecule to db
+            with codecs.open(os.path.join(inchikey_dir, 'charge.txt'), 
+                             'w', 'utf-8') as c:
+                c.write('%i' % mol.charge)
             self.update_molecule(inchikey, mol, skip_cir)
             self.import_properties(inchikey, p.path_id, mol)
-            # update source catalog in db
-            s.update_molecule_source(inchikey, identifier)
-            # update source list tsv
-            s.update_source_tsv(inchikey_dir, identifier)
             self.check(inchikey, inchikey_dir)
         else:
-            # update source catalog in db
-            s.update_molecule_source(inchikey, identifier)
-            # update source list tsv
-            s.update_source_tsv(inchikey_dir, identifier)
-            self.status = 'updated'
+            self.update_molecule(inchikey, mol, skip_cir)
+        s.update_molecule_source(inchikey, identifier)
+        s.update_source_tsv(inchikey_dir, identifier)
+        if not skip_cir:
+            self.update_synonyms(inchikey)
+            self.update_iupac(inchikey)
         self.log(args, inchikey_dir)
         self.db.commit()
         return self.status
-
+    
     def check(self, inchikey, inchikey_dir):
         """Check that a valid molecule folder was created.
         
@@ -98,6 +97,7 @@ class Import_(AbstractMethod):
         log = os.path.join(inchikey_dir, inchikey + '.log')
         notes = os.path.join(inchikey_dir, inchikey + '.notes')
         png = os.path.join(inchikey_dir, inchikey + '.png')
+        charge = os.path.join(inchikey_dir, 'charge.txt')
         sources = os.path.join(inchikey_dir, 'sources.tsv')
         try:
             with codecs.open(inchi, encoding='utf-8') as f:
@@ -107,15 +107,17 @@ class Import_(AbstractMethod):
                 try:
                     if (row.inchikey != inchikey):
                         self.status = 'import failed'
-                        return False 
+                        return False
                 except AttributeError:
                     self.status = 'import failed'
-                    return False                         
+                    return False
             with codecs.open(log, encoding='utf-8'):
                 pass
             with codecs.open(notes, encoding='utf-8'):
                 pass
             with codecs.open(png, encoding='utf-8'):
+                pass
+            with codecs.open(charge, encoding='utf-8'):
                 pass
             with codecs.open(sources, encoding='utf-8'):
                 pass
@@ -145,9 +147,9 @@ class Import_(AbstractMethod):
                 for line in iter(log.splitlines()):
                     if not line.startswith('==='):
                         ob_logs.append(line)
-        self.add_messages_to_log(base_log_path, self.method_name, 
+        self.add_messages_to_log(base_log_path, self.method_name,
                                  ob_logs)
-        self.add_messages_to_log(base_log_path, self.method_name, 
+        self.add_messages_to_log(base_log_path, self.method_name,
                                  ['status: %s' % self.status])
         pybel.ob.obErrorLog.ClearLog()
     
@@ -166,16 +168,16 @@ class Import_(AbstractMethod):
                 continue
             self.insert_property(
                 inchikey, method_path_id,
-                property_name, 'Open Babel descriptor value', 
+                property_name, 'Open Babel descriptor value',
                 type(property_value).__name__, property_value, '')
         # insert Open Babel molecule attributes
         self.insert_property(
             inchikey, method_path_id,
-            'charge', 'Open Babel molecule attribute', 
+            'charge', 'Open Babel molecule attribute',
             type(mol.charge).__name__, mol.charge, '')
         self.insert_property(
             inchikey, method_path_id,
-            'exactmass', 'Open Babel molecule attribute', 
+            'exactmass', 'Open Babel molecule attribute',
             type(mol.exactmass).__name__, mol.exactmass, 'g/mol')
         self.insert_property(
             inchikey, method_path_id,
@@ -186,7 +188,7 @@ class Import_(AbstractMethod):
             'spin', 'Open Babel descriptor value', type(mol.spin).__name__,
             mol.spin, '')
         self.db.commit()
-
+    
     def update_molecule(self, inchikey, mol, skip_cir=False):
         """Load basic molecule attributes into mess.db.
         
@@ -200,7 +202,7 @@ class Import_(AbstractMethod):
         q = 'SELECT inchi FROM molecule WHERE inchikey=?'
         inchikey_check_row = self.c.execute(q, (inchikey,)).fetchone()
         inchi = mol.write('inchi').rstrip().split('=')[1]
-        if (inchikey_check_row is not None and 
+        if (inchikey_check_row is not None and
             inchikey_check_row.inchi == inchi):
             if not skip_cir:
                 self.update_synonyms(inchikey)
@@ -208,30 +210,11 @@ class Import_(AbstractMethod):
             return 0 # this molecule is already correct in the db
         smiles = mol.write('can').rstrip() # canonical smiles
         formula = mol.formula
-        iupacs = []
-        iupac = ''
-        # get identifiers from CIR
-        if not skip_cir:
-            self.update_synonyms(inchikey)
-            try:
-                iupacs = self.cir_request(inchikey, 
-                                          'iupac_name').splitlines(True)
-                # if multiple iupacs, take the longest (most specific) one
-                iupac = max(iupacs, key=len).rstrip()
-            except AttributeError:
-                pass
         # insert molecule identifiers
         q = ('INSERT OR IGNORE INTO molecule '
-             '(inchikey, inchi, smiles, formula, iupac) '
-             'VALUES (?, ?, ?, ?, ?)')
-        self.c.execute(q, (inchikey, inchi, smiles, formula, iupac))
-        if (len(iupacs) > 1): # if multiple, add others as synonym
-            q = ('INSERT OR IGNORE INTO molecule_synonym '
-                 '(inchikey, name) '
-                 'VALUES (?, ?)')
-            for i in iupacs:
-                if i != max(iupacs, key=len):
-                    self.c.execute(q, (inchikey, i.rstrip()))
+             '(inchikey, inchi, smiles, formula) '
+             'VALUES (?, ?, ?, ?)')
+        self.c.execute(q, (inchikey, inchi, smiles, formula))
     
     def update_synonyms(self, inchikey):
         """Get synonyms from CIR and load them into mess.db."""
@@ -241,6 +224,24 @@ class Import_(AbstractMethod):
                  'VALUES (?, ?)')
             for synonym in (synonyms.split('\n')):
                 self.c.execute(q, (inchikey, synonym))
+    
+    def update_iupac(self, inchikey):
+        iupacs = []
+        iupac = ''
+        try:
+            iupacs = self.cir_request(inchikey,
+                                      'iupac_name').splitlines(True)
+            # if multiple iupacs, take the longest (most specific) one
+            iupac = max(iupacs, key=len).rstrip()
+        except AttributeError:
+            pass
+        if (len(iupacs) > 1): # if multiple, add others as synonym
+            q = ('INSERT OR IGNORE INTO molecule_synonym '
+                 '(inchikey, name) '
+                 'VALUES (?, ?)')
+            for i in iupacs:
+                if i != max(iupacs, key=len):
+                    self.c.execute(q, (inchikey, i.rstrip()))
     
     def cir_request(self, inchikey, representation):
         """Make request to CIR (Chemical Information Resolver).
@@ -264,7 +265,7 @@ class Import_(AbstractMethod):
             self.cir = True
         url = 'http://cactus.nci.nih.gov/chemical/structure/%s/%s' %\
               (inchikey, representation)
-        time.sleep(0.1) # protect cactus from hammering
+        time.sleep(0.2) # protect cactus from hammering
         try:
             r = urllib2.urlopen(url)
             if (r.getcode() == 200):
