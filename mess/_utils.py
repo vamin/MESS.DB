@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import hashlib
 import json
 import os
+import resource
 import sys
 
 def get_inchikey_dir(inchikey):
@@ -20,6 +21,21 @@ def get_inchikey_dir(inchikey):
     molecules_dir = os.path.join(os.path.dirname(__file__), '../molecules/')
     return os.path.abspath(os.path.join(molecules_dir, inchikey[:1],
                            inchikey[1:3], inchikey[3:]))
+
+def get_mem_usage(point):
+    """Get the current memory usage.
+    
+    Args:
+        point: A name for the point in time memory usage is being requested.
+    
+    Returns:
+        A human-readable string.
+    
+    """
+    usage=resource.getrusage(resource.RUSAGE_SELF)
+    return '''%s: usertime=%s systime=%s mem=%s mb
+           '''%(point,usage[0],usage[1],
+                (usage[2]*resource.getpagesize())/1000000.0)
 
 def hash_dict(d):
     """Serialize and hash a dict.

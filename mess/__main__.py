@@ -13,6 +13,9 @@ from signal import signal, SIGPIPE, SIG_DFL
 sys.path.append(os.path.join(os.path.dirname( __file__ ), '..' )) # add parent
                                                                   # dir to path
 from _tools import ToolsManager
+from _utils import get_mem_usage
+
+debug = 0 # set to 1 to print memory info
 
 def main():
     """Parse args and load the specified tool.
@@ -30,4 +33,6 @@ def main():
 
 if __name__ == '__main__':
     signal(SIGPIPE, SIG_DFL) # ignore SIG_PIPE, don't throw exception about it
+    if debug: print(get_mem_usage('Beginning'), file=sys.stderr)
     main()
+    if debug: print(get_mem_usage('End'), file=sys.stderr)
