@@ -55,10 +55,8 @@ class Calculate(AbstractTool):
     
     def execute(self, args):
         """Run calculations."""
-        db = MessDB()
-        c = db.cursor()
-        m = load_method(args.method, db)
-        p = Path(db)
+        m = load_method(args.method, MessDB())
+        p = Path(MessDB())
         p.setup(m.method_id, args.parent_path)
         pybel.ob.obErrorLog.StopLogging()
         method_args = {}

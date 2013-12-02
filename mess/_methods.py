@@ -39,10 +39,8 @@ class AbstractMethod(object):
         """Set up method."""
         if not self.is_setup:
             self.setup_method()
-            self.db.commit()
             self.set_method_id()
             self.setup_parameters()
-            self.db.commit()
             self.is_setup = True
     
     def check_dependencies(self):
@@ -165,6 +163,7 @@ class AbstractMethod(object):
         for k, v in self.parameters.items():
             self.insert_parameter(k, v)
         self.insert_tags()
+        self.db.commit()
     
     def setup_method(self):
         """Set insert program to db, set up hash, and insert method to db."""
@@ -176,8 +175,9 @@ class AbstractMethod(object):
              'SELECT program.program_id, ?, ?, ? '
              'FROM program '
              'WHERE program.name=? AND program.version=?')
-        return self.c.execute(q, (self.geop, name, self.hash,
-                                  self.prog_name, self.prog_version))
+        self.c.execute(q, (self.geop, name, self.hash,
+                           self.prog_name, self.prog_version))
+        self.db.commit()
     
     def set_method_id(self):
         """Set the object's method_id attribute."""
