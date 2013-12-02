@@ -103,7 +103,6 @@ class Mopac(AbstractMethod):
             self.status = 'calculation skipped'
             self.import_properties(inchikey, p.path_id, out_file)
         self.log(args, inchikey_dir)
-        self.db.commit()
         return self.status
 
     def check(self, moo_out, xyz_out):
@@ -313,6 +312,7 @@ class Mopac(AbstractMethod):
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
+        self.db.commit()
 
     def moo_to_xyz(self, moo, xyz):
         """Convert Mopac output to xyz.
