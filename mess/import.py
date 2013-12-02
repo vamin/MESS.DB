@@ -53,12 +53,10 @@ class Import(AbstractTool):
     
     def execute(self, args):
         """Run import method for every molecule in source."""
-        db = MessDB()
-        c = db.cursor()
-        m = load_method('import', db)
-        s = Source(db)
+        m = load_method('import', MessDB())
+        s = Source(MessDB())
         s.setup(args.source)
-        p = Path(db)
+        p = Path(MessDB())
         p.setup(m.method_id)
         pybel.ob.obErrorLog.StopLogging()
         for f in s.files():
@@ -69,6 +67,7 @@ class Import(AbstractTool):
             for mol in pybel.readfile(f.split('.')[-1],
                                       os.path.join(s.source_dir, f)):
                 decorate(mol, UnicodeDecorator)
+                pybel.ob.obErrorLog.ClearLog()
                 pybel.ob.obErrorLog.StartLogging()
                 inchikey = mol.write('inchikey').rstrip()
                 pybel.ob.obErrorLog.StopLogging()

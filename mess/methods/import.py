@@ -76,7 +76,6 @@ class Import_(AbstractMethod):
             self.update_synonyms(inchikey)
             self.update_iupac(inchikey)
         self.log(args, inchikey_dir)
-        self.db.commit()
         return self.status
     
     def check(self, inchikey, inchikey_dir):
@@ -215,6 +214,7 @@ class Import_(AbstractMethod):
              '(inchikey, inchi, smiles, formula) '
              'VALUES (?, ?, ?, ?)')
         self.c.execute(q, (inchikey, inchi, smiles, formula))
+        self.db.commit()
     
     def update_synonyms(self, inchikey):
         """Get synonyms from CIR and load them into mess.db."""
@@ -224,6 +224,7 @@ class Import_(AbstractMethod):
                  'VALUES (?, ?)')
             for synonym in (synonyms.split('\n')):
                 self.c.execute(q, (inchikey, synonym))
+        self.db.commit()
     
     def update_iupac(self, inchikey):
         iupacs = []
@@ -242,6 +243,7 @@ class Import_(AbstractMethod):
             for i in iupacs:
                 if i != max(iupacs, key=len):
                     self.c.execute(q, (inchikey, i.rstrip()))
+        self.db.commit()
     
     def cir_request(self, inchikey, representation):
         """Make request to CIR (Chemical Information Resolver).

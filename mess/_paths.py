@@ -13,12 +13,10 @@ class Path(object):
     def setup(self, method_id, parent_path_id = None):
         """Setup path in mess.db."""
         method = self.setup_method(method_id)
-        self.db.commit()
         if (parent_path_id):
             (parent_method,
              superparent_method,
              path_length) = self.setup_parent_path(parent_path_id)
-            self.db.commit()
         elif (method['name'] == 'import'):
             q = ('SELECT method_path_id FROM method_path_parent '
                  'WHERE method_id=? AND parent_method_path_id=method_path_id')
@@ -37,19 +35,18 @@ class Path(object):
             q = 'SELECT method_id, name FROM method WHERE name = ?'
             r = self.c.execute(q, ('import',)).fetchone()
             parent_method = self.setup_method(r.method_id)
-            self.db.commit()
             superparent_method = {}
             path_length = 1
         # check if path exists, add if not
         self.path_id = self.insert_path(method, parent_method, parent_path_id,
                                    path_length)
-        self.db.commit()
         # set dir
         self.method_dir = self.get_dir(method, parent_method, self.path_id)
         # set parent dir
         self.parent_method_dir = self.get_dir(parent_method,
                                               superparent_method,
                                               parent_path_id)
+        self.db.close()
     
     def setup_method(self, method_id):
         """Set up method dict.
@@ -174,6 +171,7 @@ class Path(object):
             # populate path edges
             self.populate_edges(method['id'], parent_method['id'], path_id,
                                 parent_path_id, path_length)
+        self.db.commit()
         return path_id
     
     def get_dir(self, method, parent_method, path_id):

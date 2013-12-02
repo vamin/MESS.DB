@@ -14,7 +14,7 @@ class Source(object):
     def __init__(self, db):
         """Initialize db cursor."""
         self.db = db
-        self.c = db.cursor()
+        self.c = self.db.cursor()
     
     def setup(self, source):
         """Setup source in mess.db.
@@ -71,7 +71,8 @@ class Source(object):
         q = ('INSERT OR IGNORE INTO molecule_source '
              '(inchikey, source_id, identifier) '
              'VALUES (?, ?, ?)')
-        return self.c.execute(q, (inchikey, self.id, identifier))
+        self.c.execute(q, (inchikey, self.id, identifier))
+        self.db.commit()
     
     def update_source_tsv(self, inchikey_dir, identifier):
         """Update the sources.tsv file.
