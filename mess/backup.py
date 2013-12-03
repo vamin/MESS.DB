@@ -17,9 +17,9 @@ class Backup(AbstractTool):
         """Set description of tool."""
         self.description = 'Backup or restore mess.db and the molecules dir '
         self.epilog = ('Backups consist of the db/mess.db file and the entire '
-                       'molecules directory. Everything is tarred and gzipped '
-                       'into messdb/backups with the filename '
-                       'MESS.DB.timestamp.tbz. Backups can be restored '
+                       'molecules  and logs directories. Everything is tarred '
+                       'and bzipped into messdb/backups with the filename '
+                       'MESS.DB.timestamp.tbz2. Backups can be restored '
                        'directly from thse files, overwriting whatever is '
                        'currently in MESS.DB. Backups are recommended before '
                        'any operation that writes to the database (i.e., '
@@ -27,11 +27,12 @@ class Backup(AbstractTool):
     
     def subparse(self, subparser):
         """Set tool-specific argparse arguments."""
-        subparser.add_argument('-r',
-                               '--restore',
+        subparser.add_argument('-p', '--max-procs', type=int, default=1,
+                               help=('Number of CPUs to use for compression, '
+                                     'default is 1'))
+        subparser.add_argument('-r', '--restore',
                                help=('Restore from the specified backup'))
-        subparser.add_argument('-b',
-                               '--backups_path',
+        subparser.add_argument('-b', '--backups_path',
                                help=('Path to deposit backup, default is '
                                      'messdb/backups dir'))
     
@@ -53,6 +54,8 @@ class Backup(AbstractTool):
                                        '../db/mess.db'))
         mol_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
                                          '../molecules'))
+        logs_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
+                                         '../logs'))
         backups_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
                                        '../backups'))
         
@@ -74,16 +77,28 @@ class Backup(AbstractTool):
                 except IndexError:
                     pass
                 if (mess_db_check and molecules_dir_check):
+                    print('***restore from %s initiated***' % args.restore, 
+                          file=sys.stderr)
                     subprocess.call(['rm', '-rf', mol_path])
+                    subprocess.call(['rm', '-rf', logs_path])
                     subprocess.call(['tar', '-jxvf', 
                                      os.path.relpath(args.restore)])
-                    sys.exit('***backup restored***')
+                    sys.exit('***backup %s restored***' % args.restore)
             sys.exit('%s is not a valid backup file' % args.restore)
         else:
-            subprocess.call(['tar', '-jcvf',
-                             os.path.join(backups_path, 'MESS.DB.%s.tbz2' % 
-                                                        str(time.time())), 
-                             mess_db_path, mol_path])
+            backup_name = 'MESS.DB.%s.tbz2' % str(time.time())
+            print('***backup to %s initiated***' % backup_name, 
+                  file=sys.stderr)
+            tar = subprocess.Popen(['tar', '-cv', mess_db_path, mol_path, 
+                                    logs_path], stdout=subprocess.PIPE)
+            subprocess.Popen(['parallel', '--gnu', '--pipe', '--recend', '', 
+                              '--max-procs', str(args.max_procs), '-k', 
+                              'bzip2', '--best', '-c'], stdin=tar.stdout, 
+                             stdout=open(os.path.join(backups_path, 
+                                                      backup_name), 'w'))
+            tar.wait()
+            print('***backup to %s completed***' % backup_name, 
+                  file=sys.stderr)
 
 
 def load():

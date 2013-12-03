@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+#PBS -S /bin/sh
+#PBS -V
+#PBS -j oe
+#PBS -N "MESS.DB_backup"
+#PBS -l nodes=1:ppn=__THREADS__
+
+module load python
+module load openbabel
+
+cd $PBS_O_WORKDIR
+
+OUTPUT=`python -u mess backup -p __THREADS__ __RESTORE__ 2>&1`
+echo "$OUTPUT" &>>__PATH_TO_LOGS__/backup.log
