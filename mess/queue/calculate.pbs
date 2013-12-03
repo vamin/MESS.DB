@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+#PBS -S /bin/sh
+#PBS -V
+#PBS -j oe
+#PBS -N "MESS.DB"
+#PBS -l nodes=1:ppn=1
+
+module load python
+module load openbabel
+module load balloon
+module load mopac
+
+export BALLOON_FORCEFIELD=/opt/balloon_x86_64/MMFF94.mff
+
+cd $PBS_O_WORKDIR
+
+python -u mess select --part __PART__ --of __TOTAL__ | python -u mess calculate -m __METHOD__ -p __PATH_ID__ &>>__PATH_TO_LOGS__/__METHOD___PATH___PATH_ID__.log
