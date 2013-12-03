@@ -10,12 +10,14 @@ Thumbs.db
 # ignore pyc
 *.pyc
 
+# ignore logs
+*.log
+
 # ignore the database
 db/mess.db
 
 # ignore folder contents
 backups/*
 molecules/*
-searches/*
 sources/*/
 test/*
