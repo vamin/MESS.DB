@@ -19,7 +19,7 @@ class Backup(AbstractTool):
         self.epilog = ('Backups consist of the db/mess.db file and the entire '
                        'molecules directory. Everything is tarred and gzipped '
                        'into messdb/backups with the filename '
-                       'MESS.DB.timestamp.tgz. Backups can be restored '
+                       'MESS.DB.timestamp.tbz. Backups can be restored '
                        'directly from thse files, overwriting whatever is '
                        'currently in MESS.DB. Backups are recommended before '
                        'any operation that writes to the database (i.e., '
@@ -60,7 +60,7 @@ class Backup(AbstractTool):
             mess_db_check = 0
             molecules_dir_check = 0
             try:
-                output = subprocess.check_output(['tar', '-tzf',
+                output = subprocess.check_output(['tar', '-tjf',
                                        os.path.relpath(args.restore)])
             except subprocess.CalledProcessError:
                 sys.exit('%s is not a valid backup file' % args.restore)
@@ -75,13 +75,13 @@ class Backup(AbstractTool):
                     pass
                 if (mess_db_check and molecules_dir_check):
                     subprocess.call(['rm', '-rf', mol_path])
-                    subprocess.call(['tar', '-xzvf', 
+                    subprocess.call(['tar', '-jxvf', 
                                      os.path.relpath(args.restore)])
                     sys.exit('***backup restored***')
             sys.exit('%s is not a valid backup file' % args.restore)
         else:
-            subprocess.call(['tar', '-czvf',
-                             os.path.join(backups_path, 'MESS.DB.%s.tgz' % 
+            subprocess.call(['tar', '-jcvf',
+                             os.path.join(backups_path, 'MESS.DB.%s.tbz2' % 
                                                         str(time.time())), 
                              mess_db_path, mol_path])
 
