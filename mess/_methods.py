@@ -101,8 +101,8 @@ class AbstractMethod(object):
         """Adds row to program table in mess.db."""
         q = ('INSERT OR IGNORE INTO program (name, version, url) '
              'VALUES (?, ?, ?)')
-        return self.c.execute(q, (self.prog_name, self.prog_version,
-                                  self.prog_url))
+        self.c.execute(q, (self.prog_name, self.prog_version, self.prog_url))
+        self.db.commit()
     
     def insert_parameter(self, name, setting):
         """Adds parameter to mess.db.
@@ -113,13 +113,14 @@ class AbstractMethod(object):
         
         """
         q = ('INSERT OR IGNORE INTO parameter (name) VALUES (?)')
-        r = self.c.execute(q, (name, ))
+        self.c.execute(q, (name, ))
         q = ('INSERT OR IGNORE INTO method_parameter '
              '(method_id, parameter_id, setting) '
              'SELECT ?, parameter.parameter_id, ? '
              'FROM program, parameter '
              'WHERE parameter.name=?')
-        return self.c.execute(q, (self.method_id, setting, name))
+        self.c.execute(q, (self.method_id, setting, name))
+        self.db.commit()
     
     def insert_property(self, inchikey, method_path_id,
                               name, description,
@@ -139,7 +140,7 @@ class AbstractMethod(object):
         """
         q = ('INSERT OR IGNORE INTO property (name, description, format) '
              'VALUES (?, ?, ?);')
-        r = self.c.execute(q, (name, description, format))
+        self.c.execute(q, (name, description, format))
         q = ('INSERT OR REPLACE INTO molecule_method_property '
              '(inchikey, method_path_id, property_id, units, result) '
              'SELECT ?, ?, property.property_id, ?, ? '
@@ -147,8 +148,9 @@ class AbstractMethod(object):
              'WHERE '
              'property.name=? AND property.description=? AND '
              'property.format=?')
-        return self.c.execute(q, (inchikey, method_path_id, units,
-                                  value, name, description, format))
+        self.c.execute(q, (inchikey, method_path_id, units, 
+                           value, name, description, format))
+        self.db.commit()
     
     def insert_tags(self):
         """Add tags to method_tag table in mess.db."""
@@ -157,13 +159,13 @@ class AbstractMethod(object):
              'WHERE parameter.name= ?')
         for t in self.tags:
             self.c.execute(q, (self.method_id, t))
+        self.db.commit()
     
     def setup_parameters(self):
         """Import paramaters dict to mess.db."""
         for k, v in self.parameters.items():
             self.insert_parameter(k, v)
         self.insert_tags()
-        self.db.commit()
     
     def setup_method(self):
         """Set insert program to db, set up hash, and insert method to db."""

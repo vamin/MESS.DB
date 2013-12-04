@@ -111,8 +111,9 @@ class Path(object):
              '(parent_method_id, child_method_id) '
              'SELECT parent_method_id, ? FROM method_edge '
              'WHERE child_method_id = ? UNION ALL SELECT ?, ?;')
-        return self.c.execute(q, (child_method_id, parent_method_id,
-                                  child_method_id, child_method_id))
+        self.c.execute(q, (child_method_id, parent_method_id,
+                           child_method_id, child_method_id))
+        self.db.commit()
     
     def populate_edges(self, method_id, parent_method_id, path_id,
                        parent_path_id, path_length):
@@ -135,9 +136,10 @@ class Path(object):
              'WHERE parent_method_id = ? AND child_method_id = ? '
              'UNION ALL SELECT ?, method_edge_id, distance '
              'FROM method_path_edge WHERE method_path_id = ?')
-        return self.c.execute(q, (path_id, path_id, path_id, path_length,
-                                  parent_method_id, method_id, path_id,
-                                  parent_path_id))
+        self.c.execute(q, (path_id, path_id, path_id, path_length,
+                           parent_method_id, method_id, path_id,
+                           parent_path_id))
+        self.db.commit()
     
     def insert_path(self, method, parent_method, parent_path_id, path_length):
         """Insert a new path into mess.db.
@@ -165,13 +167,13 @@ class Path(object):
             q = ('INSERT INTO method_path_parent '
                  '(method_id, parent_method_path_id, method_path_id) '
                  'VALUES (?, ?, ?);')
+            self.db.commit()
             self.c.execute(q, (method['id'], parent_path_id, path_id))
             # insert edges
             self.insert_edges(method['id'], parent_method['id'])
             # populate path edges
             self.populate_edges(method['id'], parent_method['id'], path_id,
                                 parent_path_id, path_length)
-        self.db.commit()
         return path_id
     
     def get_dir(self, method, parent_method, path_id):

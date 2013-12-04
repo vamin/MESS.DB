@@ -71,7 +71,7 @@ class Select(AbstractTool):
                           '%i parts.' % len(alpha3)))
             subsets = [ alpha3[i::args.of] for i in xrange(args.of) ]
             subset = subsets[args.part-1]
-        db = MessDB(isolation_level='DEFERRED')
+        db = MessDB()
         c = db.cursor()
         self.columns = ['molecule.inchikey']
         self.joins = set()

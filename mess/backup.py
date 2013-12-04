@@ -60,11 +60,12 @@ class Backup(AbstractTool):
                                        '../backups'))
         
         if (args.restore):
+            print('***validating integrity of %s***' % args.restore, 
+                  file=sys.stderr)
             mess_db_check = 0
             molecules_dir_check = 0
             try:
-                output = subprocess.check_output(['tar', '-tjf',
-                                       os.path.relpath(args.restore)])
+                output = subprocess.check_output(['tar', '-tjf', args.restore])
             except subprocess.CalledProcessError:
                 sys.exit('%s is not a valid backup file' % args.restore)
             for line in StringIO(output):
