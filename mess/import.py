@@ -60,8 +60,9 @@ class Import(AbstractTool):
         p.setup(m.method_id)
         pybel.ob.obErrorLog.StopLogging()
         for f in s.files():
-            if (f.split('.')[-1] == 'sql' or
-                f.split('.')[-1] == 'txt' or
+            if (f.split('.')[-1] == 'sql' or 
+                f.split('.')[-1] == 'txt' or 
+                f.split('.')[-1] == 'bak' or 
                 f[-1] == '~'):
                 continue
             for mol in pybel.readfile(f.split('.')[-1],
