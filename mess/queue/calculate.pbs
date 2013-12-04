@@ -14,4 +14,4 @@ export BALLOON_FORCEFIELD=/opt/balloon_x86_64/MMFF94.mff
 
 cd $PBS_O_WORKDIR
 
-python -u mess select --part __PART__ --of __THREADS__ | python -u mess calculate -m __METHOD__ -p __PATH_ID__ &>>__PATH_TO_LOGS__/calculate___METHOD__.log
+python -u mess select __QUERY__ --part __PART__ --of __THREADS__ | python -u mess calculate -m __METHOD__ -p __PATH_ID__ &>>__PATH_TO_LOGS__/calculate___METHOD__.log

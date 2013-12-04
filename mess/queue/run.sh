@@ -21,6 +21,7 @@ function usage {
     CALCULATE OPTIONS:
         -m <method> Name of method to calculate [required]
         -p <path_id> Path id of parent path [default=0]
+        -q <query> Query file
         -n <threads> # of threads [default=1]
         "
 }
@@ -30,7 +31,7 @@ PATH_ID=0
 THREADS=1
 
 # Override defaults with options from command line if they are set
-while getopts "t:s:r:m:p:n:h" OPT; do
+while getopts "t:s:r:m:p:q:n:h" OPT; do
     case $OPT in
         h)
             usage
@@ -50,6 +51,9 @@ while getopts "t:s:r:m:p:n:h" OPT; do
             ;;
         p)
             PATH_ID=$OPTARG
+            ;;
+        q)
+            QUERY='-q '`readlink -f $OPTARG`
             ;;
         n)
             THREADS=$OPTARG
@@ -112,6 +116,7 @@ for i in $(seq 1 $THREADS); do
     | sed "s,__RESTORE__,$RESTORE,g" \
     | sed "s,__METHOD__,$METHOD,g" \
     | sed "s,__PATH_ID__,$PATH_ID,g" \
+    | sed "s,__QUERY__,$QUERY,g" \
     | sed "s,__PART__,$i,g" \
     | sed "s,__THREADS__,$THREADS,g" >$SUB
     $SUB_CMD $SUB
