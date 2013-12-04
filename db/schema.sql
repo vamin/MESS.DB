@@ -1,9 +1,4 @@
 /*
-If your sqlite3 installation supports foreign keys,
-uncommenting the foreign key declarations is recommended.
-*/
-
-/*
 Describing molecules, their names, and where to get them
 */
 
@@ -19,7 +14,7 @@ CREATE TABLE IF NOT EXISTS
 
 --DROP TABLE molecule_synonym;
 CREATE TABLE IF NOT EXISTS
-    molecule_synonym( --any synonyms, common names, identifiers, etc.
+    molecule_synonym( --any synonyms, common names, etc.
         inchikey TEXT NOT NULL,
         --FOREIGN KEY(inchikey) REFERENCES molecule(inchikey),
         name TEXT NOT NULL,
@@ -93,7 +88,7 @@ CREATE TABLE IF NOT EXISTS
         --FOREIGN KEY(program_id) REFERENCES program(program_id),
         name TEXT,
         geop INTEGER, --flag, indicates whether method generates new geometry
-        hash TEXT NOT NULL --sha1 hash of program parameter settings
+        hash TEXT NOT NULL --sha1 hash of method name and parameter settings
     );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_method_hash ON method (hash);
 
@@ -142,7 +137,7 @@ CREATE TABLE IF NOT EXISTS
 
 --DROP TABLE method_path_parent;
 CREATE TABLE IF NOT EXISTS
-    method_path_parent( --this table tracks path parents and the ending method id for convenience of some queries
+    method_path_parent( --this table tracks path parents and the ending method id for convenience
         method_id INTEGER NOT NULL, --method id of the lastest method in the path
         --FOREIGN KEY(method_id) REFERENCES method(method_id),
         parent_method_path_id INTEGER NOT NULL,
@@ -179,3 +174,5 @@ CREATE TABLE IF NOT EXISTS
         result BLOB,
         UNIQUE(inchikey, method_path_id, property_id, units)
     );
+
+PRAGMA journal_mode=wal;

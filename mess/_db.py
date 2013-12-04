@@ -7,6 +7,7 @@ import sqlite3
 import sys
 import traceback
 from collections import namedtuple
+from distutils.version import LooseVersion
 
 class MessDB(object):
     """Manage a connection to mess.db."""
@@ -16,14 +17,20 @@ class MessDB(object):
         self.kwargs = kwargs
         self.tries = 0
         self.max_tries = 3
+        self.check_version()
         self.open()
-    
+
+    def check_version(self):
+        if (LooseVersion(sqlite3.sqlite_version) < LooseVersion('3.7.0')):
+            sys.exit(('The database requres SQLite version 3.7 or greater '
+                      'due to the use of WAL mode.'))
+
     def open(self):
         """Open a connection to db/mess.db and set up row factory."""
         try:
             self.conn = sqlite3.connect(os.path.join(os.path.dirname(__file__),
                                                      '../db/mess.db'),
-                                        timeout=30, *self.args, **self.kwargs)
+                                        timeout=120, *self.args, **self.kwargs)
         except IOError:
             sys.exit('could not find/create mess.db')
         self.conn.row_factory = self.namedtuple_factory
@@ -77,10 +84,13 @@ class MessDB(object):
         """Load the mess.db schema."""
         schema = os.path.join(os.path.dirname(__file__), '../db/schema.sql')
         self.cursor().executescript(codecs.open(schema, 
-                                               encoding='utf-8').read())
+                                                encoding='utf-8').read())
         print('New mess.db initialized.', file=sys.stderr)
     
     def __del__(self):
         """On deletion, commit transations and close the connection."""
-        self.commit()
-        self.close()
+        try:
+            self.commit()
+            self.close()
+        except AttributeError:
+            pass # there was no db connection
