@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 import codecs
 import math
 import os
-import sqlite3
 import subprocess
 import sys
 

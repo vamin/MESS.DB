@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 import argparse
 import shutil
 import os
-import sqlite3
 import sys
 
 from _db import MessDB

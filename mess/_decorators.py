@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 import collections
 import functools
 import inspect
-import sqlite3
 import types
 
 from _utils import unicode_replace

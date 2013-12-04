@@ -5,7 +5,6 @@ import binascii
 import codecs
 import math
 import os
-import sqlite3
 import subprocess
 import sys
 from distutils.version import LooseVersion

@@ -3,8 +3,6 @@ from __future__ import unicode_literals
 
 import argparse
 import imp
-import os
-import sqlite3
 import sys
 from distutils.version import LooseVersion
 

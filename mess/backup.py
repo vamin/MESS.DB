@@ -1,7 +1,6 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import argparse
 import os
 import subprocess
 import sys
@@ -46,6 +45,14 @@ class Backup(AbstractTool):
         python_version = '.'.join(str(x) for x in sys.version_info)
         if (LooseVersion(python_version) < LooseVersion('2.7')):
             sys.exit('The backup tool requres Python >=2.7.')
+        try:
+            if (LooseVersion(pybel.ob.OBReleaseVersion()) <
+                LooseVersion('2.3.0')):
+                sys.exit(('This tool requires Open Babel (and its python '
+                          'module, pybel) version >=2.3.0.'))
+        except AttributeError, OSError:
+            sys.exit(('This tool requires Open Babel (and its python module, '
+                      'pybel) version >=2.3.0.'))
         return True
     
     def execute(self, args):

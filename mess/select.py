@@ -5,7 +5,6 @@ import codecs
 import csv
 import os
 import re
-import sqlite3
 import string
 import sys
 
