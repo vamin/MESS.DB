@@ -14,7 +14,7 @@ Thumbs.db
 *.log
 
 # ignore the database
-db/mess.db
+db/mess.db*
 
 # ignore folder contents
 backups/*
