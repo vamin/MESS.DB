@@ -21,8 +21,8 @@ class Select(AbstractTool):
     
     def subparse(self, subparser):
         """Set tool-specific argparse arguments."""
-        subparser.add_argument('-s', '--sql', type=str,
-                               help=('An SQL statement or file that returns '
+        subparser.add_argument('-q', '--query', type=str,
+                               help=('An SQL query string or file that returns '
                                      'inchikeys in first column'))
         #subparser.add_argument('-n', '--property-name', type=str,
         #                       help='name of propery')
@@ -76,26 +76,26 @@ class Select(AbstractTool):
         self.columns = ['molecule.inchikey']
         self.joins = set()
         self.wheres = ['1=1']
-        if args.sql:
+        if args.query:
             try:
-                c.execute(codecs.open(args.sql, encoding='utf-8').read())
+                c.execute(codecs.open(args.query, encoding='utf-8').read())
             except sqlite3.OperationalError:
-                sys.exit("'%s' does not contain valid sql." % args.sql)
+                sys.exit("'%s' does not contain valid sql." % args.query)
             except IOError:
                 try:
-                    c.execute(args.sql)
+                    c.execute(args.query)
                 except sqlite3.OperationalError:
                     sys.exit(("'%s' is neither valid sql nor a path "
-                              'to a file containing valid sql.') % args.sql)
+                              'to a file containing valid sql.') % args.query)
         #elif args.property_name and args.property_operator and (args.property_value or args.property_value == 0):
         #    self.joins.add(('JOIN molecule_method_property '
         #                    'ON molecule_method_property.inchikey = '
         #                    'molecule.inchikey'))
         #    self.add_condition(args.property_name, args.property_operator)
-        #    c.execute(self.generate_sql(), (args.property_name,
-        #                                    args.property_value))
+        #    c.execute(self.generate_query), (args.property_name,
+        #                                     args.property_value))
         else:
-            c.execute(self.generate_sql())
+            c.execute(self.generate_query())
         # check that sql returns inchikey in first column
         if not c.description[0][0].lower() == 'inchikey':
             sys.exit('Query must return inchikey in first column.')
@@ -113,11 +113,11 @@ class Select(AbstractTool):
             writer.writerow(list(xstr(v).decode('utf-8') for v in r))
         db.close() # must be closed manually to prevent db locking during pipe
     
-    def generate_sql(self):
+    def generate_query(self):
         """Combine columns, joins, and wheres into single SQL query.
         
         Returns:
-            A valid sql statement.
+            A valid sql query.
         
         """
         return ''.join(['SELECT ',
