@@ -174,5 +174,3 @@ CREATE TABLE IF NOT EXISTS
         result BLOB,
         UNIQUE(inchikey, method_path_id, property_id, units)
     );
-
-PRAGMA journal_mode=wal;

@@ -82,9 +82,13 @@ class MessDB(object):
     
     def initialize(self):
         """Load the mess.db schema."""
+        c = self.cursor()
         schema = os.path.join(os.path.dirname(__file__), '../db/schema.sql')
-        self.cursor().executescript(codecs.open(schema, 
-                                                encoding='utf-8').read())
+        c.executescript(codecs.open(schema, encoding='utf-8').read())
+        r = c.execute('PRAGMA journal_mode=wal').next()
+        if not r.journal_mode == 'wal':
+            sys.exit(('Setting jounral mode to WAL failed. Run PRAGMA '
+                      'journal_mode=wal in SQLite before continuing.'))
         print('New mess.db initialized.', file=sys.stderr)
     
     def __del__(self):
