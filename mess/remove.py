@@ -25,10 +25,6 @@ class Remove(AbstractTool):
                                help=('A list of inchikeys, file or passed in '
                                      'through STDIN'))
     
-    def check_dependencies(self):
-        """Return true, no dependencies for this tool."""
-        return True
-    
     def execute(self, args):
         """Remove specified elements."""
         db = MessDB()

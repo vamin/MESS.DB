@@ -35,26 +35,6 @@ class Backup(AbstractTool):
                                help=('Path to deposit backup, default is '
                                      'messdb/backups dir'))
     
-    def check_dependencies(self):
-        """Check for dependencies (Python >=2.7).
-        
-        Returns:
-            True if all dependencies are met.
-        
-        """
-        python_version = '.'.join(str(x) for x in sys.version_info)
-        if (LooseVersion(python_version) < LooseVersion('2.7')):
-            sys.exit('The backup tool requres Python >=2.7.')
-        try:
-            if (LooseVersion(pybel.ob.OBReleaseVersion()) <
-                LooseVersion('2.3.0')):
-                sys.exit(('This tool requires Open Babel (and its python '
-                          'module, pybel) version >=2.3.0.'))
-        except AttributeError, OSError:
-            sys.exit(('This tool requires Open Babel (and its python module, '
-                      'pybel) version >=2.3.0.'))
-        return True
-    
     def execute(self, args):
         """Run backup/restore."""
         mess_db_path = os.path.relpath(os.path.join(os.path.dirname(__file__),

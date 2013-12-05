@@ -34,23 +34,6 @@ class Calculate(AbstractTool):
                                help=('Specify a parent path id. If not set, '
                                      'start from InChI'))
     
-    def check_dependencies(self):
-        """Check for dependencies (Open Babel >=2.3).
-        
-        Returns:
-            True if all dependencies are met.
-        
-        """
-        try:
-            if (LooseVersion(pybel.ob.OBReleaseVersion()) <
-                LooseVersion('2.3.0')):
-                sys.exit(('This tool requires Open Babel (and its python '
-                          'module, pybel) version >=2.3.0.'))
-        except AttributeError, OSError:
-            sys.exit(('This tool requires Open Babel (and its python module, '
-                      'pybel) version >=2.3.0.'))
-        return True
-    
     def execute(self, args):
         """Run calculations."""
         m = load_method(args.method, MessDB())

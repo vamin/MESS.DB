@@ -20,10 +20,6 @@ class Check(AbstractTool):
         """Set tool-specific argparse arguments."""
         pass # no arguments
     
-    def check_dependencies(self):
-        """Return true, no dependencies for this tool."""
-        return True
-    
     def execute(self, args):
         """Run self checks."""
         db = MessDB()

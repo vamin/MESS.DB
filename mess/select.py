@@ -47,10 +47,6 @@ class Select(AbstractTool):
                                      'recommended if piping to '
                                      "'mess calculate'"))
     
-    def check_dependencies(self):
-        """Return true, no dependencies for this tool."""
-        return True
-    
     def execute(self, args):
         """Run select query, output table."""
         if (args.part or args.of) and not (args.part and args.of):

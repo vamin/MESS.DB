@@ -61,11 +61,6 @@ class AbstractTool(object):
         
         """
         raise NotImplementedError("every tool needs a 'subparse' method")
-
-    def check_dependencies(self):
-        """Raise error if check_dependencies not implemented."""
-        raise NotImplementedError(("every tool needs a 'check_dependencies'"
-                                   'method'))
     
     def execute(self, args):
         """Raise error if execute not implemented."""

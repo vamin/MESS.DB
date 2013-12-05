@@ -32,23 +32,6 @@ class Import(AbstractTool):
                                help=('Do not use CIR web service to import '
                                      'IUPAC names and other synonyms'))
     
-    def check_dependencies(self):
-        """Check for dependencies (Open Babel >=2.3).
-        
-        Returns:
-            True if all dependencies are met.
-        
-        """
-        try:
-            if (LooseVersion(pybel.ob.OBReleaseVersion()) <
-                LooseVersion('2.3.0')):
-                sys.exit(('This tool requires Open Babel (and its python '
-                          'module, pybel) version >=2.3.0.'))
-        except AttributeError, OSError:
-            sys.exit(('This tool requires Open Babel (and its python module, '
-                      'pybel) version >=2.3.0.'))
-        return True
-    
     def execute(self, args):
         """Run import method for every molecule in source."""
         m = load_method('import', MessDB())
