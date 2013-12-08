@@ -11,9 +11,9 @@ from distutils.version import LooseVersion
 
 import pybel
 
-from _decorators import decorate, UnicodeDecorator
-from _methods import AbstractMethod
-from _utils import get_inchikey_dir, setup_dir
+from _method import AbstractMethod
+from decorators import decorate, UnicodeDecorator
+from utils import get_inchikey_dir, setup_dir
 
 decorate(pybel, UnicodeDecorator)
 

@@ -7,8 +7,8 @@ import os
 import subprocess
 import sys
 
-from _methods import AbstractMethod
-from _utils import get_inchikey_dir, setup_dir
+from _method import AbstractMethod
+from utils import get_inchikey_dir, setup_dir
 
 class Mopac(AbstractMethod):
     # method info

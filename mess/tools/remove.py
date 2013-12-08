@@ -7,7 +7,7 @@ import os
 import sys
 
 from _db import MessDB
-from _tools import AbstractTool
+from _tool import AbstractTool
 
 ### TODO: handle source, method (level, program, method*, parameter,
 ### property) pruning

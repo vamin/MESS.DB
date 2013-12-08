@@ -11,11 +11,11 @@ import urllib2
 
 import pybel
 
-from _decorators import decorate, UnicodeDecorator
-from _methods import AbstractMethod
-from _paths import Path
-from _sources import Source
-from _utils import get_inchikey_dir, setup_dir, touch
+from _method import AbstractMethod
+from _path import Path
+from _source import Source
+from decorators import decorate, UnicodeDecorator
+from utils import get_inchikey_dir, setup_dir, touch
 
 decorate(pybel, UnicodeDecorator)
 

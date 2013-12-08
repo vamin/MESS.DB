@@ -9,7 +9,7 @@ from distutils.version import LooseVersion
 from StringIO import StringIO
 
 from _db import MessDB
-from _tools import AbstractTool
+from _tool import AbstractTool
 
 class Backup(AbstractTool):
     def __init__(self):

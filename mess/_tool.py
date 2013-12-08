@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from mess import __all__
 
-class ToolsManager(object):
+class ToolManager(object):
     """Handles the reading and loading of tool modules."""
     def __init__(self):
         """Initialize the tools list."""
@@ -31,12 +31,13 @@ class ToolsManager(object):
         
         """
         if not tool_name in __all__:
-            raise KeyError("tool '" + tool_name + "' not found")
+            raise KeyError("tool '%s' not found" % tool_name)
         try:
             tool = self.__tools[tool_name]
         except KeyError:
             # load the plugin only if not loaded yet
-            module = __import__('mess.%s' % tool_name, fromlist=['tools'])
+            module = __import__('mess.tools.%s' % tool_name, 
+                                fromlist=['tools'])
             tool = module.load()
             self.__tools[tool_name] = tool
         return tool

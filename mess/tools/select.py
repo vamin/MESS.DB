@@ -9,8 +9,8 @@ import string
 import sys
 
 from _db import MessDB
-from _tools import AbstractTool
-from _utils import xstr
+from _tool import AbstractTool
+from utils import xstr
 
 class Select(AbstractTool):
     def __init__(self):

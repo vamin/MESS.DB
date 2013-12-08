@@ -8,8 +8,6 @@ import os
 import sys
 from datetime import datetime
 
-from _utils import hash_dict
-
 class AbstractMethod(object):
     """All methods should inherit from this class."""
     def __init__(self, db):

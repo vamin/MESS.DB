@@ -6,7 +6,7 @@ import functools
 import inspect
 import types
 
-from _utils import unicode_replace
+from utils import unicode_replace
 
 def decorate(object_, decorator, *args, **kwargs):
     """Apply a decorator to all callable functions of an object.

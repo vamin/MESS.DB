@@ -6,8 +6,8 @@ import os
 import sys
 
 from _db import MessDB
-from _tools import AbstractTool
-from _utils import is_inchikey
+from _tool import AbstractTool
+from utils import is_inchikey
 
 class Check(AbstractTool):
     def __init__(self):

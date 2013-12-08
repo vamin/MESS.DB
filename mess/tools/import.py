@@ -9,11 +9,11 @@ from distutils.version import LooseVersion
 import pybel
 
 from _db import MessDB
-from _decorators import decorate, UnicodeDecorator
-from _paths import Path
-from _sources import Source
-from _tools import AbstractTool
-from _utils import is_inchikey, load_method
+from _path import Path
+from _source import Source
+from _tool import AbstractTool
+from decorators import decorate, UnicodeDecorator
+from utils import is_inchikey, load_method
 
 decorate(pybel, UnicodeDecorator)
 
