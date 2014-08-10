@@ -66,9 +66,6 @@ class AbstractMethod(object):
                                    'method'))
     
     def reduce(self, query, values):
-        print('reduce:')
-        print(query)
-        print(len(values))
         if query or values[0]:
             self.c.executemany(query, values)
             self.db.commit()

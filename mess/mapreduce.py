@@ -80,7 +80,7 @@ class Server(mincemeat.Server):
             logging.basicConfig(level=logging.DEBUG)
         else:
             logging.basicConfig(level=logging.INFO)
-        self.run_server(password, port)
+        return self.run_server(password, port)
     
     def handle_accept(self):
         conn, addr = self.accept()

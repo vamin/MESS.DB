@@ -10,8 +10,6 @@ import sys
 from _method import AbstractMethod
 from utils import get_inchikey_dir, setup_dir
 
-import time
-
 class Mopac(AbstractMethod):
     # method info
     description = ('Semiempirical geometry optimization, energies, and bond '
@@ -104,9 +102,6 @@ class Mopac(AbstractMethod):
             for query, values in self.import_properties(inchikey, 
                                                         path_id, 
                                                         out_file):
-                print(query)
-                print(values)
-                #time.sleep(5)
                 yield query, values
     
     def check(self, moo_out, xyz_out):
@@ -315,7 +310,6 @@ class Mopac(AbstractMethod):
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
-        #self.db.commit()
 
     def moo_to_xyz(self, moo, xyz):
         """Convert Mopac output to xyz.
@@ -360,7 +354,6 @@ class Mopac(AbstractMethod):
                               format, value, units):
         q = ('INSERT OR IGNORE INTO property (name, description, format) '
              'VALUES (?, ?, ?)')
-        #self.c.execute(q, (name, description, format))
         yield (q, (name, description, format))
         q = ('INSERT OR REPLACE INTO molecule_method_property '
              '(inchikey, method_path_id, property_id, units, result) '
@@ -369,8 +362,6 @@ class Mopac(AbstractMethod):
              'WHERE '
              'property.name=? AND property.description=? AND '
              'property.format=?')
-        #self.c.execute(q, (inchikey, method_path_id, units, 
-                           #value, name, description, format))
         yield (q, (inchikey, method_path_id, units, value, name, description, format))
 
 
