@@ -106,7 +106,7 @@ class Mopac(AbstractMethod):
                                                         out_file):
                 print(query)
                 print(values)
-                time.sleep(5)
+                #time.sleep(5)
                 yield query, values
     
     def check(self, moo_out, xyz_out):
@@ -355,23 +355,23 @@ class Mopac(AbstractMethod):
                             x.write('%s\n' % '\t'.join(a))
                     break
     
-#    def insert_property_query(self, inchikey, method_path_id,
-#                              name, description,
-#                              format, value, units):
-#        q = ('INSERT OR IGNORE INTO property (name, description, format) '
-#             'VALUES (?, ?, ?)')
-#        #self.c.execute(q, (name, description, format))
-#        yield (q, (name, description, format))
-#        q = ('INSERT OR REPLACE INTO molecule_method_property '
-#             '(inchikey, method_path_id, property_id, units, result) '
-#             'SELECT ?, ?, property.property_id, ?, ? '
-#             'FROM property '
-#             'WHERE '
-#             'property.name=? AND property.description=? AND '
-#             'property.format=?')
-#        #self.c.execute(q, (inchikey, method_path_id, units, 
-#                           #value, name, description, format))
-#        yield (q, (inchikey, method_path_id, units, value, name, description, format))
+    def insert_property_query(self, inchikey, method_path_id,
+                              name, description,
+                              format, value, units):
+        q = ('INSERT OR IGNORE INTO property (name, description, format) '
+             'VALUES (?, ?, ?)')
+        #self.c.execute(q, (name, description, format))
+        yield (q, (name, description, format))
+        q = ('INSERT OR REPLACE INTO molecule_method_property '
+             '(inchikey, method_path_id, property_id, units, result) '
+             'SELECT ?, ?, property.property_id, ?, ? '
+             'FROM property '
+             'WHERE '
+             'property.name=? AND property.description=? AND '
+             'property.format=?')
+        #self.c.execute(q, (inchikey, method_path_id, units, 
+                           #value, name, description, format))
+        yield (q, (inchikey, method_path_id, units, value, name, description, format))
 
 
 def load(db):

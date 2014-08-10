@@ -51,6 +51,8 @@ class Calculate(AbstractTool):
         """Run calculations."""
         method = load_method(args.method, MessDB())
         path = Path(MessDB())
+        print(args.map)
+        print(args.reduce)
         if (args.map):
             self.map_client(method)
             return
@@ -72,25 +74,34 @@ class Calculate(AbstractTool):
             inchikey = row.split()[0].strip()
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
+            queries = dict()
             for query, values in method.map(inchikey, 
                                             [path.path_id, 
                                              path.method_dir, 
                                              path.parent_method_dir]):
-                count += method.reduce(query, [values])
+                try:
+                    queries[query].append(values)
+                except KeyError:
+                    queries[query] = [values]
+            print('mapreduce_local:')
+            print(queries)
+            for query, values in queries.iteritems():
+                count += method.reduce(query, values)
         print(count)
 
     def mapreduce_server(self, inchikeys, method, path):
-        source = {}
+        datasource = {}
         for row in inchikeys:
             inchikey = row.split()[0].strip()
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
-            source[inchikey] = [path.path_id, 
-                                path.method_dir, 
-                                path.parent_method_dir]
+            datasource[inchikey] = [path.path_id, 
+                                    path.method_dir, 
+                                    path.parent_method_dir]
         server = mapreduce.Server()
-        server.datasource = source
+        server.datasource = datasource
         server.password = method.__hash__()
+        print(server.password)
         results = server.run(debug=1)
         print(results)
     
@@ -99,8 +110,9 @@ class Calculate(AbstractTool):
             try:
                 client = mapreduce.Client()
                 client.password = method.__hash__()
+                print(client.password)
                 client.mapfn = method.map
-                client.reducefn = method.reduce
+                #client.reducefn = method.reduce
                 client.run('localhost', mapreduce.DEFAULT_PORT, debug=1)
             except KeyboardInterrupt:
                 break
@@ -114,6 +126,7 @@ class Calculate(AbstractTool):
     def reduce_client(self, method):
         client = mapreduce.Client()
         client.password = method.__hash__()
+        print(client.password)
         client.reducefn = method.reduce
         client.run('localhost', mapreduce.DEFAULT_PORT, debug=1)
     

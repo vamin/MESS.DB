@@ -69,11 +69,12 @@ class Import_(AbstractMethod):
             self.check(inchikey, inchikey_dir)
         else:
             self.update_molecule(inchikey, mol, skip_cir)
+            #self.import_properties(inchikey, p.path_id, mol)
         s.update_molecule_source(inchikey, identifier)
         s.update_source_tsv(inchikey_dir, identifier)
-        if not skip_cir:
-            self.update_synonyms(inchikey)
-            self.update_iupac(inchikey)
+        #if not skip_cir:
+        #    self.update_synonyms(inchikey)
+        #    self.update_iupac(inchikey)
         self.log(args, inchikey_dir)
         return self.status
     
@@ -202,8 +203,8 @@ class Import_(AbstractMethod):
         inchi = mol.write('inchi').rstrip().split('=')[1]
         if (inchikey_check_row is not None and
             inchikey_check_row.inchi == inchi):
-            if not skip_cir:
-                self.update_synonyms(inchikey)
+            #if not skip_cir:
+            #    self.update_synonyms(inchikey)
             self.status = 'updated'
             return 0 # this molecule is already correct in the db
         smiles = mol.write('can').rstrip() # canonical smiles
