@@ -35,6 +35,7 @@ class Import(AbstractTool):
     def execute(self, args):
         """Run import method for every molecule in source."""
         m = load_method('import', MessDB())
+        m.setup()
         s = Source(MessDB())
         s.setup(args.source)
         p = Path(MessDB())

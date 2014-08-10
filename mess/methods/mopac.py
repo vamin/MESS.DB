@@ -10,6 +10,8 @@ import sys
 from _method import AbstractMethod
 from utils import get_inchikey_dir, setup_dir
 
+import time
+
 class Mopac(AbstractMethod):
     # method info
     description = ('Semiempirical geometry optimization, energies, and bond '
@@ -43,23 +45,19 @@ class Mopac(AbstractMethod):
         
         """
         try:
-            mopac = subprocess.Popen(['MOPAC2012.exe'], stdout=subprocess.PIPE, 
-                                     stderr=subprocess.PIPE)
+            subprocess.check_output(['MOPAC2012.exe'], 
+                                    stderr=open(os.devnull, 'w'))
         except OSError:
             sys.exit(('The %s method requires MOPAC2012.exe (%s) to be '
                       'installed and in PATH.') % (self.method_name, 
                                                    self.prog_url))
         return True
-
-    def execute(self, args):
-        """Run mopac and import calculated properties for molecule."""
-        p = args['path']
-        parent_method_dir = p.parent_method_dir
+    
+    def map(self, inchikey, params):
+        (path_id, method_dir, parent_method_dir) = params
         if parent_method_dir is '':
             sys.exit(('This method requires a parent path with a valid '
                       'xyz file (i.e., it cannot accept an InChI).'))
-        method_dir = p.method_dir
-        inchikey = args['inchikey']
         inchikey_dir = get_inchikey_dir(inchikey)
         out_dir = os.path.realpath(os.path.join(inchikey_dir, method_dir))
         setup_dir(out_dir)
@@ -95,15 +93,22 @@ class Mopac(AbstractMethod):
             os.chdir(pwd)
             self.moo_to_xyz(os.path.abspath(out_file), xyz_out)
             if self.check(out_file, xyz_out):
-                self.import_properties(inchikey, p.path_id, out_file)
+                for query, values in self.import_properties(inchikey, 
+                                                            path_id, 
+                                                            out_file):
+                    yield query, values
             else:
                 print(babel_stderr, file=sys.stderr)
         else:
             self.status = 'calculation skipped'
-            self.import_properties(inchikey, p.path_id, out_file)
-        self.log(args, inchikey_dir)
-        return self.status
-
+            for query, values in self.import_properties(inchikey, 
+                                                        path_id, 
+                                                        out_file):
+                print(query)
+                print(values)
+                time.sleep(5)
+                yield query, values
+    
     def check(self, moo_out, xyz_out):
         """Check that a valid Mopac output and xyz file was generated.
         
@@ -150,18 +155,17 @@ class Mopac(AbstractMethod):
             self.status = 'PM7 calculation or xyz conversion failed'
             return False
     
-    def log(self, args, inchikey_dir):
+    def log(self, inchikey, inchikey_dir, method_dir):
         """Log messages to base log and method log.
         
         Args:
-            args: The args parameter passed to the method (dict expected to
-                  contain 'inchikey')
+            inchikey: An inchikey.
             inchikey_dir: Directory of molecule.
         
         """
-        base_log_path = os.path.join(inchikey_dir, '%s.log' % args['inchikey'])
-        method_log_path = os.path.join(inchikey_dir, args['path'].method_dir, 
-                                       '%s.log' % args['inchikey'])
+        base_log_path = os.path.join(inchikey_dir, '%s.log' % inchikey)
+        method_log_path = os.path.join(inchikey_dir, method_dir, 
+                                       '%s.log' % inchikey)
         self.add_messages_to_log(base_log_path, self.method_name, 
                                  ['status: %s' % self.status])
         self.add_messages_to_log(method_log_path, self.method_name, 
@@ -220,98 +224,98 @@ class Mopac(AbstractMethod):
                      moo_out)
         # insert properties into db
         try:
-            self.insert_property(
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'HEAT OF FORMATION', 'MOPAC property', 'float',
-                heat_of_formation_kcal, 'kcal/mol')
-            self.insert_property(
+                heat_of_formation_kcal, 'kcal/mol'): yield q, v
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'HEAT OF FORMATION', 'MOPAC property', 'float',
-                heat_of_formation_kJ, 'kJ/mol')
+                heat_of_formation_kJ, 'kJ/mol'): yield q, v
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property(
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'TOTAL ENERGY', 'MOPAC property', 'float',
-                total_energy, 'eV')
+                total_energy, 'eV'): yield q, v
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property(
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'ELECTRONIC ENERGY', 'MOPAC property', 'float',
-                electronic_energy, 'eV')
+                electronic_energy, 'eV'): yield q, v
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property(
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'POINT GROUP', 'MOPAC property', 'str',
-                point_group, '')
+                point_group, ''): yield q, v
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property(
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'CORE-CORE REPULSION', 'MOPAC property', 'float',
-                core_repulsion, 'eV')
+                core_repulsion, 'eV'): yield q, v
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property(
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'COSMO AREA', 'MOPAC property', 'float',
-                cosmo_area, 'A^2')
-            self.insert_property(
+                cosmo_area, 'A^2'): yield q, v
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'COSMO VOLUME', 'MOPAC property', 'float',
-                cosmo_volume, 'A^3')
+                cosmo_volume, 'A^3'): yield q, v
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property(
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'GRADIENT NORM', 'MOPAC property', 'float',
-                gradient_norm, '')
+                gradient_norm, ''): yield q, v
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property(
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'IONIZATION POTENTIAL', 'MOPAC property', 'float',
-                ionization_potential, 'eV')
+                ionization_potential, 'eV'): yield q, v
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property(
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'HOMO', 'MOPAC property', 'float',
-                homo, 'eV')
-            self.insert_property(
+                homo, 'eV'): yield q, v
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'LUMO', 'MOPAC property', 'float',
-                lumo, 'eV')
+                lumo, 'eV'): yield q, v
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
         try:
-            self.insert_property(
+            for q, v in self.insert_property_query(
                 inchikey, method_path_id,
                 'FILLED LEVELS', 'MOPAC property', 'int',
-                filled_levels, '')
+                filled_levels, ''): yield q, v
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
             self.status = 'some properties not parsed'
-        self.db.commit()
+        #self.db.commit()
 
     def moo_to_xyz(self, moo, xyz):
         """Convert Mopac output to xyz.
@@ -350,6 +354,24 @@ class Mopac(AbstractMethod):
                         for a in xyz_coords:
                             x.write('%s\n' % '\t'.join(a))
                     break
+    
+#    def insert_property_query(self, inchikey, method_path_id,
+#                              name, description,
+#                              format, value, units):
+#        q = ('INSERT OR IGNORE INTO property (name, description, format) '
+#             'VALUES (?, ?, ?)')
+#        #self.c.execute(q, (name, description, format))
+#        yield (q, (name, description, format))
+#        q = ('INSERT OR REPLACE INTO molecule_method_property '
+#             '(inchikey, method_path_id, property_id, units, result) '
+#             'SELECT ?, ?, property.property_id, ?, ? '
+#             'FROM property '
+#             'WHERE '
+#             'property.name=? AND property.description=? AND '
+#             'property.format=?')
+#        #self.c.execute(q, (inchikey, method_path_id, units, 
+#                           #value, name, description, format))
+#        yield (q, (inchikey, method_path_id, units, value, name, description, format))
 
 
 def load(db):

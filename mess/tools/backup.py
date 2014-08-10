@@ -1,12 +1,14 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import glob
 import os
+import shutil
 import subprocess
 import sys
 import time
+from cStringIO import StringIO
 from distutils.version import LooseVersion
-from StringIO import StringIO
 
 from _db import MessDB
 from _tool import AbstractTool
@@ -38,13 +40,13 @@ class Backup(AbstractTool):
     def execute(self, args):
         """Run backup/restore."""
         mess_db_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
-                                       '../db/mess.db'))
+                                       '../../db/mess.db'))
         mol_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
-                                         '../molecules'))
+                                         '../../molecules'))
         logs_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
-                                         '../logs'))
+                                         '../../logs'))
         backups_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
-                                       '../backups'))
+                                       '../../backups'))
         
         if (args.restore):
             print('***validating integrity of %s***' % args.restore, 
@@ -67,8 +69,15 @@ class Backup(AbstractTool):
                 if (mess_db_check and molecules_dir_check):
                     print('***restore from %s initiated***' % args.restore, 
                           file=sys.stderr)
-                    subprocess.call(['rm', '-rf', mol_path])
-                    subprocess.call(['rm', '-rf', logs_path])
+                    try:
+                        shutil.rmtree(mol_path)
+                        shutil.rmtree(logs_path)
+                    except OSError:
+                        # already deleted
+                        pass
+                    mess_db_glob = glob.glob('%s*' % mess_db_path)
+                    for f in mess_db_glob:
+                      os.remove(f)
                     subprocess.call(['tar', '-jxvf', 
                                      os.path.relpath(args.restore)])
                     sys.exit('***backup %s restored***' % args.restore)

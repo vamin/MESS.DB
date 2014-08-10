@@ -53,10 +53,9 @@ class Balloon(AbstractMethod):
                       'variable to the path to MMFF94.mff.'))
         return True
     
-    def execute(self, args):
+    def map(self, inchikey, params):
         """Generate 3D structures with Balloon."""
-        inchikey = args['inchikey']
-        method_dir = args['path'].method_dir
+        (path_id, method_dir, parent_method_dir) = params
         inchikey_dir = get_inchikey_dir(inchikey)
         out_dir = os.path.realpath(os.path.join(inchikey_dir, method_dir))
         setup_dir(out_dir)
@@ -98,8 +97,8 @@ class Balloon(AbstractMethod):
             self.check(xyz_out)
         else:
             self.status = 'skipped'
-        self.log(args, inchikey_dir, messages)
-        return self.status
+        self.log(inchikey, inchikey_dir, method_dir, messages)
+        yield 0, 0
     
     def check(self, xyz_out):
         """Check that a valid xyz file was created.
@@ -131,7 +130,7 @@ class Balloon(AbstractMethod):
             self.status = 'generating 3D coordinates failed'
             return False
     
-    def log(self, args, inchikey_dir, messages):
+    def log(self, inchikey, inchikey_dir, method_dir, messages):
         """Log messages to base log and method log.
         
         Args:
@@ -141,9 +140,9 @@ class Balloon(AbstractMethod):
             messages: List of messages to be written to logs.
         
         """
-        base_log_path = os.path.join(inchikey_dir, '%s.log' % args['inchikey'])
-        method_log_path = os.path.join(inchikey_dir, args['path'].method_dir,
-                                       '%s.log' % args['inchikey'])
+        base_log_path = os.path.join(inchikey_dir, '%s.log' % inchikey)
+        method_log_path = os.path.join(inchikey_dir, method_dir,
+                                       '%s.log' % inchikey)
         self.add_messages_to_log(base_log_path, self.method_name,
                                  ['status: %s' % self.status])
         if (messages):

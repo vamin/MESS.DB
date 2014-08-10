@@ -31,7 +31,6 @@ class AbstractMethod(object):
                       'prog_name, prog_version, prog_url, '
                       'parameters, tags as attributes.'))
         self.check_dependencies()
-        self.setup()
     
     def setup(self):
         """Set up method."""
@@ -45,14 +44,6 @@ class AbstractMethod(object):
         """If check_dependencies is not implemented, raise error."""
         raise NotImplementedError(("every method needs a 'check_dependencies' "
                                    'method'))
-    
-    def execute(self, args):
-        """If execute is not implemented, raise error."""
-        # all methods should have a method that executes its tasks
-        # based on the given commands
-        raise NotImplementedError("every method needs an 'execute' method")
-        self.log(args) # all methods should record logs
-        return self.status # should be set by self.check()
     
     def check(self, args):
         """If check is not implemented, raise error."""
@@ -74,6 +65,13 @@ class AbstractMethod(object):
         raise NotImplementedError(("every method needs an 'import_properties' "
                                    'method'))
     
+    def reduce(self, query, values):
+        print(query)
+        if query or values[0]:
+            self.c.executemany(query, values)
+            self.db.commit()
+        return len(values)
+
     def add_messages_to_log(self, log_path, method_name, messages):
         """Write messages to a log.
         
@@ -158,6 +156,36 @@ class AbstractMethod(object):
         for t in self.tags:
             self.c.execute(q, (self.method_id, t))
         self.db.commit()
+
+    def insert_property_query(self, name, description, format):
+        """
+        Args:
+            inchikey: The inchikey of a molecule in MESS.DB.
+            method_path_id: Path id for the calculations that generated the
+                            property.
+            name: The property name.
+            description: A description of the property.
+            format: A description of the format the property is in.
+            value: The calculated property.
+            units: Units for the property value.
+        
+        """
+        q = ('INSERT OR IGNORE INTO property (name, description, format) '
+             'VALUES (?, ?, ?);')
+        return (q, (name, description, format))
+
+    def insert_property_value_query(self, inchikey, method_path_id,
+                                  name, description,
+                                  format, value, units):
+        q = ('INSERT OR REPLACE INTO molecule_method_property '
+             '(inchikey, method_path_id, property_id, units, result) '
+             'SELECT ?, ?, property.property_id, ?, ? '
+             'FROM property '
+             'WHERE '
+             'property.name=? AND property.description=? AND '
+             'property.format=?')
+        return (q, (inchikey, method_path_id, units, 
+                   value, name, description, format))
     
     def setup_parameters(self):
         """Import paramaters dict to mess.db."""
