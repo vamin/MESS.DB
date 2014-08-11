@@ -8,6 +8,7 @@ import types
 
 from utils import unicode_replace
 
+
 def decorate(object_, decorator, *args, **kwargs):
     """Apply a decorator to all callable functions of an object.
     
@@ -17,20 +18,21 @@ def decorate(object_, decorator, *args, **kwargs):
     
     """
     for attr in dir(object_):
-        if not '__' in attr:
+        if '__' not in attr:
             try:
                 if inspect.isbuiltin(getattr(object_, attr)):
                     continue
                 if callable(getattr(object_, attr)):
                     try:
                         setattr(object_, attr,
-                                decorator(getattr(object_, attr)), *args,
-                                          **kwargs)
+                                decorator(getattr(object_, attr)),
+                                *args, **kwargs)
                     except TypeError:
                         pass
             except AttributeError:
                 pass
     return object_
+
 
 class ExceptionDecorator(object):
     def __init__(self, func, exceptions, replacement=None):
@@ -56,9 +58,9 @@ class ExceptionDecorator(object):
         try:
             return self.func(*args, **kwargs)
         except self.exceptions:
-            if (isinstance(self.replacement, types.FunctionType)):
+            if isinstance(self.replacement, types.FunctionType):
                 return replacement(self.func)
-            elif (self.replacement):
+            elif self.replacement:
                 return self.replacement
             else:
                 pass
@@ -115,4 +117,4 @@ class UnicodeDecorator(object):
             r = dict(map(unicode_replace, r.iteritems()))
         elif isinstance(r, str):
             r = unicode_replace(r)
-        return r        
+        return r

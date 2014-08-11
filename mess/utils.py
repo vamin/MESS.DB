@@ -7,6 +7,7 @@ import os
 import resource
 import sys
 
+
 def get_inchikey_dir(inchikey):
     """Convert InChIKey into a path.
     
@@ -20,7 +21,8 @@ def get_inchikey_dir(inchikey):
     """
     molecules_dir = os.path.join(os.path.dirname(__file__), '../molecules/')
     return os.path.abspath(os.path.join(molecules_dir, inchikey[:1],
-                           inchikey[1:3], inchikey[3:]))
+                                        inchikey[1:3], inchikey[3:]))
+
 
 def get_mem_usage(point):
     """Get the current memory usage.
@@ -32,10 +34,11 @@ def get_mem_usage(point):
         A human-readable string.
     
     """
-    usage=resource.getrusage(resource.RUSAGE_SELF)
+    usage = resource.getrusage(resource.RUSAGE_SELF)
     return '''%s: usertime=%s systime=%s mem=%s mb
-           '''%(point,usage[0],usage[1],
-                (usage[2]*resource.getpagesize())/1000000.0)
+           ''' % (point, usage[0], usage[1],
+                  (usage[2] * resource.getpagesize()) / 1000000.0)
+
 
 def hash_dict(d):
     """Serialize and hash a dict.
@@ -50,6 +53,7 @@ def hash_dict(d):
     """
     return hashlib.sha1(json.dumps(d, sort_keys=True)).hexdigest()
 
+
 def is_inchikey(inchikey, enforce_standard=False):
     """Check if a string is a valid InChIKey.
     
@@ -61,18 +65,19 @@ def is_inchikey(inchikey, enforce_standard=False):
         boolean
     
     """
-    if ('=' in inchikey):
+    if '=' in inchikey:
         inchikey = inchikey.split('=')[1]
-    if (len(inchikey) == 27):
+    if len(inchikey) == 27:
         s = inchikey.split('-')
         try:
-            if (len(s[0]) == 14 and len(s[1]) == 10 and len(s[2]) == 1):
-                if (s[0].isalpha() and s[1].isalpha() and s[2].isalpha()):
-                    if (not enforce_standard or s[1][-2] == 'S'):
+            if len(s[0]) == 14 and len(s[1]) == 10 and len(s[2]) == 1:
+                if s[0].isalpha() and s[1].isalpha() and s[2].isalpha():
+                    if not enforce_standard or s[1][-2] == 'S':
                         return True
         except IndexError:
             pass
     return False
+
 
 def load_method(method_name, db):
     """Locate a method in mess/methods and return an instance of it."""
@@ -84,10 +89,12 @@ def load_method(method_name, db):
         sys.exit('%s is not a valid method.' % method_name)
     return method
 
+
 def setup_dir(directory):
     """If directory does not exist, create it and its parents."""
     if not os.path.isdir(directory):
         os.makedirs(directory)
+
 
 def touch(fname, times=None):
     """Update the timestamp on a file."""
@@ -96,6 +103,7 @@ def touch(fname, times=None):
         os.utime(fname, times)
     finally:
         fhandle.close()
+
 
 def unicode_replace(x, enc='utf-8', err='replace'):
     """Convert str to unicode.
@@ -113,6 +121,7 @@ def unicode_replace(x, enc='utf-8', err='replace'):
         return unicode(x, enc, err)
     else:
         return x
+
 
 def xstr(s):
     """Return str(), except that None returns empty string."""

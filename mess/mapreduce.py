@@ -10,6 +10,7 @@ import mincemeat
 
 DEFAULT_PORT = mincemeat.DEFAULT_PORT
 
+
 class Client(mincemeat.Client, object):
     def __init__(self):
         super(Client, self).__init__()
@@ -42,7 +43,7 @@ class Client(mincemeat.Client, object):
             results = self.reducefn(data[0], data[1])
             self.send_command('reducedone', (data[0], results))
     
-    def run(self, hostname, port, sleep=2, debug=0):  
+    def run(self, hostname, port, sleep=2, debug=0):
         if debug:
             logging.basicConfig(level=logging.DEBUG)
         else:
@@ -71,7 +72,6 @@ class Client(mincemeat.Client, object):
 class Server(mincemeat.Server):
     def __init__(self):
         super(Server, self).__init__()
-        
     
     def run(self, password=None, port=DEFAULT_PORT, debug=0):
         if password is None:

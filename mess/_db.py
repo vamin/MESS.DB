@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""MESS.DB database module
+
+This module contains the MessDB class, which MESS.DB uses to connect to and
+interact with the 'mess.db' sqlite3 database in the 'db' directory.
+"""
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -9,22 +15,36 @@ import traceback
 from collections import namedtuple
 from distutils.version import LooseVersion
 
+
 class MessDB(object):
-    """Manage a connection to mess.db."""
+    """Manage a connection to mess.db.
+    
+    Attributes:
+        args (list of str): Positional arguments, passed to sqlite3.connect()
+        kwargs (dict): Named arguments, passed to sqlite3.connect()
+        tries (int): Number of times a db commit has failed
+        max_tries (int): Maximum number of times to try db commit
+        conn (obj): sqlite3 db connection object
+    """
     def __init__(self, *args, **kwargs):
-        """Initialize attributes and db connection."""
+        """Initialize attributes and db connection.
+        
+        Args:
+            All args will be passed to sqlite3.connect()
+        """
         self.args = args
         self.kwargs = kwargs
         self.tries = 0
         self.max_tries = 3
         self.check_version()
         self.open()
-
+    
     def check_version(self):
-        if (LooseVersion(sqlite3.sqlite_version) < LooseVersion('3.7.0')):
+        """Ensure that all dependencies are satisfied."""
+        if LooseVersion(sqlite3.sqlite_version) < LooseVersion('3.7.0'):
             sys.exit(('The database requres SQLite version 3.7 or greater '
                       'due to the use of WAL mode.'))
-
+    
     def open(self):
         """Open a connection to db/mess.db and set up row factory."""
         try:
@@ -66,27 +86,26 @@ class MessDB(object):
         """
         Usage:
             conn.row_factory = namedtuple_factory
-        
         """
         fields = [col[0] for col in cursor.description]
-        Row = namedtuple('Row', fields)
-        return Row(*row)
+        row_tuple = namedtuple('Row', fields)
+        return row_tuple(*row)
     
     def check(self):
         """Check that mess.db has the right number of tables in it."""
-        q = 'SELECT count(*) count FROM sqlite_master WHERE type=?'
-        r = self.cursor().execute(q, ('table',)).next()
-        if (r.count != 15):
+        query = 'SELECT count(*) count FROM sqlite_master WHERE type=?'
+        result = self.cursor().execute(query, ('table',)).next()
+        if result.count != 15:
             return False
         return True
     
     def initialize(self):
         """Load the mess.db schema."""
-        c = self.cursor()
+        cur = self.cursor()
         schema = os.path.join(os.path.dirname(__file__), '../db/schema.sql')
-        c.executescript(codecs.open(schema, encoding='utf-8').read())
-        r = c.execute('PRAGMA journal_mode=wal').next()
-        if not r.journal_mode == 'wal':
+        cur.executescript(codecs.open(schema, encoding='utf-8').read())
+        result = cur.execute('PRAGMA journal_mode=wal').next()
+        if not result.journal_mode == 'wal':
             sys.exit(('Setting jounral mode to WAL failed. Run PRAGMA '
                       'journal_mode=wal in SQLite before continuing.'))
         print('New mess.db initialized.', file=sys.stderr)
@@ -97,4 +116,4 @@ class MessDB(object):
             self.commit()
             self.close()
         except AttributeError:
-            pass # there was no db connection
+            pass  # there was no db connection
