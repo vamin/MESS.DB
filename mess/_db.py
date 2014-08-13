@@ -102,8 +102,15 @@ class MessDB(object):
     def initialize(self):
         """Load the mess.db schema."""
         cur = self.cursor()
-        schema = os.path.join(os.path.dirname(__file__), '../db/schema.sql')
-        cur.executescript(codecs.open(schema, encoding='utf-8').read())
+        tables = os.path.join(os.path.dirname(__file__),
+                              '../db/schema/tables.sql')
+        views = os.path.join(os.path.dirname(__file__),
+                             '../db/schema/views.sql')
+        triggers = os.path.join(os.path.dirname(__file__),
+                                '../db/schema/triggers.sql')
+        cur.executescript(codecs.open(tables, encoding='utf-8').read())
+        cur.executescript(codecs.open(views, encoding='utf-8').read())
+        cur.executescript(codecs.open(triggers, encoding='utf-8').read())
         result = cur.execute('PRAGMA journal_mode=wal').next()
         if not result.journal_mode == 'wal':
             sys.exit(('Setting jounral mode to WAL failed. Run PRAGMA '
