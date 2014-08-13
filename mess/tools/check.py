@@ -119,15 +119,15 @@ class Check(AbstractTool):
         # check inchikey foreign keys
         molecule_synonym_inchikeys = set()
         q = 'SELECT DISTINCT inchikey FROM molecule_synonym'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             molecule_synonym_inchikeys.add(r.inchikey)
         molecule_source_inchikeys = set()
         q = 'SELECT DISTINCT inchikey FROM molecule_source'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             molecule_source_inchikeys.add(r.inchikey)
         q = 'SELECT DISTINCT inchikey FROM molecule_method_property'
         molecule_method_property_inchikeys = set()
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             molecule_method_property_inchikeys.add(r.inchikey)
         loose_keys_mol_syn = molecule_synonym_inchikeys - self.db_inchikeys
         loose_keys_mol_src = molecule_source_inchikeys - self.db_inchikeys
@@ -146,8 +146,8 @@ class Check(AbstractTool):
         # check that sources in db exist in sources dir
         q = 'SELECT source_id, dirname FROM source'
         source_ids = set()
-        source_path = os.path.join(os.path.dirname(__file__), '../sources')
-        for r in self.c.execute(q).fetchall():
+        source_path = os.path.join(os.path.dirname(__file__), '../../sources')
+        for r in self.cur.execute(q).fetchall():
             source_ids.add(r.source_id)
             if not os.path.isdir(os.path.join(source_path, r.dirname)):
                 print('%s not in sources directory.' % r.dirname)
@@ -155,7 +155,7 @@ class Check(AbstractTool):
         # check source foreign keys
         molecule_source_ids = set()
         q = 'SELECT DISTINCT source_id FROM molecule_source'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             molecule_source_ids.add(r.source_id)
         loose_source_ids = molecule_source_ids - source_ids
         print('%d loose source_ids in molecule_source table:' %
@@ -165,11 +165,11 @@ class Check(AbstractTool):
         # check program foreign keys
         program_ids = set()
         q = 'SELECT program_id FROM program'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             program_ids.add(r.program_id)
         method_program_ids = set()
         q = 'SELECT DISTINCT program_id FROM method'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_program_ids.add(r.program_id)
         loose_program_ids = method_program_ids - program_ids
         print('%d loose program_ids in method table:' % len(loose_program_ids))
@@ -178,15 +178,15 @@ class Check(AbstractTool):
         # check parameter foreign keys
         parameter_ids = set()
         q = 'SELECT parameter_id FROM parameter'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             parameter_ids.add(r.parameter_id)
         method_parameter_ids = set()
         q = 'SELECT DISTINCT parameter_id FROM method_parameter'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_parameter_ids.add(r.parameter_id)
         method_tag_parameter_ids = set()
         q = 'SELECT DISTINCT parameter_id FROM method_tag'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_tag_parameter_ids.add(r.parameter_id)
         loose_m_pids = method_parameter_ids - parameter_ids
         print('%d loose parameter_ids in method_parameter table:' %
@@ -200,11 +200,11 @@ class Check(AbstractTool):
         # check property foreign keys
         property_ids = set()
         q = 'SELECT property_id FROM property'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             property_ids.add(r.property_id)
         mmp_property_ids = set()
         q = 'SELECT DISTINCT property_id FROM molecule_method_property'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             mmp_property_ids.add(r.property_id)
         loose_mmp_property_ids = mmp_property_ids - property_ids
         print('%d loose property_ids in method_tag table:' %
@@ -214,23 +214,23 @@ class Check(AbstractTool):
         # check that methods in db exist in methods dir
         method_ids = set()
         q = 'SELECT method_id, name FROM method'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_ids.add(r.method_id)
         
         # check method foreign keys
         method_parameter_mids = set()
         q = 'SELECT DISTINCT method_id FROM method_parameter'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_parameter_mids.add(r.method_id)
         method_edge_mids = set()
         q = ('SELECT DISTINCT parent_method_id, child_method_id  '
              'FROM method_edge')
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_edge_mids.add(r.parent_method_id)
             method_edge_mids.add(r.child_method_id)
         method_path_parent_mids = set()
         q = 'SELECT DISTINCT method_id FROM method_path_parent'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_path_parent_mids.add(r.method_id)
         loose_method_parameter_mids = method_parameter_mids - method_ids
         print('%d loose method_ids in method_parameter table:' %
@@ -248,11 +248,11 @@ class Check(AbstractTool):
         # check edge foreign keys
         method_edge_ids = set()
         q = 'SELECT method_edge_id FROM method_edge'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_edge_ids.add(r.method_edge_id)
         method_path_edge_ids = set()
         q = 'SELECT DISTINCT method_edge_id FROM method_path_edge'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_path_edge_ids.add(r.method_edge_id)
         loose_method_path_edge_ids = method_path_edge_ids - method_edge_ids
         print('%d loose method_edge_ids in method_path_edge table:' %
@@ -262,16 +262,16 @@ class Check(AbstractTool):
         # check path foreign keys
         method_path_ids = set()
         q = 'SELECT method_path_id FROM method_path'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_path_ids.add(r.method_path_id)
         method_path_edge_pids = set()
         q = 'SELECT DISTINCT method_path_id FROM method_path_edge'
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_path_edge_pids.add(r.method_path_id)
         method_path_parent_pids = set()
         q = ('SELECT DISTINCT method_path_id, parent_method_path_id '
              'FROM method_path_parent')
-        for r in self.c.execute(q).fetchall():
+        for r in self.cur.execute(q).fetchall():
             method_path_parent_pids.add(r.method_path_id)
             method_path_parent_pids.add(r.parent_method_path_id)
         loose_method_path_edge_pids = method_path_edge_pids - method_path_ids
