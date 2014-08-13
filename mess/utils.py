@@ -123,6 +123,29 @@ def unicode_replace(x, enc='utf-8', err='replace'):
         return x
 
 
+def write_to_log(self, log_path, messages):
+    """Write messages to a log.
+    
+    Args:
+        log_path: Path to the log to be written to.
+        messages: List of messages to write to the log.
+    """
+    with codecs.open(log_path, 'a', 'utf-8') as log:
+        log.write(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        log.write('\n')
+        log.write(' '.join(sys.argv))
+        log.write('\n')
+        try:
+            for message in messages:
+                log.write(message)
+                log.write('\n')
+        except TypeError:
+            log.write('')
+            log.write('\n')
+        log.write('-' * 79)
+        log.write('\n')
+
+
 def xstr(s):
     """Return str(), except that None returns empty string."""
     if s is None:

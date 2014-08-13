@@ -32,7 +32,10 @@ class AbstractMethod(object):
         parameters (dict): Parameters that affect program execution
         tags (list of str): List of parameters that identify the method
     """
-    hash = property(__hash__)
+    parameters = dict()
+    tags = list()
+    status = None
+    is_setup = False
     
     def __init__(self, db):
         """Set up db, check for attributes, dependencies, and setup.
@@ -43,16 +46,12 @@ class AbstractMethod(object):
         self.db = db
         self.cur = db.cursor()
         self.method_name = self.get_method_name()
-        self.status = ''
-        self.is_setup = False
         try:
             self.description
             self.geop  # flag indicates method results in new xyz coordinates
             self.prog_name
             self.prog_version
             self.prog_url
-            self.parameters
-            self.tags
         except AttributeError as err:
             print(''.join([str(err), '\n']), file=sys.stderr)
             sys.exit(('Each method class needs to define description, geop, '
@@ -70,14 +69,6 @@ class AbstractMethod(object):
         return hashlib.sha1(self.method_name +
                             json.dumps(self.parameters,
                                        sort_keys=True)).hexdigest()
-    
-    def setup(self):
-        """Set up method."""
-        if not self.is_setup:
-            self.setup_method()
-            self.set_method_id()
-            self.setup_parameters()
-            self.is_setup = True
     
     def check_dependencies(self):
         """If check_dependencies is not implemented, raise error."""
@@ -104,6 +95,12 @@ class AbstractMethod(object):
         raise NotImplementedError(("every method needs an 'import_properties' "
                                    'method'))
     
+    def map():
+        """Generally, maps molecule to calculation via method, emits
+        query/value pairs.
+        """
+        raise NotImplementedError(("every method needs a 'map' method"))
+    
     def reduce(self, query, values):
         """Run queries/values on the db."""
         if query or values[0]:
@@ -111,25 +108,25 @@ class AbstractMethod(object):
             self.db.commit()
         return len(values)
     
-    def add_messages_to_log(self, log_path, method_name, messages):
-        """Write messages to a log.
-        
-        Args:
-            log_path: Path to the log to be written to.
-            method_name: Name of the method doing the logging.
-            messages: List of messages to write to the log.
-        """
-        with codecs.open(log_path, 'a', 'utf-8') as log:
-            log.write(': '.join([datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                                 method_name]))
-            log.write('\n')
-            log.write(' '.join(sys.argv))
-            log.write('\n')
-            for message in messages:
-                log.write(message)
-                log.write('\n')
-            log.write('-' * 79)
-            log.write('\n')
+    def setup(self):
+        """Set up method."""
+        if not self.is_setup:
+            self.insert_method()
+            self.insert_program()
+            self.insert_parameters()
+            self.insert_tags()
+            self.is_setup = True
+    
+    def insert_method(self):
+        """Set insert program to db, set up hash, and insert method to db."""
+        query = ('INSERT OR IGNORE INTO method '
+                 '(program_id, geop, name, hash) '
+                 'SELECT program.program_id, ?, ?, ? '
+                 'FROM program '
+                 'WHERE program.name=? AND program.version=?')
+        self.cur.execute(query, (self.geop, self.method_name, self.hash,
+                                 self.prog_name, self.prog_version))
+        self.db.commit()
     
     def insert_program(self):
         """Adds row to program table in mess.db."""
@@ -139,25 +136,35 @@ class AbstractMethod(object):
                          (self.prog_name, self.prog_version, self.prog_url))
         self.db.commit()
     
-    def insert_parameter(self, name, setting):
-        """Adds parameter to mess.db.
+    def insert_parameters(self):
+        """Import paramaters dict to mess.db.
         
         Args:
             name: Name of parameter.
             setting: The value the parameter is set to.
         """
-        query = ('INSERT OR IGNORE INTO parameter (name) VALUES (?)')
-        self.cur.execute(query, (name, ))
-        query = ('INSERT OR IGNORE INTO method_parameter '
-                 '(method_id, parameter_id, setting) '
-                 'SELECT ?, parameter.parameter_id, ? '
-                 'FROM program, parameter '
-                 'WHERE parameter.name=?')
-        self.cur.execute(query, (self.method_id, setting, name))
+        for name, setting in self.parameters.items():
+            query = ('INSERT OR IGNORE INTO parameter (name) VALUES (?)')
+            self.cur.execute(query, (name, ))
+            query = ('INSERT OR IGNORE INTO method_parameter '
+                     '(method_id, parameter_id, setting) '
+                     'SELECT ?, parameter.parameter_id, ? '
+                     'FROM program, parameter '
+                     'WHERE parameter.name=?')
+            self.cur.execute(query, (self.method_id, setting, name))
         self.db.commit()
     
-    def insert_property(self, inchikey, method_path_id, name, description,
-                        format_, value, units):
+    def insert_tags(self):
+        """Add tags to method_tag table in mess.db."""
+        query = ('INSERT OR IGNORE INTO method_tag (method_id, parameter_id) '
+                 'SELECT ?, parameter.parameter_id FROM parameter '
+                 'WHERE parameter.name= ?')
+        for tag in self.tags:
+            self.cur.execute(query, (self.method_id, tag))
+        self.db.commit()
+    
+    def get_insert_property_query(self, inchikey, method_path_id, name,
+                                  description, format_, value, units):
         """Adds property value to mess.db.
         
         Args:
@@ -170,86 +177,24 @@ class AbstractMethod(object):
             value: The calculated property.
             units: Units for the property value.
         """
-        query = ('INSERT OR IGNORE INTO property (name, description, format) '
-                 'VALUES (?, ?, ?);')
-        self.cur.execute(query, (name, description, format_))
-        query = ('INSERT OR REPLACE INTO molecule_method_property '
-                 '(inchikey, method_path_id, property_id, units, result) '
-                 'SELECT ?, ?, property.property_id, ?, ? '
-                 'FROM property '
-                 'WHERE '
-                 'property.name=? AND property.description=? AND '
-                 'property.format=?')
-        self.cur.execute(query, (inchikey, method_path_id, units,
-                                 value, name, description, format))
-        self.db.commit()
-    
-    def insert_tags(self):
-        """Add tags to method_tag table in mess.db."""
-        query = ('INSERT OR IGNORE INTO method_tag (method_id, parameter_id) '
-                 'SELECT ?, parameter.parameter_id FROM parameter '
-                 'WHERE parameter.name= ?')
-        for tag in self.tags:
-            self.cur.execute(query, (self.method_id, tag))
-        self.db.commit()
-    
-    def insert_property_query(self, name, description, format_):
-        """
-        Args:
-            inchikey: The inchikey of a molecule in MESS.DB.
-            method_path_id: Path id for the calculations that generated the
-                            property.
-            name: The property name.
-            description: A description of the property.
-            format: A description of the format the property is in.
-            value: The calculated property.
-            units: Units for the property value.
-        """
-        query = ('INSERT OR IGNORE INTO property (name, description, format) '
-                 'VALUES (?, ?, ?);')
-        return (query, (name, description, format_))
-    
-    def insert_property_value_query(self, inchikey, method_path_id, name,
-                                    description, format_, value, units):
-        """Insert property values into db."""
-        query = ('INSERT OR REPLACE INTO molecule_method_property '
-                 '(inchikey, method_path_id, property_id, units, result) '
-                 'SELECT ?, ?, property.property_id, ?, ? '
-                 'FROM property '
-                 'WHERE '
-                 'property.name=? AND property.description=? AND '
-                 'property.format=?')
-        return (query, (inchikey, method_path_id, units,
-                        value, name, description, format_))
-    
-    def setup_parameters(self):
-        """Import paramaters dict to mess.db."""
-        for k, v in self.parameters.items():
-            self.insert_parameter(k, v)
-        self.insert_tags()
-    
-    def setup_method(self):
-        """Set insert program to db, set up hash, and insert method to db."""
-        self.insert_program()
-        #self.hash = self.__hash__()
-        name = self.get_method_name()
-        query = ('INSERT OR IGNORE INTO method '
-                 '(program_id, geop, name, hash) '
-                 'SELECT program.program_id, ?, ?, ? '
-                 'FROM program '
-                 'WHERE program.name=? AND program.version=?')
-        self.cur.execute(query, (self.geop, name, self.hash,
-                                 self.prog_name, self.prog_version))
-        self.db.commit()
-    
-    def set_method_id(self):
-        """Set the object's method_id attribute."""
-        query = ('SELECT method_id FROM method '
-                 'WHERE hash = ?;')
-        row = self.cur.execute(query, (self.hash,)).fetchone()
-        self.method_id = row.method_id
+        query = ('INSERT INTO molecule_method_property_denorm '
+                 'VALUES (?, ?, ?, ?, ?, ?, ?);')
+        return (query, (inchikey, method_path_id, name, description,
+                        format_, units, value))
     
     @classmethod
     def get_method_name(cls):
         """Return the name of the method, derived from the subclass name."""
         return cls.__name__.replace('_', '').lower()
+    
+    @property
+    def method_id(self):
+        """Get the object's method_id attribute."""
+        query = ('SELECT method_id FROM method '
+                 'WHERE hash = ?;')
+        row = self.cur.execute(query, (self.hash,)).fetchone()
+        return row.method_id
+    
+    @property
+    def hash(self):
+        return self.__hash__()

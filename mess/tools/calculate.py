@@ -56,23 +56,29 @@ class Calculate(AbstractTool):
         if args.inchikeys.name == '<stdin>' and args.inchikeys.isatty():
             sys.exit('No input specified.')
         method.setup()
-        Path(MessDB()).setup(method.method_id, args.parent_path)
+        path = Path(MessDB())
+        path.setup(method.method_id, args.parent_path)
         if args.mapreduce_server:
             self.mapreduce_server(args.inchikeys, method, path)
         else:
             self.mapreduce_local(args.inchikeys, method, path)
 
     def mapreduce_local(self, inchikeys, method, path):
-        count = 0
+        keys = {}
         for row in inchikeys:
             inchikey = row.split()[0].strip()
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
-            for query, values in method.map(inchikey,
-                                            [path.path_id,
-                                             path.method_dir,
-                                             path.parent_method_dir]):
-                count += method.reduce(query, values)
+            for key, values in method.map(inchikey,
+                                          [path.path_id,
+                                           path.method_dir,
+                                           path.parent_method_dir]):
+                try:
+                    keys[key].append(values)
+                except:
+                    keys[key] = [values] 
+        for key, values in keys.iteritems():
+            method.reduce(key, values)
 
     def mapreduce_server(self, inchikeys, method, path):
         print('Hostname is: %s' % gethostname(), file=sys.stderr)
