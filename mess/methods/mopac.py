@@ -323,20 +323,20 @@ class Mopac(AbstractMethod):
             skip = True
             xyz_coords = []
             for line in f:
-                if ('COMPUTATION TIME' in line):
+                if 'COMPUTATION TIME' in line:
                     skip = False
-                if (skip):
+                if skip:
                     continue
                 # parse xyz
                 s = line.split()
                 try:
-                    if (int(s[0]) + 1 > 0): # check if first col is a number
+                    if int(s[0]) + 1 > 0: # check if first col is a number
                         xyz_coords.append((s[1], s[2], s[4], s[6]))
                 except (IndexError, ValueError, TypeError):
                     pass # not a coordinate line
-                if ('Empirical Formula:' in line):
+                if 'Empirical Formula:' in line:
                     # check integrity
-                    if not (len(xyz_coords) == int(line.split()[-2])):
+                    if not len(xyz_coords) == int(line.split()[-2]):
                         print('%s:' % moo, file=sys.stderr)
                         print('unrecoverable error in xyz conversion.\n',
                               file=sys.stderr)

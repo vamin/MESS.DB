@@ -23,7 +23,7 @@ class Balloon(AbstractMethod):
     geop = 1
     # program info
     prog_name = 'Balloon'
-    prog_version = '' # set dynamically by property method
+    prog_version = ''  # set dynamically by property method
     prog_url = 'http://users.abo.fi/mivainio/balloon/'
     # parameters
     parameters = {'-v': '1',

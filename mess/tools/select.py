@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 
 import codecs
 import csv
-import os
 import re
 import string
 import sys
@@ -11,6 +10,7 @@ import sys
 from _db import MessDB
 from _tool import AbstractTool
 from utils import xstr
+
 
 class Select(AbstractTool):
     def __init__(self):
@@ -21,8 +21,8 @@ class Select(AbstractTool):
     def subparse(self, subparser):
         """Set tool-specific argparse arguments."""
         subparser.add_argument('-q', '--query', type=str,
-                               help=('An SQL query string or file that returns '
-                                     'inchikeys in first column'))
+                               help=('An SQL query string or file that '
+                                     'returns inchikeys in first column'))
         #subparser.add_argument('-n', '--property-name', type=str,
         #                       help='name of propery')
         #subparser.add_argument('-o', '--property-operator', type=str,
@@ -58,31 +58,32 @@ class Select(AbstractTool):
             if args.part < 1:
                 sys.exit('--part must be >=1.')
             alpha = string.ascii_uppercase
-            alpha3 = [''.join([a,b,c]) for a in alpha
-                                       for b in alpha
-                                       for c in alpha] # AAA to ZZZ
+            alpha3 = [''.join([a, b, c]) for a in alpha
+                                         for b in alpha
+                                         for c in alpha]  # AAA to ZZZ
             if args.of > len(alpha3):
                 sys.exit(('MESS.DB does not support subsetting into more than '
                           '%i parts.' % len(alpha3)))
-            subsets = [ alpha3[i::args.of] for i in xrange(args.of) ]
-            subset = subsets[args.part-1]
+            subsets = [alpha3[i::args.of] for i in xrange(args.of)]
+            subset = subsets[args.part - 1]
         db = MessDB()
-        c = db.cursor()
+        cur = db.cursor()
         self.columns = ['molecule.inchikey']
         self.joins = set()
         self.wheres = ['1=1']
         if args.query:
             try:
-                c.execute(codecs.open(args.query, encoding='utf-8').read())
+                cur.execute(codecs.open(args.query, encoding='utf-8').read())
             except sqlite3.OperationalError:
                 sys.exit("'%s' does not contain valid sql." % args.query)
             except IOError:
                 try:
-                    c.execute(args.query)
+                    cur.execute(args.query)
                 except sqlite3.OperationalError:
                     sys.exit(("'%s' is neither valid sql nor a path "
                               'to a file containing valid sql.') % args.query)
-        #elif args.property_name and args.property_operator and (args.property_value or args.property_value == 0):
+        #elif args.property_name and args.property_operator and
+        #     (args.property_value or args.property_value == 0):
         #    self.joins.add(('JOIN molecule_method_property '
         #                    'ON molecule_method_property.inchikey = '
         #                    'molecule.inchikey'))
@@ -90,23 +91,23 @@ class Select(AbstractTool):
         #    c.execute(self.generate_query), (args.property_name,
         #                                     args.property_value))
         else:
-            c.execute(self.generate_query())
+            cur.execute(self.generate_query())
         # check that sql returns inchikey in first column
-        if not c.description[0][0].lower() == 'inchikey':
+        if not cur.description[0][0].lower() == 'inchikey':
             sys.exit('Query must return inchikey in first column.')
         # print table
         writer = csv.writer(sys.stdout, delimiter=args.delimiter)
         if args.headers:
-            writer.writerow(list(h[0] for h in c.description))
-        for r in c:
-            if args.regex_subset and not re.match(args.regex_subset, r[0],
+            writer.writerow(list(h[0] for h in cur.description))
+        for result in cur:
+            if args.regex_subset and not re.match(args.regex_subset, result[0],
                                                   re.IGNORECASE):
                 continue
             if args.part and args.of:
-                if not any(r[0].startswith(a) for a in subset):
+                if not any(result[0].startswith(a) for a in subset):
                     continue
-            writer.writerow(list(xstr(v).decode('utf-8') for v in r))
-        db.close() # must be closed manually to prevent db locking during pipe
+            writer.writerow(list(xstr(v).decode('utf-8') for v in result))
+        db.close()  # must be closed manually to prevent db locking during pipe
     
     def generate_query(self):
         """Combine columns, joins, and wheres into single SQL query.
@@ -116,13 +117,13 @@ class Select(AbstractTool):
         
         """
         return ''.join(['SELECT ',
-                         ', '.join(self.columns),
-                         ' ',
-                         'FROM molecule ',
-                         ' '.join(self.joins),
-                         ' ',
-                         'WHERE ',
-                         '(', ') AND ('.join(self.wheres), ')'])
+                        ', '.join(self.columns),
+                        ' ',
+                        'FROM molecule ',
+                        ' '.join(self.joins),
+                        ' ',
+                        'WHERE ',
+                        '(', ') AND ('.join(self.wheres), ')'])
     
     def add_condition(self, property, condition):
         """Add columns, join phrase, and where phrase for a property/condition.
@@ -130,7 +131,7 @@ class Select(AbstractTool):
         """
         self.columns.append('molecule_method_property.result as %s' % property)
         self.joins.add(('JOIN property ON property.property_id = '
-                           'molecule_method_property.property_id'))
+                        'molecule_method_property.property_id'))
         self.wheres.append(('property.name = ? '
                             'AND molecule_method_property.result '
                             '%s ?') % condition)

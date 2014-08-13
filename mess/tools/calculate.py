@@ -2,10 +2,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
-import imp
 import sys
-from collections import OrderedDict
-from distutils.version import LooseVersion
 from socket import gethostname
 
 import pybel
@@ -18,6 +15,7 @@ from decorators import decorate, UnicodeDecorator
 from utils import is_inchikey, load_method
 
 decorate(pybel, UnicodeDecorator)
+
 
 class Calculate(AbstractTool):
     def __init__(self):
@@ -37,28 +35,29 @@ class Calculate(AbstractTool):
                                      'start from InChI'))
         subparser.add_argument('-s', '--mapreduce-server', action='store_true',
                                help='Start a mapreduce server')
-        subparser.add_argument('-m', '--map',  action='store_true',
+        subparser.add_argument('-m', '--map', action='store_true',
                                help='Start a mapreduce mapper client')
-        subparser.add_argument('-r', '--reduce',  action='store_true',
+        subparser.add_argument('-r', '--reduce', action='store_true',
                                help='Start a mapreduce reducer client')
-        subparser.add_argument('-n', '--hostname',  type=str, default='localhost', 
-                               help='Set mapreduce server hostname for client, defaults to \'localhost\'')
+        subparser.add_argument('-n', '--hostname', type=str,
+                               default='localhost',
+                               help=('Set mapreduce server hostname for '
+                                     'client, defaults to \'localhost\''))
     
     def execute(self, args):
         """Run calculations."""
         method = load_method(args.method, MessDB())
-        path = Path(MessDB())
-        if (args.map):
+        if args.map:
             self.map_client(method, args.hostname)
             return
-        elif (args.reduce):
+        elif args.reduce:
             self.reduce_client(method, args.hostname)
             return
         if args.inchikeys.name == '<stdin>' and args.inchikeys.isatty():
             sys.exit('No input specified.')
         method.setup()
-        path.setup(method.method_id, args.parent_path)
-        if (args.mapreduce_server):
+        Path(MessDB()).setup(method.method_id, args.parent_path)
+        if args.mapreduce_server:
             self.mapreduce_server(args.inchikeys, method, path)
         else:
             self.mapreduce_local(args.inchikeys, method, path)
@@ -69,16 +68,10 @@ class Calculate(AbstractTool):
             inchikey = row.split()[0].strip()
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
-            queries = dict()
-            for query, values in method.map(inchikey, 
-                                            [path.path_id, 
-                                             path.method_dir, 
+            for query, values in method.map(inchikey,
+                                            [path.path_id,
+                                             path.method_dir,
                                              path.parent_method_dir]):
-                try:
-                    queries[query].append(values)
-                except KeyError:
-                    queries[query] = [values]
-            for query, values in queries.iteritems():
                 count += method.reduce(query, values)
 
     def mapreduce_server(self, inchikeys, method, path):
@@ -88,29 +81,29 @@ class Calculate(AbstractTool):
             inchikey = row.split()[0].strip()
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
-            datasource[inchikey] = [path.path_id, 
-                                    path.method_dir, 
+            datasource[inchikey] = [path.path_id,
+                                    path.method_dir,
                                     path.parent_method_dir]
         server = mapreduce.Server()
         server.datasource = datasource
-        server.password = method.__hash__()
+        server.password = hash(method)
         results = server.run(debug=0)
         print('Done!', file=sys.stderr)
     
     def map_client(self, method, hostname):
-        print('Connecting to mapreduce server at: %s' % hostname, 
+        print('Connecting to mapreduce server at: %s' % hostname,
               file=sys.stderr)
         client = mapreduce.Client()
-        client.password = method.__hash__()
+        client.password = hash(method)
         client.mapfn = method.map
         client.run(hostname, mapreduce.DEFAULT_PORT, debug=0)
         print('Done!', file=sys.stderr)
     
     def reduce_client(self, method, hostname):
-        print('Connecting to mapreduce server at: %s' % hostname, 
-               file=sys.stderr)
+        print('Connecting to mapreduce server at: %s' % hostname,
+              file=sys.stderr)
         client = mapreduce.Client()
-        client.password = method.__hash__()
+        client.password = hash(method)
         client.reducefn = method.reduce
         client.run(hostname, mapreduce.DEFAULT_PORT, debug=0)
         print('Done!', file=sys.stderr)

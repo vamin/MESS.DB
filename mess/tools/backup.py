@@ -8,10 +8,9 @@ import subprocess
 import sys
 import time
 from cStringIO import StringIO
-from distutils.version import LooseVersion
 
-from _db import MessDB
 from _tool import AbstractTool
+
 
 class Backup(AbstractTool):
     def __init__(self):
@@ -40,16 +39,16 @@ class Backup(AbstractTool):
     def execute(self, args):
         """Run backup/restore."""
         mess_db_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
-                                       '../../db/mess.db'))
+                                                    '../../db/mess.db'))
         mol_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
-                                         '../../molecules'))
+                                                '../../molecules'))
         logs_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
-                                         '../../logs'))
+                                                 '../../logs'))
         backups_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
-                                       '../../backups'))
+                                                    '../../backups'))
         
-        if (args.restore):
-            print('***validating integrity of %s***' % args.restore, 
+        if args.restore:
+            print('***validating integrity of %s***' % args.restore,
                   file=sys.stderr)
             mess_db_check = 0
             molecules_dir_check = 0
@@ -59,15 +58,15 @@ class Backup(AbstractTool):
                 sys.exit('%s is not a valid backup file' % args.restore)
             for line in StringIO(output):
                 split = line.split('/')
-                if (split[0].strip() == 'molecules'):
+                if split[0].strip() == 'molecules':
                     molecules_dir_check = 1
                 try:
-                    if (split[1].strip() == 'mess.db'):
+                    if split[1].strip() == 'mess.db':
                         mess_db_check = 1
                 except IndexError:
                     pass
-                if (mess_db_check and molecules_dir_check):
-                    print('***restore from %s initiated***' % args.restore, 
+                if mess_db_check and molecules_dir_check:
+                    print('***restore from %s initiated***' % args.restore,
                           file=sys.stderr)
                     try:
                         shutil.rmtree(mol_path)
@@ -76,25 +75,25 @@ class Backup(AbstractTool):
                         # already deleted
                         pass
                     mess_db_glob = glob.glob('%s*' % mess_db_path)
-                    for f in mess_db_glob:
-                      os.remove(f)
-                    subprocess.call(['tar', '-jxvf', 
+                    for file in mess_db_glob:
+                        os.remove(file)
+                    subprocess.call(['tar', '-jxvf',
                                      os.path.relpath(args.restore)])
                     sys.exit('***backup %s restored***' % args.restore)
             sys.exit('%s is not a valid backup file' % args.restore)
         else:
             backup_name = 'MESS.DB.%s.tbz2' % str(time.time())
-            print('***backup to %s initiated***' % backup_name, 
+            print('***backup to %s initiated***' % backup_name,
                   file=sys.stderr)
-            tar = subprocess.Popen(['tar', '-cv', mess_db_path, mol_path, 
+            tar = subprocess.Popen(['tar', '-cv', mess_db_path, mol_path,
                                     logs_path], stdout=subprocess.PIPE)
-            subprocess.Popen(['parallel', '--gnu', '--pipe', '--recend', '', 
-                              '--max-procs', str(args.max_procs), '-k', 
-                              'bzip2', '--best', '-c'], stdin=tar.stdout, 
-                             stdout=open(os.path.join(backups_path, 
+            subprocess.Popen(['parallel', '--gnu', '--pipe', '--recend', '',
+                              '--max-procs', str(args.max_procs), '-k',
+                              'bzip2', '--best', '-c'], stdin=tar.stdout,
+                             stdout=open(os.path.join(backups_path,
                                                       backup_name), 'w'))
             tar.wait()
-            print('***backup to %s completed***' % backup_name, 
+            print('***backup to %s completed***' % backup_name,
                   file=sys.stderr)
 
 

@@ -12,6 +12,7 @@ from _tool import AbstractTool
 ### TODO: handle source, method (level, program, method*, parameter,
 ### property) pruning
 
+
 class Remove(AbstractTool):
     def __init__(self):
         """Set description of tool."""
@@ -28,7 +29,7 @@ class Remove(AbstractTool):
     def execute(self, args):
         """Remove specified elements."""
         db = MessDB()
-        c = db.cursor()
+        cur = db.cursor()
         for row in args.inchikeys:
             inchikey = row.split()[0].strip()
             try:
@@ -36,7 +37,7 @@ class Remove(AbstractTool):
                 shutil.rmtree(inchikey_dir)
                 print('%s dir removed\n' % inchikey, file=sys.stderr)
             except OSError:
-                print('%s did not have a directory\n' % inchikey, 
+                print('%s did not have a directory\n' % inchikey,
                       file=sys.stderr)
             try:
                 parent = os.path.relpath(os.path.join(inchikey_dir, '../'))
@@ -44,18 +45,19 @@ class Remove(AbstractTool):
             except OSError:
                 pass
             records = 0
-            q = 'DELETE from molecule WHERE inchikey=?'
-            c.execute(q, (inchikey,))
-            records += c.rowcount
-            q = 'DELETE from molecule_synonym WHERE inchikey=?'
-            c.execute(q, (inchikey,))
-            records += c.rowcount
-            q = 'DELETE from molecule_source WHERE inchikey=?'
-            c.execute(q, (inchikey,))
-            records += c.rowcount
-            q = 'DELETE from molecule_state_method_property WHERE inchikey=?'
-            c.execute(q, (inchikey,))
-            records += c.rowcount
+            query = 'DELETE from molecule WHERE inchikey=?'
+            cur.execute(query, (inchikey,))
+            records += cur.rowcount
+            query = 'DELETE from molecule_synonym WHERE inchikey=?'
+            cur.execute(query, (inchikey,))
+            records += cur.rowcount
+            query = 'DELETE from molecule_source WHERE inchikey=?'
+            cur.execute(query, (inchikey,))
+            records += cur.rowcount
+            query = ('DELETE from molecule_state_method_property '
+                     'WHERE inchikey=?')
+            cur.execute(query, (inchikey,))
+            records += cur.rowcount
             db.commit()
             print('%i %s records removed from db\n\n' % (records, inchikey),
                   file=sys.stderr)

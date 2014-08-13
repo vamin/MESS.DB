@@ -3,11 +3,11 @@ from __future__ import unicode_literals
 
 import glob
 import os
-import sys
 
 from _db import MessDB
 from _tool import AbstractTool
 from utils import is_inchikey
+
 
 class Check(AbstractTool):
     def __init__(self):
@@ -18,20 +18,20 @@ class Check(AbstractTool):
     
     def subparse(self, subparser):
         """Set tool-specific argparse arguments."""
-        pass # no arguments
+        pass  # no arguments
     
     def execute(self, args):
         """Run self checks."""
         db = MessDB()
-        self.c = db.cursor()
-        self.c.execute('SELECT inchikey FROM molecule')
+        self.cur = db.cursor()
+        self.cur.execute('SELECT inchikey FROM molecule')
         self.db_inchikeys = set()
         # check that inchikeys are all valid
-        for r in self.c:
-            if is_inchikey(r.inchikey, enforce_standard=True):
-                self.db_inchikeys.add(r.inchikey)
+        for result in self.cur:
+            if is_inchikey(result.inchikey, enforce_standard=True):
+                self.db_inchikeys.add(result.inchikey)
             else:
-                print('%s is not a valid standard InChiKey!' % r.inchikey)
+                print('%s is not a valid standard InChiKey!' % result.inchikey)
         self.check_dir_structure()
         self.check_db_structure()
         self.check_db_dir_inchikey_concordance()
@@ -98,7 +98,7 @@ class Check(AbstractTool):
             print('%s does not contain notes.' % inchikey)
         if not inchikey + '.png' in l:
             print('%s does not contain png.' % inchikey)
-        if not 'sources.tsv' in l:
+        if 'sources.tsv' not in l:
             print('%s does not contain sources.tsv file.' % inchikey)
         else:
             self.check_sources_tsv(os.path.join(d, 'sources.tsv'))

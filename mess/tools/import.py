@@ -1,10 +1,8 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import imp
 import os
 import sys
-from distutils.version import LooseVersion
 
 import pybel
 
@@ -16,6 +14,7 @@ from decorators import decorate, UnicodeDecorator
 from utils import is_inchikey, load_method
 
 decorate(pybel, UnicodeDecorator)
+
 
 class Import(AbstractTool):
     def __init__(self):
@@ -42,10 +41,8 @@ class Import(AbstractTool):
         p.setup(m.method_id)
         pybel.ob.obErrorLog.StopLogging()
         for f in s.files():
-            if (f.split('.')[-1] == 'sql' or 
-                f.split('.')[-1] == 'txt' or 
-                f.split('.')[-1] == 'bak' or 
-                f[-1] == '~'):
+            if (f.split('.')[-1] == 'sql' or f.split('.')[-1] == 'txt' or
+                    f.split('.')[-1] == 'bak' or f[-1] == '~'):
                 continue
             for mol in pybel.readfile(f.split('.')[-1],
                                       os.path.join(s.source_dir, f)):
@@ -58,7 +55,7 @@ class Import(AbstractTool):
                 frag_count = cansmi.count('.') + 1
                 for f in cansmi.split('.'):
                     method_args = {}
-                    if (frag_count > 1):
+                    if frag_count > 1:
                         frag = pybel.readstring('can', f)
                         decorate(frag, UnicodeDecorator)
                         # neutralize fragments
@@ -70,17 +67,17 @@ class Import(AbstractTool):
                         frag_inchikey = frag.write('inchikey').rstrip()
                         pybel.ob.obErrorLog.StopLogging()
                         if not is_inchikey(frag_inchikey):
-                            print("'%s' is not an importable molecule.\n" % f, 
+                            print("'%s' is not an importable molecule.\n" % f,
                                   file=sys.stderr)
                             continue
-                        method_args['parent'] = ('from: %s' % 
+                        method_args['parent'] = ('from: %s' %
                                                  unicode(mol.title,
                                                          'utf-8', 'replace'))
                         method_args['inchikey'] = frag_inchikey
                         method_args['mol'] = frag
                     else:
                         if not is_inchikey(inchikey):
-                            print("'%s' is not an importable molecule.\n" % f, 
+                            print("'%s' is not an importable molecule.\n" % f,
                                   file=sys.stderr)
                             continue
                         method_args['inchikey'] = inchikey

@@ -32,6 +32,8 @@ class AbstractMethod(object):
         parameters (dict): Parameters that affect program execution
         tags (list of str): List of parameters that identify the method
     """
+    hash = property(__hash__)
+    
     def __init__(self, db):
         """Set up db, check for attributes, dependencies, and setup.
         
@@ -57,6 +59,17 @@ class AbstractMethod(object):
                       'prog_name, prog_version, prog_url, '
                       'parameters, tags as attributes.'))
         self.check_dependencies()
+    
+    def __hash__(self):
+        """Hash based on method name and parameters.
+        
+        Returns:
+            A hex string of the sha1 hash of self.method_name plus
+            JSON-serialized self.parameters. Keys are sorted.
+        """
+        return hashlib.sha1(self.method_name +
+                            json.dumps(self.parameters,
+                                       sort_keys=True)).hexdigest()
     
     def setup(self):
         """Set up method."""
@@ -218,7 +231,7 @@ class AbstractMethod(object):
     def setup_method(self):
         """Set insert program to db, set up hash, and insert method to db."""
         self.insert_program()
-        self.hash = self.__hash__()
+        #self.hash = self.__hash__()
         name = self.get_method_name()
         query = ('INSERT OR IGNORE INTO method '
                  '(program_id, geop, name, hash) '
@@ -240,14 +253,3 @@ class AbstractMethod(object):
     def get_method_name(cls):
         """Return the name of the method, derived from the subclass name."""
         return cls.__name__.replace('_', '').lower()
-    
-    def __hash__(self):
-        """Hash based on method name and parameters.
-        
-        Returns:
-            A hex string of the sha1 hash of self.method_name plus
-            JSON-serialized self.parameters. Keys are sorted.
-        """
-        return hashlib.sha1(self.method_name +
-                            json.dumps(self.parameters,
-                                       sort_keys=True)).hexdigest()
