@@ -46,15 +46,16 @@ class TestUtils(unittest.TestCase):
     
     def test_load_method(self):
         load_method = self.utils.load_method
+        
         class DB(object):
             def dummy():
                 pass
+        
         db = DB()
         with self.assertRaises(SystemExit) as context:
             load_method('not_a_valid_method', DB())
         self.assertRegexpMatches(context.exception.message,
                                  'not a valid method')
-        import inspect
         sys.path.insert(1, os.path.join(os.path.dirname(__file__), '../..'))
         method = load_method('_import', DB())
         self.assertRegexpMatches(str(method), 'import')
@@ -77,7 +78,7 @@ class TestUtils(unittest.TestCase):
     
     def test_write_to_log(self):
         write_to_log = self.utils.write_to_log
-        test_log = os.path.join(self.tmp_dir,'test.log')
+        test_log = os.path.join(self.tmp_dir, 'test.log')
         write_to_log(test_log, ['test message'])
         self.assertRegexpMatches(open(test_log).read(), 'test message')
     
