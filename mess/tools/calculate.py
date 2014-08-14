@@ -75,7 +75,7 @@ class Calculate(AbstractTool):
                                            path.parent_method_dir]):
                 try:
                     keys[key].append(values)
-                except:
+                except KeyError:
                     keys[key] = [values] 
         for key, values in keys.iteritems():
             method.reduce(key, values)
