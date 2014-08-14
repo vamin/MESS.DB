@@ -54,17 +54,19 @@ class Balloon(AbstractMethod):
                       'variable to the path to MMFF94.mff.'))
         return True
     
-    def map(self, inchikey, params):
+    def map(self, inchikey, args):
         """Generate 3D structures with Balloon."""
         start = time.time()
-        (path_id, method_dir, parent_method_dir) = params
+        (path_id, method_dir, parent_method_dir) = (args['path_id'],
+                                                    args['method_dir'],
+                                                    args['parent_method_dir'])
         inchikey_dir = get_inchikey_dir(inchikey)
         out_dir = os.path.realpath(os.path.join(inchikey_dir, method_dir))
         setup_dir(out_dir)
         sdf_out = os.path.realpath(os.path.join(out_dir, '%s.sdf' % inchikey))
         xyz_out = os.path.join(out_dir, inchikey + '.xyz')
         messages = []
-        if not self.check(xyz_out):
+        if not self.check(xyz_out) or 1:
             query = 'SELECT smiles FROM molecule WHERE inchikey=?'
             r = self.db.execute(query, (inchikey,)).next()
             # get positive 32-bit integer
@@ -95,7 +97,14 @@ class Balloon(AbstractMethod):
                 mol = pybel.readfile('sdf', sdf_bad).next()
             decorate(mol, UnicodeDecorator)
             mol.localopt(forcefield='mmff94s', steps=128)
-            mol.write('xyz', xyz_out)
+            #mol.write('xyz', xyz_out)
+            print(inchikey)
+            print(mol.write('xyz'))
+            print(pybel.ob.FindType("gen2d"))
+            exit()
+            #pybel.ob.OBConversion().SetOptions("--")
+            #conv.ReadStr
+            
             self.check(xyz_out)
             yield self.get_timing_query(inchikey, path_id, start)
         else:

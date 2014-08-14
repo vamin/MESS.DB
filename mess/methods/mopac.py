@@ -52,9 +52,11 @@ class Mopac(AbstractMethod):
                                                    self.prog_url))
         return True
     
-    def map(self, inchikey, params):
+    def map(self, inchikey, args):
         start = time.time()
-        (path_id, method_dir, parent_method_dir) = params
+        (path_id, method_dir, parent_method_dir) = (args['path_id'],
+                                                    args['method_dir'],
+                                                    args['parent_method_dir'])
         if parent_method_dir is '':
             sys.exit(('This method requires a parent path with a valid '
                       'xyz file (i.e., it cannot accept an InChI).'))

@@ -58,21 +58,21 @@ class Calculate(AbstractTool):
         method.setup()
         path = Path(MessDB())
         path.setup(method.method_id, args.parent_path)
+        map_args = {'path_id': path.path_id,
+                    'method_dir': path.method_dir,
+                    'parent_method_dir': path.parent_method_dir}
         if args.mapreduce_server:
-            self.mapreduce_server(args.inchikeys, method, path)
+            self.mapreduce_server(args.inchikeys, method, map_args)
         else:
-            self.mapreduce_local(args.inchikeys, method, path)
+            self.mapreduce_local(args.inchikeys, method, map_args)
 
-    def mapreduce_local(self, inchikeys, method, path):
+    def mapreduce_local(self, inchikeys, method, map_args):
         keys = {}
         for row in inchikeys:
             inchikey = row.split()[0].strip()
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
-            for key, values in method.map(inchikey,
-                                          [path.path_id,
-                                           path.method_dir,
-                                           path.parent_method_dir]):
+            for key, values in method.map(inchikey, map_args):
                 try:
                     keys[key].append(values)
                 except KeyError:
@@ -80,16 +80,14 @@ class Calculate(AbstractTool):
         for key, values in keys.iteritems():
             method.reduce(key, values)
 
-    def mapreduce_server(self, inchikeys, method, path):
+    def mapreduce_server(self, inchikeys, method, map_args):
         print('Hostname is: %s' % gethostname(), file=sys.stderr)
         datasource = {}
         for row in inchikeys:
             inchikey = row.split()[0].strip()
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
-            datasource[inchikey] = [path.path_id,
-                                    path.method_dir,
-                                    path.parent_method_dir]
+            datasource[inchikey] = map_args
         server = mapreduce.Server()
         server.datasource = datasource
         server.password = hash(method)
