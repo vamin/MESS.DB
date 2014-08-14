@@ -8,11 +8,9 @@ method object must inherit from.
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import codecs
 import hashlib
 import json
 import sys
-from datetime import datetime
 
 
 class AbstractMethod(object):

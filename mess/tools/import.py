@@ -27,66 +27,54 @@ class Import(AbstractTool):
         """Set tool-specific argparse arguments."""
         subparser.add_argument('source',
                                help='A molecule source file or directory')
-        subparser.add_argument('-s', '--skip-cir', action='store_true',
-                               help=('Do not use CIR web service to import '
-                                     'IUPAC names and other synonyms'))
     
     def execute(self, args):
         """Run import method for every molecule in source."""
-        m = load_method('import', MessDB())
-        m.setup()
-        s = Source(MessDB())
-        s.setup(args.source)
-        p = Path(MessDB())
-        p.setup(m.method_id)
+        imp = load_method('_import', MessDB())
+        imp.setup()
+        source = Source(MessDB())
+        source.setup(args.source)
+        path = Path(MessDB())
+        path.setup(imp.method_id)
         pybel.ob.obErrorLog.StopLogging()
-        for f in s.files():
-            if (f.split('.')[-1] == 'sql' or f.split('.')[-1] == 'txt' or
-                    f.split('.')[-1] == 'bak' or f[-1] == '~'):
-                continue
-            for mol in pybel.readfile(f.split('.')[-1],
-                                      os.path.join(s.source_dir, f)):
+        keys = {}
+        for file_ in source.files():
+            for mol in pybel.readfile(file_.split('.')[-1],
+                                      os.path.join(source.source_dir, file_)):
                 decorate(mol, UnicodeDecorator)
                 pybel.ob.obErrorLog.ClearLog()
                 pybel.ob.obErrorLog.StartLogging()
-                inchikey = mol.write('inchikey').rstrip()
                 pybel.ob.obErrorLog.StopLogging()
                 cansmi = mol.write('can').split()[0]
-                frag_count = cansmi.count('.') + 1
-                for f in cansmi.split('.'):
+                for fragment in cansmi.split('.'):
                     method_args = {}
-                    if frag_count > 1:
-                        frag = pybel.readstring('can', f)
+                    if cansmi.count('.') > 0:
+                        frag = pybel.readstring('can', fragment)
                         decorate(frag, UnicodeDecorator)
-                        # neutralize fragments
-                        #if (frag.charge != 0):
-                        #    for atom in frag.atoms:
-                        #        atom.OBAtom.SetFormalCharge(0)
                         pybel.ob.obErrorLog.ClearLog()
                         pybel.ob.obErrorLog.StartLogging()
-                        frag_inchikey = frag.write('inchikey').rstrip()
+                        inchikey = frag.write('inchikey').rstrip()
                         pybel.ob.obErrorLog.StopLogging()
-                        if not is_inchikey(frag_inchikey):
-                            print("'%s' is not an importable molecule.\n" % f,
+                        if not is_inchikey(inchikey):
+                            print(("'%s' is not "
+                                   'an importable molecule.\n') % fragment,
                                   file=sys.stderr)
                             continue
                         method_args['parent'] = ('from: %s' %
                                                  unicode(mol.title,
                                                          'utf-8', 'replace'))
-                        method_args['inchikey'] = frag_inchikey
                         method_args['mol'] = frag
                     else:
+                        inchikey = mol.write('inchikey').rstrip()
                         if not is_inchikey(inchikey):
-                            print("'%s' is not an importable molecule.\n" % f,
+                            print(("'%s' is not "
+                                   'an importable molecule.\n') % fragment,
                                   file=sys.stderr)
                             continue
-                        method_args['inchikey'] = inchikey
                         method_args['mol'] = mol
-                    method_args['source'] = s
-                    method_args['path'] = p
-                    method_args['skip_cir'] = args.skip_cir
-                    status = m.execute(method_args)
-                    print('%s: %s' % (method_args['inchikey'], status))
+                    method_args['source'] = source
+                    method_args['path'] = path
+                    imp.execute(inchikey, method_args)
 
 
 def load():

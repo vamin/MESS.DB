@@ -83,7 +83,13 @@ class Source(object):
     
     def files(self):
         """Returns a list of files in the source directory."""
-        return os.listdir(self.source_dir)
+        return filter(self.is_source_file, os.listdir(self.source_dir))
+    
+    def is_source_file(self, file_):
+        return not (file_.split('.')[-1] == 'sql'
+                    or file_.split('.')[-1] == 'txt'
+                    or file_.split('.')[-1] == 'bak'
+                    or file_[-1] == '~')
     
     def update_molecule_source(self, inchikey, identifier):
         """Update the source in mess.db.
