@@ -87,8 +87,9 @@ def load_method(method_name, db):
         module = __import__('mess.methods.%s' % method_name,
                             fromlist=['methods'])
         method = module.load(db)
-    except ImportError:
-        sys.exit('%s is not a valid method.' % method_name)
+    except ImportError as err:
+        print('Error: %s;' % err)
+        sys.exit('\'%s\' is not a valid method.' % method_name)
     return method
 
 
