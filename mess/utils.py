@@ -37,9 +37,9 @@ def get_mem_usage(point):
     
     """
     usage = resource.getrusage(resource.RUSAGE_SELF)
-    return '''%s: usertime=%s systime=%s mem=%s mb
-           ''' % (point, usage[0], usage[1],
-                  (usage[2] * resource.getpagesize()) / 1000000.0)
+    return ('%s: usertime=%s systime=%s '
+            'mem=%s mb\n') % (point, usage[0],usage[1],
+                              (usage[2] * resource.getpagesize()) / 1000000.0)
 
 
 def hash_dict(d):
