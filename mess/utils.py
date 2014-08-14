@@ -1,11 +1,13 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import codecs
 import hashlib
 import json
 import os
 import resource
 import sys
+from datetime import datetime
 
 
 def get_inchikey_dir(inchikey):
@@ -123,7 +125,7 @@ def unicode_replace(x, enc='utf-8', err='replace'):
         return x
 
 
-def write_to_log(self, log_path, messages):
+def write_to_log(log_path, messages):
     """Write messages to a log.
     
     Args:
