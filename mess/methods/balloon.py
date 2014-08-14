@@ -7,13 +7,14 @@ import math
 import os
 import subprocess
 import sys
+import time
 from distutils.version import LooseVersion
 
 import pybel
 
 from _method import AbstractMethod
 from decorators import decorate, UnicodeDecorator
-from utils import get_inchikey_dir, setup_dir
+from utils import get_inchikey_dir, setup_dir, write_to_log
 
 decorate(pybel, UnicodeDecorator)
 
@@ -55,6 +56,7 @@ class Balloon(AbstractMethod):
     
     def map(self, inchikey, params):
         """Generate 3D structures with Balloon."""
+        start = time.time()
         (path_id, method_dir, parent_method_dir) = params
         inchikey_dir = get_inchikey_dir(inchikey)
         out_dir = os.path.realpath(os.path.join(inchikey_dir, method_dir))
@@ -63,8 +65,8 @@ class Balloon(AbstractMethod):
         xyz_out = os.path.join(out_dir, inchikey + '.xyz')
         messages = []
         if not self.check(xyz_out):
-            q = 'SELECT smiles FROM molecule WHERE inchikey=?'
-            r = self.c.execute(q, (inchikey,)).next()
+            query = 'SELECT smiles FROM molecule WHERE inchikey=?'
+            r = self.db.execute(query, (inchikey,)).next()
             # get positive 32-bit integer
             seed = binascii.crc32(inchikey) & 0xffffffff
             try:
@@ -95,10 +97,10 @@ class Balloon(AbstractMethod):
             mol.localopt(forcefield='mmff94s', steps=128)
             mol.write('xyz', xyz_out)
             self.check(xyz_out)
+            yield self.get_timing_query(inchikey, path_id, start)
         else:
             self.status = 'skipped'
         self.log(inchikey, inchikey_dir, method_dir, messages)
-        yield 0, 0
     
     def check(self, xyz_out):
         """Check that a valid xyz file was created.
@@ -143,11 +145,9 @@ class Balloon(AbstractMethod):
         base_log_path = os.path.join(inchikey_dir, '%s.log' % inchikey)
         method_log_path = os.path.join(inchikey_dir, method_dir,
                                        '%s.log' % inchikey)
-        self.add_messages_to_log(base_log_path, self.method_name,
-                                 ['status: %s' % self.status])
+        write_to_log(base_log_path, ['status: %s' % self.status])
         if (messages):
-            self.add_messages_to_log(method_log_path, self.method_name,
-                                     messages)
+            write_to_log(method_log_path, messages)
     
     def import_properties(self):
         """Pass, becuase balloon does not calculate any properties."""

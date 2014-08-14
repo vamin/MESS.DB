@@ -38,7 +38,6 @@ class Source(object):
             db (obj): A MessDB object
         """
         self.db = db
-        self.cur = self.db.cursor()
     
     def setup(self, source):
         """Setup source in mess.db.
@@ -66,13 +65,13 @@ class Source(object):
             sys.exit(('All sources must have a corresponding sql file '
                       'in their directory.'))
         # insert/update source in the database
-        self.cur.executescript(codecs.open(source_sql,
-                                           encoding='utf-8').read())
+        self.db.executescript(codecs.open(source_sql,
+                                          encoding='utf-8').read())
         # get source id
         query = ('SELECT source_id, name, dirname, '
                  'url, url_template, last_update '
                  'FROM source WHERE dirname=?')
-        source_row = self.cur.execute(query, (source_basename,)).fetchone()
+        source_row = self.db.execute(query, (source_basename,)).fetchone()
         # set attributes
         self.id = source_row.source_id
         self.name = source_row.name
@@ -101,8 +100,7 @@ class Source(object):
         query = ('INSERT OR IGNORE INTO molecule_source '
                  '(inchikey, source_id, identifier) '
                  'VALUES (?, ?, ?)')
-        self.cur.execute(query, (inchikey, self.id, identifier))
-        self.db.commit()
+        self.db.execute(query, (inchikey, self.id, identifier))
     
     def update_source_tsv(self, inchikey_dir, identifier):
         """Update the sources.tsv file.

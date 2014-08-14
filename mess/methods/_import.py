@@ -40,6 +40,7 @@ class Import(AbstractMethod):
     
     def execute(self, inchikey, args):
         """Import molecule into MESS.DB."""
+        start = time.time()
         mol = args['mol']
         s = args['source']
         p = args['path']
@@ -68,12 +69,15 @@ class Import(AbstractMethod):
             self.update_molecule(inchikey, mol)
             self.import_properties(inchikey, p.path_id, mol)
             self.check(inchikey)
+            query, values = self.get_timing_query(inchikey, p.path_id, start)
+            self.reduce(query, [values])
         else:
             self.update_molecule(inchikey, mol)
         s.update_molecule_source(inchikey, identifier)
         s.update_source_tsv(inchikey_dir, identifier)
         self.log(inchikey, self.status)
         print('%s: %s' % (inchikey, self.status))
+        
     
     def check(self, inchikey):
         """Check that a valid molecule folder was created.
@@ -100,7 +104,7 @@ class Import(AbstractMethod):
             with codecs.open(inchi, encoding='utf-8') as f:
                 inchi_str = f.readline().split('=')[1].strip()
                 q = 'SELECT inchikey FROM molecule WHERE inchi=?'
-                row = self.cur.execute(q, (inchi_str,)).fetchone()
+                row = self.db.execute(q, (inchi_str,)).fetchone()
                 try:
                     if (row.inchikey != inchikey):
                         self.status = 'import failed'
@@ -200,7 +204,7 @@ class Import(AbstractMethod):
         """
         # calculate identifiers with ob/cir, unless entry exists
         query = 'SELECT inchi FROM molecule WHERE inchikey=?'
-        inchikey_check_row = self.cur.execute(query, (inchikey,)).fetchone()
+        inchikey_check_row = self.db.execute(query, (inchikey,)).fetchone()
         inchi = mol.write('inchi').rstrip().split('=')[1]
         if (inchikey_check_row is not None and
             inchikey_check_row.inchi == inchi):

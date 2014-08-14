@@ -67,11 +67,11 @@ class Select(AbstractTool):
             subsets = [alpha3[i::args.of] for i in xrange(args.of)]
             subset = subsets[args.part - 1]
         db = MessDB()
-        cur = db.cursor()
         self.columns = ['molecule.inchikey']
         self.joins = set()
         self.wheres = ['1=1']
         if args.query:
+            cur = db.cursor()
             try:
                 cur.execute(codecs.open(args.query, encoding='utf-8').read())
             except sqlite3.OperationalError:
@@ -91,7 +91,7 @@ class Select(AbstractTool):
         #    c.execute(self.generate_query), (args.property_name,
         #                                     args.property_value))
         else:
-            cur.execute(self.generate_query())
+            cur = db.execute(self.generate_query())
         # check that sql returns inchikey in first column
         if not cur.description[0][0].lower() == 'inchikey':
             sys.exit('Query must return inchikey in first column.')

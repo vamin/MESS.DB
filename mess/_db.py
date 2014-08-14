@@ -82,6 +82,32 @@ class MessDB(object):
         traceback.print_stack()
         sys.exit('Database is still locked after %d tries.' % self.tries)
     
+    def execute(self, query, values=()):
+        try:
+            with self.conn:
+                return self.conn.execute(query, values)
+        except sqlite3.Error as err:
+            print(('Error executing query:\n%s\n'
+                   'With values:\n%s\n'
+                   '%s') % (query, values, err.strerror), file=sys.stderr)
+            
+    def executemany(self, query, values):
+        try:
+            with self.conn:
+                return self.conn.executemany(query, values)
+        except sqlite3.Error as err:
+            print(('Error executing query:\n%s\n'
+                   'With many values.'
+                   '%s') % (query, err.strerror), file=sys.stderr)
+    
+    def executescript(self, script):
+        try:
+            with self.conn:
+                return self.conn.executescript(script)
+        except sqlite3.Error as err:
+            print(('Error executing script:\n%s\n'
+                   '%s') % (script, err.strerror), file=sys.stderr)
+    
     def namedtuple_factory(self, cursor, row):
         """
         Usage:
@@ -113,7 +139,7 @@ class MessDB(object):
         cur.executescript(codecs.open(triggers, encoding='utf-8').read())
         result = cur.execute('PRAGMA journal_mode=wal').next()
         if not result.journal_mode == 'wal':
-            sys.exit(('Setting jounral mode to WAL failed. Run PRAGMA '
+            sys.exit(('Setting journal mode to WAL failed. Run PRAGMA '
                       'journal_mode=wal in SQLite before continuing.'))
         print('New mess.db initialized.', file=sys.stderr)
     

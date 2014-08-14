@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 import hashlib
 import json
 import sys
+import time
 
 
 class AbstractMethod(object):
@@ -42,7 +43,6 @@ class AbstractMethod(object):
             db (obj): A MessDB object
         """
         self.db = db
-        self.cur = db.cursor()
         self.method_name = self.get_method_name()
         try:
             self.description
@@ -102,37 +102,33 @@ class AbstractMethod(object):
     def reduce(self, query, values):
         """Run queries/values on the db."""
         if query or values[0]:
-            self.cur.executemany(query, values)
-            self.db.commit()
-        return len(values)
+            self.db.executemany(query, values)
     
     def setup(self):
         """Set up method."""
         if not self.is_setup:
-            self.insert_method()
             self.insert_program()
+            self.insert_method()
             self.insert_parameters()
             self.insert_tags()
             self.is_setup = True
     
-    def insert_method(self):
+    def insert_method(self): # WITH:
         """Set insert program to db, set up hash, and insert method to db."""
         query = ('INSERT OR IGNORE INTO method '
                  '(program_id, geop, name, hash) '
                  'SELECT program.program_id, ?, ?, ? '
                  'FROM program '
                  'WHERE program.name=? AND program.version=?')
-        self.cur.execute(query, (self.geop, self.method_name, self.hash,
-                                 self.prog_name, self.prog_version))
-        self.db.commit()
+        self.db.execute(query, (self.geop, self.method_name, self.hash,
+                                self.prog_name, self.prog_version))
     
     def insert_program(self):
         """Adds row to program table in mess.db."""
         query = ('INSERT OR IGNORE INTO program (name, version, url) '
                  'VALUES (?, ?, ?)')
-        self.cur.execute(query,
-                         (self.prog_name, self.prog_version, self.prog_url))
-        self.db.commit()
+        self.db.execute(query,
+                        (self.prog_name, self.prog_version, self.prog_url))
     
     def insert_parameters(self):
         """Import paramaters dict to mess.db.
@@ -143,14 +139,13 @@ class AbstractMethod(object):
         """
         for name, setting in self.parameters.items():
             query = ('INSERT OR IGNORE INTO parameter (name) VALUES (?)')
-            self.cur.execute(query, (name, ))
+            self.db.execute(query, (name, ))
             query = ('INSERT OR IGNORE INTO method_parameter '
                      '(method_id, parameter_id, setting) '
                      'SELECT ?, parameter.parameter_id, ? '
                      'FROM program, parameter '
                      'WHERE parameter.name=?')
-            self.cur.execute(query, (self.method_id, setting, name))
-        self.db.commit()
+            self.db.execute(query, (self.method_id, setting, name))
     
     def insert_tags(self):
         """Add tags to method_tag table in mess.db."""
@@ -158,8 +153,7 @@ class AbstractMethod(object):
                  'SELECT ?, parameter.parameter_id FROM parameter '
                  'WHERE parameter.name= ?')
         for tag in self.tags:
-            self.cur.execute(query, (self.method_id, tag))
-        self.db.commit()
+            self.db.execute(query, (self.method_id, tag))
     
     def get_insert_property_query(self, inchikey, method_path_id, name,
                                   description, format_, value, units):
@@ -180,6 +174,12 @@ class AbstractMethod(object):
         return (query, (inchikey, method_path_id, name, description,
                         format_, units, value))
     
+    def get_timing_query(self, inchikey, path_id, start):
+        return self.get_insert_property_query(inchikey, path_id, 'runtime',
+                                              'execution time',
+                                              type(start).__name__,
+                                              time.time()-start, 's')
+    
     @classmethod
     def get_method_name(cls):
         """Return the name of the method, derived from the subclass name."""
@@ -190,7 +190,7 @@ class AbstractMethod(object):
         """Get the object's method_id attribute."""
         query = ('SELECT method_id FROM method '
                  'WHERE hash = ?;')
-        row = self.cur.execute(query, (self.hash,)).fetchone()
+        row = self.db.execute(query, (self.hash,)).fetchone()
         return row.method_id
     
     @property

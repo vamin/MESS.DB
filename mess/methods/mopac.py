@@ -6,6 +6,7 @@ import math
 import os
 import subprocess
 import sys
+import time
 
 from _method import AbstractMethod
 from utils import get_inchikey_dir, setup_dir, write_to_log
@@ -52,6 +53,7 @@ class Mopac(AbstractMethod):
         return True
     
     def map(self, inchikey, params):
+        start = time.time()
         (path_id, method_dir, parent_method_dir) = params
         if parent_method_dir is '':
             sys.exit(('This method requires a parent path with a valid '
@@ -73,11 +75,11 @@ class Mopac(AbstractMethod):
                 else:
                     keywords += '%s ' % k
             keywords += 'THREADS=%s ' % self.threads
-            q = ('SELECT result AS charge '
-                 'FROM molecule_method_property mpp '
-                 'JOIN property p ON mpp.property_id = p.property_id '
-                 "WHERE p.name='charge' AND mpp.inchikey=?")
-            r = self.c.execute(q, (inchikey,)).fetchone()
+            query = ('SELECT result AS charge '
+                     'FROM molecule_method_property mpp '
+                     'JOIN property p ON mpp.property_id = p.property_id '
+                     "WHERE p.name='charge' AND mpp.inchikey=?")
+            r = self.db.execute(query, (inchikey,)).fetchone()
             keywords += 'CHARGE=%i' % r.charge
             babel = subprocess.Popen(['obabel', '-ixyz', xyz_in, '-omop', 
                                       '-xk' + keywords], 
@@ -91,6 +93,7 @@ class Mopac(AbstractMethod):
             os.chdir(pwd)
             self.moo_to_xyz(os.path.abspath(out_file), xyz_out)
             if self.check(out_file, xyz_out):
+                yield self.get_timing_query(inchikey, path_id, start)
                 for query, values in self.import_properties(inchikey, 
                                                             path_id, 
                                                             out_file):
