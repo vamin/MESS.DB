@@ -7,9 +7,12 @@ import re
 import string
 import sys
 
+import pybel
+
 from _db import MessDB
 from _tool import AbstractTool
 from utils import xstr
+from mess.tools.match import Match
 
 
 class Select(AbstractTool):
@@ -23,6 +26,9 @@ class Select(AbstractTool):
         subparser.add_argument('-q', '--query', type=str,
                                help=('An SQL query string or file that '
                                      'returns inchikeys in first column'))
+        subparser.add_argument('-s', '--smarts', type=str,
+                               help=('Subset using SMARTS pattern or file '
+                                     'listing a series of SMARTS patterns'))
         #subparser.add_argument('-n', '--property-name', type=str,
         #                       help='name of propery')
         #subparser.add_argument('-o', '--property-operator', type=str,
@@ -105,6 +111,16 @@ class Select(AbstractTool):
                 continue
             if args.part and args.of:
                 if not any(result[0].startswith(a) for a in subset):
+                    continue
+            if args.smarts:
+                matches = 0
+                query = 'SELECT inchi FROM molecule WHERE inchikey = ?'
+                inchi = db.execute(query, (result[0],)).fetchone()[0]
+                mol = pybel.readstring('inchi', 'InChI=%s' % inchi)
+                for (smarts_obj,
+                     smarts_str) in Match.smarts_generator(args.smarts):
+                    matches += len(smarts_obj.findall(mol))
+                if not matches:
                     continue
             writer.writerow(list(xstr(v).decode('utf-8') for v in result))
         db.close()  # must be closed manually to prevent db locking during pipe
