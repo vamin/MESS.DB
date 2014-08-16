@@ -22,6 +22,19 @@ CREATE TABLE IF NOT EXISTS
   );
 CREATE INDEX IF NOT EXISTS ix_molecule_synonym_name ON molecule_synonym (name);
 
+--DROP TABLE molecule_fingerprint;
+CREATE TABLE IF NOT EXISTS
+  molecule_fingerprint(
+    inchikey TEXT NOT NULL,
+    --FOREIGN KEY(inchikey) REFERENCES molecule(inchikey),
+    name TEXT NOT NULL,
+    settings TEXT,
+    fingerprint TEXT NOT NULL,
+    method_path_id INTEGER,
+    --FOREIGN KEY(method_path_id) REFERENCES method_path(method_path_id),
+    UNIQUE(inchikey, name, settings, method_path_id)
+  );
+
 --DROP TABLE source;
 CREATE TABLE IF NOT EXISTS
   source( --catalogs where molecules exist and might be purchased
