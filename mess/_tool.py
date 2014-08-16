@@ -9,6 +9,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from mess import __all__
+from mess.utils import CustomFormatter
 
 
 class ToolManager(object):
@@ -29,7 +30,8 @@ class ToolManager(object):
             tool = self.load_tool(tool_name)
             subparser = subparsers.add_parser(tool_name, help=tool.description,
                                               description=tool.description,
-                                              epilog=tool.epilog)
+                                              epilog=tool.epilog,
+                                              formatter_class=CustomFormatter)
             tool.subparse(subparser)
     
     def load_tool(self, tool_name):
@@ -39,7 +41,7 @@ class ToolManager(object):
             tool_name: The name of a valid tool.
         
         Returns:
-            The tool module.
+            The tool object.
         """
         if tool_name not in __all__:
             raise KeyError("tool '%s' not found" % tool_name)
@@ -61,13 +63,13 @@ class ToolManager(object):
 # each tool must provide a load method at module level that will be
 # used to instantiate the plugin (e.g. def load():\ return Tool())
 class AbstractTool(object):
-    """All tools should inherit from this class."""
+    """All tools must inherit from this class."""
     def __init__(self):
         """Raise error if __init__ not implemented."""
         self.description = ''
         self.epilog = ''
-        raise NotImplementedError(('every tool needs an __init__ with a '
-                                   'description and epilog attribute'))
+        raise NotImplementedError(('every tool needs an __init__ that sets '
+                                   'description and epilog attributes'))
     
     def subparse(self, subparser):
         """Set tool-specific arguments for argparser. Raise error if not

@@ -1,6 +1,14 @@
+# -*- coding: utf-8 -*-
+"""MESS.DB utilities module
+
+This module contains helper functions and classes that are used by many mess
+modules.
+"""
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import argparse
 import codecs
 import hashlib
 import json
@@ -19,7 +27,6 @@ def get_inchikey_dir(inchikey):
     Returns:
         Absolute path of the form e.g.:
         path/to/molecules/C/PE/LXLSAUQHCOX-UHFFFAOYSA-M/
-    
     """
     molecules_dir = os.path.join(os.path.dirname(__file__), '../molecules/')
     return os.path.abspath(os.path.join(molecules_dir, inchikey[:1],
@@ -34,11 +41,10 @@ def get_mem_usage(point):
     
     Returns:
         A human-readable string.
-    
     """
     usage = resource.getrusage(resource.RUSAGE_SELF)
     return ('%s: usertime=%s systime=%s '
-            'mem=%s mb\n') % (point, usage[0],usage[1],
+            'mem=%s mb\n') % (point, usage[0], usage[1],
                               (usage[2] * resource.getpagesize()) / 1000000.0)
 
 
@@ -51,7 +57,6 @@ def hash_dict(d):
     Returns:
         A hex string of the sha1 hash of the JSON-serialized dict. Keys are
         sorted.
-    
     """
     return hashlib.sha1(json.dumps(d, sort_keys=True)).hexdigest()
 
@@ -65,7 +70,6 @@ def is_inchikey(inchikey, enforce_standard=False):
     
     Returns:
         boolean
-    
     """
     if '=' in inchikey:
         inchikey = inchikey.split('=')[1]
@@ -118,7 +122,6 @@ def unicode_replace(x, enc='utf-8', err='replace'):
     
     Returns:
         Unicode string if x is str, x otherwise.
-    
     """
     if isinstance(x, str):
         return unicode(x, enc, err)
@@ -153,4 +156,46 @@ def xstr(s):
     """Return str(), except that None returns empty string."""
     if s is None:
         return ''
-    return str(s)
+    else:
+        return str(s)
+
+
+class CustomFormatter(argparse.HelpFormatter):
+    """Custom formatter for setting argparse formatter_class. Very similar to
+    ArgumentDefaultsHelpFormatter, except that:
+    1) (default: %%(default)s) is not shown if it is set to None or False, or
+       if it is already described in the help text, and
+    2) very long option strings are split into two lines.
+    """
+    
+    def _get_help_string(self, action):
+        help_ = action.help
+        if '(default' not in action.help:
+            if (action.default not in (argparse.SUPPRESS, None, False)
+                    or action.default is 0):
+                defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
+                if action.option_strings or action.nargs in defaulting_nargs:
+                    help_ += ' (default: %(default)s)'
+        return help_
+    
+    def _format_action_invocation(self, action):
+        if not action.option_strings:
+            metavar, = self._metavar_formatter(action, action.dest)(1)
+            return metavar
+        else:
+            parts = []
+            # if the Optional doesn't take a value, format is:
+            #    -s, --long
+            if action.nargs == 0:
+                parts.extend(action.option_strings)
+            # if the Optional takes a value, format is:
+            #    -s ARGS, --long ARGS
+            else:
+                default = action.dest.upper()
+                args_string = self._format_args(action, default)
+                for option_string in action.option_strings:
+                    parts.append('%s %s' % (option_string, args_string))
+            if sum(len(s) for s in parts) < self._width - (len(parts) - 1) * 2:
+                return ', '.join(parts)
+            else:
+                return ',\n  '.join(parts)
