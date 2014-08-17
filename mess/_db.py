@@ -89,7 +89,7 @@ class MessDB(object):
         except sqlite3.Error as err:
             print(('Error executing query:\n%s\n'
                    'With values:\n%s\n'
-                   '%s') % (query, values, err.strerror), file=sys.stderr)
+                   '%s') % (query, values, err), file=sys.stderr)
             
     def executemany(self, query, values):
         try:
@@ -98,7 +98,7 @@ class MessDB(object):
         except sqlite3.Error as err:
             print(('Error executing query:\n%s\n'
                    'With many values.'
-                   '%s') % (query, err.strerror), file=sys.stderr)
+                   '%s') % (query, err), file=sys.stderr)
     
     def executescript(self, script):
         try:
@@ -106,7 +106,7 @@ class MessDB(object):
                 return self.conn.executescript(script)
         except sqlite3.Error as err:
             print(('Error executing script:\n%s\n'
-                   '%s') % (script, err.strerror), file=sys.stderr)
+                   '%s') % (script, err), file=sys.stderr)
     
     def namedtuple_factory(self, cursor, row):
         """
