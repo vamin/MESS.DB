@@ -92,7 +92,7 @@ def load_method(method_name, db):
                             fromlist=['methods'])
         method = module.load(db)
     except ImportError as err:
-        print('Error: %s;' % err)
+        print('Error: %s;' % err, file=sys.stderr)
         sys.exit('\'%s\' is not a valid method.' % method_name)
     return method
 
