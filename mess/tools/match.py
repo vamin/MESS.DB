@@ -270,8 +270,8 @@ class Match(AbstractTool):
                     spec.SetStereo(pybel.ob.OBSpectrophore()
                                    .AllStereoSpecificProbes)
                 else:
-                    print(('Warning: unrecognized Spectrophore stereospecificity '
-                           'argument (%s), cage type '
+                    print(('Warning: unrecognized Spectrophore '
+                           'stereospecificity argument (%s), cage type '
                            'set to default (No).') % args['stereo'],
                           file=sys.stderr)
                     spec.SetStereo(0)
