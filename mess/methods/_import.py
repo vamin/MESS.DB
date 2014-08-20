@@ -11,11 +11,10 @@ import urllib2
 
 import pybel
 
-from _method import AbstractMethod
-from _path import Path
-from _source import Source
-from decorators import decorate, UnicodeDecorator
-from utils import get_inchikey_dir, setup_dir, touch, write_to_log
+from mess._method import AbstractMethod
+from mess._source import Source
+from mess.decorators import decorate, UnicodeDecorator
+from mess.utils import get_inchikey_dir, setup_dir, touch, write_to_log
 
 decorate(pybel, UnicodeDecorator)
 
@@ -42,8 +41,8 @@ class Import(AbstractMethod):
         """Import molecule into MESS.DB."""
         start = time.time()
         mol = args['mol']
-        s = args['source']
-        p = args['path']
+        source = args['source']
+        path_id = args['path_id']
         inchikey_dir = get_inchikey_dir(inchikey)
         inchikey_basename = os.path.join(inchikey_dir, inchikey)
         setup_dir(inchikey_dir)
@@ -67,14 +66,14 @@ class Import(AbstractMethod):
                              'w', 'utf-8') as c:
                 c.write('%i' % mol.charge)
             self.update_molecule(inchikey, mol)
-            self.import_properties(inchikey, p.path_id, mol)
+            self.import_properties(inchikey, path_id, mol)
             self.check(inchikey)
-            query, values = self.get_timing_query(inchikey, p.path_id, start)
+            query, values = self.get_timing_query(inchikey, path_id, start)
             self.reduce(query, [values])
         else:
             self.update_molecule(inchikey, mol)
-        s.update_molecule_source(inchikey, identifier)
-        s.update_source_tsv(inchikey_dir, identifier)
+        source.update_molecule_source(inchikey, identifier)
+        source.update_source_tsv(inchikey_dir, identifier)
         self.log(inchikey, self.status)
         print('%s: %s' % (inchikey, self.status))
         

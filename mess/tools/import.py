@@ -6,12 +6,12 @@ import sys
 
 import pybel
 
-from _db import MessDB
-from _path import Path
-from _source import Source
-from _tool import AbstractTool
-from decorators import decorate, UnicodeDecorator
-from utils import is_inchikey, load_method
+from mess._db import MessDB
+from mess._path import MethodPath
+from mess._source import Source
+from mess._tool import AbstractTool
+from mess.decorators import decorate, UnicodeDecorator
+from mess.utils import is_inchikey, load_method
 
 decorate(pybel, UnicodeDecorator)
 
@@ -19,8 +19,7 @@ decorate(pybel, UnicodeDecorator)
 class Import(AbstractTool):
     def __init__(self):
         """Set description of tool."""
-        self.description = ('Import molecule file, multi-molecule file, '
-                            'or dir of molecules into MESS.DB')
+        self.description = 'Import molecules into MESS.DB'
         self.epilog = ''
     
     def subparse(self, subparser):
@@ -34,8 +33,9 @@ class Import(AbstractTool):
         imp.setup()
         source = Source(MessDB())
         source.setup(args.source)
-        path = Path(MessDB())
-        path.setup(imp.method_id)
+        path = MethodPath()
+        path.setup_path(imp.method_id)
+        path_id = path.get_path_id()
         pybel.ob.obErrorLog.StopLogging()
         keys = {}
         for file_ in source.files():
@@ -73,7 +73,7 @@ class Import(AbstractTool):
                             continue
                         method_args['mol'] = mol
                     method_args['source'] = source
-                    method_args['path'] = path
+                    method_args['path_id'] = path_id
                     imp.execute(inchikey, method_args)
 
 

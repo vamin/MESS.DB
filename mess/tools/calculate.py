@@ -7,12 +7,12 @@ from socket import gethostname
 
 import pybel
 
-import mapreduce
-from _db import MessDB
-from _path import Path
-from _tool import AbstractTool
-from decorators import decorate, UnicodeDecorator
-from utils import is_inchikey, load_method
+import mess.mapreduce as mapreduce
+from mess._db import MessDB
+from mess._path import MethodPath
+from mess._tool import AbstractTool
+from mess.decorators import decorate, UnicodeDecorator
+from mess.utils import is_inchikey, load_method
 
 decorate(pybel, UnicodeDecorator)
 
@@ -20,7 +20,7 @@ decorate(pybel, UnicodeDecorator)
 class Calculate(AbstractTool):
     def __init__(self):
         """Set description of tool."""
-        self.description = 'Calculate properties for a set of molecules'
+        self.description = 'Calculate molecular properties with mapreduce'
         self.epilog = ''
     
     def subparse(self, subparser):
@@ -30,7 +30,7 @@ class Calculate(AbstractTool):
                                type=argparse.FileType('r'), default=sys.stdin,
                                help=('A list of inchikeys, file or passed in '
                                      'through STDIN'))
-        subparser.add_argument('-p', '--parent-path', type=int, default=0,
+        subparser.add_argument('-p', '--parent-path', type=int, default=None,
                                help=('Specify a parent path id. If not set, '
                                      'start from InChI'))
         subparser.add_argument('-s', '--mapreduce-server', action='store_true',
@@ -56,11 +56,11 @@ class Calculate(AbstractTool):
         if args.inchikeys.name == '<stdin>' and args.inchikeys.isatty():
             sys.exit('No input specified.')
         method.setup()
-        path = Path(MessDB())
-        path.setup(method.method_id, args.parent_path)
-        map_args = {'path_id': path.path_id,
-                    'method_dir': path.method_dir,
-                    'parent_method_dir': path.parent_method_dir}
+        path = MethodPath()
+        path.setup_path(method.method_id, args.parent_path)
+        map_args = {'path_id': path.get_path_id(),
+                    'method_dir': path.get_path_directory(),
+                    'parent_method_dir': path.get_parent_path_directory()}
         if args.mapreduce_server:
             self.mapreduce_server(args.inchikeys, method, map_args)
         else:
@@ -76,7 +76,7 @@ class Calculate(AbstractTool):
                 try:
                     keys[key].append(values)
                 except KeyError:
-                    keys[key] = [values] 
+                    keys[key] = [values]
         for key, values in keys.iteritems():
             method.reduce(key, values)
 

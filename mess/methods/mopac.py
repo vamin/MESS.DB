@@ -58,7 +58,7 @@ class Mopac(AbstractMethod):
         (path_id, method_dir, parent_method_dir) = (args['path_id'],
                                                     args['method_dir'],
                                                     args['parent_method_dir'])
-        if parent_method_dir is '':
+        if parent_method_dir is None:
             sys.exit(('This method requires a parent path with a valid '
                       'xyz file (i.e., it cannot accept an InChI).'))
         inchikey_dir = get_inchikey_dir(inchikey)
@@ -68,6 +68,8 @@ class Mopac(AbstractMethod):
         out_file = os.path.join(out_dir, '%s.out' % inchikey)
         xyz_in = os.path.abspath(os.path.join(inchikey_dir, parent_method_dir,
                                               '%s.xyz' % inchikey))
+        if not os.path.isfile(xyz_in):
+            sys.exit('xyz file expected but not found: %s.' % xyz_in)
         xyz_out = os.path.abspath(os.path.join(out_dir,
                                                '%s.xyz' % inchikey))
         if not self.check(out_file, xyz_out):

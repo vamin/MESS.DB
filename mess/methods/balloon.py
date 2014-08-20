@@ -97,14 +97,7 @@ class Balloon(AbstractMethod):
                 mol = pybel.readfile('sdf', sdf_bad).next()
             decorate(mol, UnicodeDecorator)
             mol.localopt(forcefield='mmff94s', steps=128)
-            #mol.write('xyz', xyz_out)
-            print(inchikey)
-            print(mol.write('xyz'))
-            print(pybel.ob.FindType("gen2d"))
-            exit()
-            #pybel.ob.OBConversion().SetOptions("--")
-            #conv.ReadStr
-            
+            mol.write('xyz', xyz_out)
             self.check(xyz_out)
             yield self.get_timing_query(inchikey, path_id, start)
         else:
