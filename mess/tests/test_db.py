@@ -7,10 +7,9 @@ import shutil
 import sys
 import unittest
 
-from helpers import suppress_stderr
-
-sys.path.insert(1, os.path.join(os.path.dirname(__file__), '..'))
-from _db import MessDB
+sys.path.insert(1, os.path.join(os.path.dirname(__file__), '../..'))
+from mess._db import MessDB
+from mess.tests.helpers import suppress_stderr
 
 
 class TestDB(unittest.TestCase):

@@ -7,10 +7,9 @@ import shutil
 import sys
 import unittest
 
-from helpers import suppress_stderr
-
-sys.path.insert(1, os.path.join(os.path.dirname(__file__), '..'))
-import utils
+sys.path.insert(1, os.path.join(os.path.dirname(__file__), '../..'))
+import mess.utils as utils
+from mess.tests.helpers import suppress_stderr
 
 
 class TestUtils(unittest.TestCase):
