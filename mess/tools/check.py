@@ -4,16 +4,15 @@ from __future__ import unicode_literals
 import glob
 import os
 
-from _db import MessDB
-from _tool import AbstractTool
-from utils import is_inchikey
+from mess._db import MessDB
+from mess._tool import AbstractTool
+from mess.utils import is_inchikey
 
 
 class Check(AbstractTool):
     def __init__(self):
         """Set description of tool."""
-        self.description = ('Check integrity of mess.db and concordance with '
-                            'molecules dir')
+        self.description = ('Check integrity of db/mess.db and molecules dir')
         self.epilog = ''
     
     def subparse(self, subparser):

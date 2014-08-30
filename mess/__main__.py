@@ -11,8 +11,15 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import inspect
+import os
 import sys
 from distutils.version import LooseVersion
+
+mess_dir = os.path.dirname(inspect.getfile(inspect.currentframe()))
+parent_dir = os.path.realpath(os.path.join(mess_dir, '..'))
+if parent_dir not in sys.path:
+    sys.path.insert(1, parent_dir)
 
 from mess._tool import ToolManager
 from mess.utils import get_mem_usage

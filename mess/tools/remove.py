@@ -6,8 +6,8 @@ import shutil
 import os
 import sys
 
-from _db import MessDB
-from _tool import AbstractTool
+from mess._db import MessDB
+from mess._tool import AbstractTool
 
 ### TODO: handle source, method (level, program, method*, parameter,
 ### property) pruning
@@ -16,7 +16,7 @@ from _tool import AbstractTool
 class Remove(AbstractTool):
     def __init__(self):
         """Set description of tool."""
-        self.description = ('Remove molecules from MESS.DB')
+        self.description = ('Remove molecules or calculations from MESS.DB')
         self.epilog = ''
     
     def subparse(self, subparser):
