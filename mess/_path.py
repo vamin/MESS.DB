@@ -238,13 +238,23 @@ class MethodPath(object):
                 path_id = self._db.execute(select_query, (0, )).fetchone()[0]
             except TypeError:
                 pass
+        else:
+            select_query = ('SELECT method_path_id FROM method_path '
+                            'WHERE method_path_id = ?')
+            try:
+                path_id = self._db.execute(select_query,
+                                           (path_id, )).fetchone()[0]
+            except TypeError:
+                sys.exit('Path %s does not exist.' % path_id)
         self._path_id = path_id
         self._path = []
-        select_query = ('SELECT method_edge_id FROM method_path_edge '
-                        'WHERE method_path_id = ? '
-                        'ORDER BY distance')
+        select_query = ('SELECT me.child_method_id FROM method_edge AS me '
+                        'JOIN method_path_edge AS mpe '
+                        'ON me.method_edge_id = mpe.method_edge_id '
+                        'WHERE mpe.method_path_id = ? '
+                        'ORDER BY mpe.distance')
         for row in self._db.execute(select_query, (path_id, )).fetchall():
-            self.extend_path(row.method_edge_id)
+            self.extend_path(row.child_method_id)
         assert self._path_id == self.get_path_id()
     
     def setup_path(self, method_id, parent_path_id=None):
@@ -338,8 +348,8 @@ class MethodPath(object):
         the current path, or None if the path is less than three methods long.
         """
         try:
-            parent_id = self._graph.get_edge_node_ids(self._path[-2])[0]
-            return parent_id
+            superparent_id = self._graph.get_edge_node_ids(self._path[-2])[0]
+            return superparent_id
         except (IndexError, TypeError):
             return None
     
@@ -355,7 +365,10 @@ class MethodPath(object):
         """Return the path id for the path that does not contain the last
         method of the current path."""
         query, values = self._get_path_id_query(self._path[:-1])
-        return self._db.execute(query, values).fetchone()[0]
+        try:
+            return self._db.execute(query, values).fetchone()[0]
+        except TypeError:
+            return None
      
     def _get_path_id_query(self, path):
         """Return a query that will return a path id.

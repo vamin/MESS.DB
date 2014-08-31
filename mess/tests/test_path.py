@@ -120,19 +120,80 @@ class TestMethodPath(unittest.TestCase):
         self.assertEquals(sorted(self.path._graph.get_node_ids()), [1, 2, 3])
         self.assert_path_consistency()
 
-    def test_set_path(self):
-        # self.test_load_graph()
-        # TODO
-        self.assert_path_consistency()
-
-    def test_extend_path(self):
-        # TODO
-        self.assert_path_consistency()
-
     def test_setup_path(self):
-        # TODO
+        self.path.setup_path(1)
+        self.assertEquals(self.path._graph._node_count, 1)
+        self.assertEquals(self.path._path, [1])
+        self.assertEquals(self.path.get_length(), 0)
         self.assert_path_consistency()
-
+        
+    def test_extend_path(self):
+        self.path.setup_path(42)
+        self.path.extend_path(43)
+        self.assertEquals(self.path._graph._node_count, 2)
+        self.assertEquals(self.path._path, [1,2])
+        self.assertEquals(self.path.get_length(), 1)
+        self.path.extend_path(44)
+        self.assertEquals(self.path._graph._node_count, 3)
+        self.assertEquals(self.path._path, [1,2,5])
+        self.assertEquals(self.path.get_length(), 2)
+        self.path.extend_path(42)
+        self.assertEquals(self.path._graph._node_count, 3)
+        self.assertEquals(self.path._path, [1,2,5,8])
+        self.assertEquals(self.path.get_length(), 3)
+        self.assert_path_consistency()
+        
+    def test_set_path(self):
+        self.path.setup_path(42)
+        self.path.extend_path(43)
+        self.path.extend_path(44)
+        self.path.set_path(2)
+        self.assertEquals(self.path._graph._node_count, 3)
+        self.assertEquals(self.path._path, [1,2])
+        self.assertEquals(self.path.get_length(), 1)
+        self.assert_path_consistency()
+    
+    def test_get_path_id(self):
+        self.assertIsNone(self.path.get_path_id())
+        self.path.setup_path(42)
+        self.path.extend_path(43)
+        self.path.extend_path(44)
+        self.assertEquals(self.path.get_path_id(), 3)
+    
+    def test_get_parent_path_id(self):
+        self.assertIsNone(self.path.get_parent_path_id())
+        self.path.setup_path(42)
+        self.path.extend_path(43)
+        self.path.extend_path(44)
+        self.assertEquals(self.path.get_parent_path_id(), 2)
+    
+    def test_get_method_id(self):
+        self.assertIsNone(self.path.get_method_id())
+        self.path.setup_path(42)
+        self.assertEquals(self.path.get_method_id(), 42)
+        self.path.extend_path(43)
+        self.assertEquals(self.path.get_method_id(), 43)
+    
+    def test_get_parent_method_id(self):
+        self.assertIsNone(self.path.get_parent_method_id())
+        self.path.setup_path(42)
+        self.assertEquals(self.path.get_parent_method_id(), 42)
+        self.path.extend_path(43)
+        self.assertEquals(self.path.get_parent_method_id(), 42)
+        self.path.extend_path(44)
+        self.assertEquals(self.path.get_parent_method_id(), 43)
+    
+    def test_get_superparent_method_id(self):
+        self.assertIsNone(self.path.get_superparent_method_id())
+        self.path.setup_path(42)
+        self.assertEquals(self.path.get_parent_method_id(), 42)
+        self.path.extend_path(43)
+        self.assertEquals(self.path.get_parent_method_id(), 42)
+        self.path.extend_path(44)
+        self.assertEquals(self.path.get_superparent_method_id(), 42)
+        self.path.extend_path(45)
+        self.assertEquals(self.path.get_superparent_method_id(), 43) 
+    
     def test_get_directory(self):
         # TODO
         self.assert_path_consistency()
