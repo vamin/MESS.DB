@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
 """MESS.DB main module
 
 This module runs MESS.DB. The primary responibility of this code is to load a
 mess tool and execute it.
-
-Victor Amin 2013-2014
 """
 
 from __future__ import print_function
