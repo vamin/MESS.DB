@@ -131,15 +131,15 @@ class TestMethodPath(unittest.TestCase):
         self.path.setup_path(42)
         self.path.extend_path(43)
         self.assertEquals(self.path._graph._node_count, 2)
-        self.assertEquals(self.path._path, [1,2])
+        self.assertEquals(self.path._path, [1, 2])
         self.assertEquals(self.path.get_length(), 1)
         self.path.extend_path(44)
         self.assertEquals(self.path._graph._node_count, 3)
-        self.assertEquals(self.path._path, [1,2,5])
+        self.assertEquals(self.path._path, [1, 2, 5])
         self.assertEquals(self.path.get_length(), 2)
         self.path.extend_path(42)
         self.assertEquals(self.path._graph._node_count, 3)
-        self.assertEquals(self.path._path, [1,2,5,8])
+        self.assertEquals(self.path._path, [1, 2, 5, 8])
         self.assertEquals(self.path.get_length(), 3)
         self.assert_path_consistency()
         
@@ -149,7 +149,7 @@ class TestMethodPath(unittest.TestCase):
         self.path.extend_path(44)
         self.path.set_path(2)
         self.assertEquals(self.path._graph._node_count, 3)
-        self.assertEquals(self.path._path, [1,2])
+        self.assertEquals(self.path._path, [1, 2])
         self.assertEquals(self.path.get_length(), 1)
         self.assert_path_consistency()
     
@@ -192,19 +192,16 @@ class TestMethodPath(unittest.TestCase):
         self.path.extend_path(44)
         self.assertEquals(self.path.get_superparent_method_id(), 42)
         self.path.extend_path(45)
-        self.assertEquals(self.path.get_superparent_method_id(), 43) 
+        self.assertEquals(self.path.get_superparent_method_id(), 43)
     
     def test_get_directory(self):
-        # TODO
-        self.assert_path_consistency()
+        self.assertIsNone(self.path._get_directory(1, 2, 3))
 
     def test_get_path_directory(self):
-        # TODO
-        self.assert_path_consistency()
+        self.assertIsNone(self.path.get_path_directory())
 
     def test_get_parent_path_directory(self):
-        # TODO
-        self.assert_path_consistency()
+        self.assertIsNone(self.path.get_parent_path_directory())
 
 
 if __name__ == '__main__':
