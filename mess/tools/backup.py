@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import glob
+import inspect
 import os
 import shutil
 import subprocess
@@ -11,7 +12,6 @@ from cStringIO import StringIO
 
 from mess._tool import AbstractTool
 
-
 class Backup(AbstractTool):
     def __init__(self):
         """Set description of tool."""
@@ -20,21 +20,23 @@ class Backup(AbstractTool):
                        'molecules  and logs directories. Everything is tarred '
                        'and bzipped into messdb/backups with the filename '
                        'MESS.DB.timestamp.tbz2. Backups can be restored '
-                       'directly from thse files, overwriting whatever is '
+                       'directly from these files, overwriting whatever is '
                        'currently in MESS.DB. Backups are recommended before '
                        'any operation that writes to the database (i.e., '
                        'import, calculate, or remove).')
     
     def subparse(self, subparser):
         """Set tool-specific argparse arguments."""
+        tools_dir = os.path.dirname(inspect.getfile(inspect.currentframe()))
+        backups_dir = os.path.realpath(os.path.join(tools_dir,
+                                                    '../../backups'))
         subparser.add_argument('-p', '--max-procs', type=int, default=1,
-                               help=('Number of CPUs to use for compression, '
-                                     'default is 1'))
-        subparser.add_argument('-r', '--restore',
-                               help=('Restore from the specified backup'))
-        subparser.add_argument('-b', '--backups_path',
-                               help=('Path to deposit backup, default is '
-                                     'messdb/backups dir'))
+                               help=('number of CPUs to use for compression'))
+        subparser.add_argument('-r', '--restore-path',
+                               help=('restore from backup'))
+        subparser.add_argument('-b', '--backups-dir', type=str,
+                               default=backups_dir,
+                               help=('path to deposit backup'))
     
     def execute(self, args):
         """Run backup/restore."""
