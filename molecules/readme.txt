@@ -1,1 +1,0 @@
-This folder is for molecule directories, organized by inchikey. Each molecule directory contains a log, png, a sources spreadsheet, and the input and output files of any calculations done on that molecule.
