@@ -1,4 +1,4 @@
-# Molecular Electronic Structure Screening DB #
+# Molecular Electronic Structure Screening DB (MESS.DB) #
 
 This project provides a framework for organizing electronic structure (and
 other) calculations on organic molecules into a rational file structure and
@@ -7,46 +7,46 @@ relational database. MESS.DB scales happily to millions of molecules.
 ## Quick Start ##
 
 - Clone the repository:
-```bash
-git clone git@github.com:vamin/MESS.DB.git
-cd messdb  
-```
+  ```bash
+  git clone git@github.com:vamin/MESS.DB.git
+  cd messdb  
+  ```
 
 - Alias mess executable:
-```bash
-alias mess=${PWD}/bin/mess
-```
+  ```bash
+  alias mess=${PWD}/bin/mess
+  ```
 
 - Get help:
-```bash
-mess -h
-mess [tool] -h
-```
+  ```bash
+  mess -h
+  mess [tool] -h
+  ```
 
 - Import the sample source molecules:
-```bash
-mess import fda
-```
+  ```bash
+  mess import fda
+  ```
 
 - Prepare your own source for import:
-```bash
-sources/setup_source.sh
-```
+  ```bash
+  sources/setup_source.sh
+  ```
 
 - Generate 3D structures for all molecules in the database:
-```bash
-mess select | mess calculate balloon
-```
+  ```bash
+  mess select | mess calculate balloon
+  ```
 
-- Select only molecules in a particular MW range:
-```bash
-mess select -hd -n MW -o '>' -v 250
-```
+- Select only molecules in a particular molecular weight range:
+  ```bash
+  mess select -hd -n MW -o '>' -v 250
+  ```
 
 - Find matches to a [SMARTS][] string:
-```bash
-mess select | mess match -hd -m [CX3]=[OX1]
-```
+  ```bash
+  mess select | mess match -hd -m [CX3]=[OX1]
+  ```
 
 [SMARTS]: http://www.daylight.com/dayhtml_tutorials/languages/smarts/smarts_examples.html
 
@@ -98,37 +98,37 @@ already been imported with `mess import [source]`.
 ### Find low molecular weight molecules with small ionization potentials. ###
 
 - Generate 3D structures with [Balloon][]:
-```bash
-mess select | mess calculate balloon
-```
-Running `mess select` with no options outputs a list of every molecule in the
-database.
+  ```bash
+  mess select | mess calculate balloon
+  ```
+  Running `mess select` with no options outputs a list of every molecule in the
+  database.
 
 - Calculate electronic structure with [Mopac][]:
-```bash
-mess select | mess calculate mopac -p 2
-```
-The `-p 2` specifies that the calculation should use the geometry in path id 2
-(the Balloon-generated geometry) as input.
+  ```bash
+  mess select | mess calculate mopac -p 2
+  ```
+  The `-p 2` specifies that the calculation should use the geometry in path id
+  2 (the Balloon-generated geometry) as input.
 
 - Select candidate molecules:
-```bash
-mess select -n MW -o '<' -v 250 | mess select -n 'IONIZATION POTENTIAL' -o '<' -v '7'
-```
-The resulting table can be sorted by piping to common unix tools like `sort`.
+  ```bash
+  mess select -n MW -o '<' -v 250 | mess select -n 'IONIZATION POTENTIAL' -o '<' -v '7'
+  ```
+  The resulting table can be sorted by piping to common unix tools like `sort`.
 
 ### Find molecules with conformations similar to aspirin that also contain a halogen. ###
 
 - Generate 3D structures with [Balloon][]:
-```bash
-mess select | mess calculate balloon
-```
+  ```bash
+  mess select | mess calculate balloon
+  ```
 
 - Compare halogen-containing molecules to aspirin target geometry by
   [Spectrophore][]:
-```bash
-mess match -m [F,Cl,Br,I] | mess match -t aspirin.xyz -s -p 2
-```
+  ```bash
+  mess match -m [F,Cl,Br,I] | mess match -t aspirin.xyz -s -p 2
+  ```
 
 [Balloon]: http://users.abo.fi/mivainio/balloon/
 [Mopac]: http://openmopac.net/MOPAC2012.html
