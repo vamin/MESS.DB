@@ -30,7 +30,7 @@ class TestUtils(unittest.TestCase):
     
     def test_get_mem_usage(self):
         self.assertRegexpMatches(utils.get_mem_usage(),
-                                 '.+\d+.+\d+.+\d+.+mb\n$')
+                                 '.+\d+.+\d+.+\d+.+mb$')
     
     def test_hash_dict(self):
         self.assertEqual(utils.hash_dict({'test': 'dictionary'}),
