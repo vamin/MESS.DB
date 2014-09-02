@@ -29,8 +29,8 @@ class TestUtils(unittest.TestCase):
                          test_dir)
     
     def test_get_mem_usage(self):
-        self.assertRegexpMatches(utils.get_mem_usage('test'),
-                                 '^test.+\d+.+\d+.+\d+.+mb\n$')
+        self.assertRegexpMatches(utils.get_mem_usage(),
+                                 '.+\d+.+\d+.+\d+.+mb\n$')
     
     def test_hash_dict(self):
         self.assertEqual(utils.hash_dict({'test': 'dictionary'}),

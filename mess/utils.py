@@ -33,18 +33,15 @@ def get_inchikey_dir(inchikey):
                                         inchikey[1:3], inchikey[3:]))
 
 
-def get_mem_usage(point):
+def get_mem_usage():
     """Get the current memory usage.
-    
-    Args:
-        point: A name for the point in time memory usage is being requested.
     
     Returns:
         A human-readable string.
     """
     usage = resource.getrusage(resource.RUSAGE_SELF)
-    return ('%s: usertime=%s systime=%s '
-            'mem=%s mb\n') % (point, usage[0], usage[1],
+    return ('usertime=%s systime=%s '
+            'mem=%s mb\n') % (usage[0], usage[1],
                               (usage[2] * resource.getpagesize()) / 1000000.0)
 
 
