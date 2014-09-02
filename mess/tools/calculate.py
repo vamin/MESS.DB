@@ -90,7 +90,7 @@ class Calculate(AbstractTool):
             datasource[inchikey] = map_args
         server = mapreduce.Server()
         server.datasource = datasource
-        server.password = hash(method)
+        server.password = method.hash
         results = server.run(debug=0)
         print('Done!', file=sys.stderr)
     
@@ -98,7 +98,7 @@ class Calculate(AbstractTool):
         print('Connecting to mapreduce server at: %s' % hostname,
               file=sys.stderr)
         client = mapreduce.Client()
-        client.password = hash(method)
+        client.password = method.hash
         client.mapfn = method.map
         client.run(hostname, mapreduce.DEFAULT_PORT, debug=0)
         print('Done!', file=sys.stderr)
@@ -107,7 +107,7 @@ class Calculate(AbstractTool):
         print('Connecting to mapreduce server at: %s' % hostname,
               file=sys.stderr)
         client = mapreduce.Client()
-        client.password = hash(method)
+        client.password = method.hash
         client.reducefn = method.reduce
         client.run(hostname, mapreduce.DEFAULT_PORT, debug=0)
         print('Done!', file=sys.stderr)
