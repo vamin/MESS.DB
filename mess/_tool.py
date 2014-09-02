@@ -8,7 +8,8 @@ from.
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from mess import __all__
+import os
+
 from mess.utils import CustomFormatter
 
 
@@ -17,16 +18,25 @@ class ToolManager(object):
     
     Attributes:
     _tools (dict): Look up tool object by tool name
+    _tool_names: Sorted list of tool names
     """
     def __init__(self):
         """Initialize the tools list."""
         self._tools = {}
+        self._tool_names = []
+        for filename in os.listdir(os.path.join(os.path.dirname(__file__),
+                                   'tools')):
+            base, extension = os.path.splitext(filename)
+            if extension == '.py' and not (filename.startswith('_')
+                                           or filename.startswith('.')):
+                self._tool_names.append(base)
+        self._tool_names.sort()  # so they show up alphabetized in help
+        
     
     def populate_parser(self, parser):
         """Get argparse information from all of the tools."""
         subparsers = parser.add_subparsers(help='tools', dest='subparser_name')
-        __all__.sort()  # so they show up alphabetized in help
-        for tool_name in __all__:
+        for tool_name in self._tool_names:
             tool = self.load_tool(tool_name)
             subparser = subparsers.add_parser(tool_name, help=tool.description,
                                               description=tool.description,
@@ -43,21 +53,17 @@ class ToolManager(object):
         Returns:
             The tool object.
         """
-        if tool_name not in __all__:
+        if tool_name not in self._tool_names:
             raise KeyError("tool '%s' not found" % tool_name)
         try:
             tool = self._tools[tool_name]
         except KeyError:
             # load the plugin only if not loaded yet
             module = __import__('mess.tools.%s' % tool_name,
-                                fromlist=['tools'])
+                                fromlist=['tools'], level=0)
             tool = module.load()
             self._tools[tool_name] = tool
         return tool
-    
-    def list(self):
-        """Returns a list of the available tools."""
-        return __all__
 
 
 # each tool must provide a load method at module level that will be
