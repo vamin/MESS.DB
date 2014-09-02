@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
 """MESS.DB tools module
 
 This module contains the ToolManager class, which is used to load a tool for
 execution, and the AbstractTool class, which all tool objects must inherit
 from.
 """
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import logging
 import os
 
-from mess.utils import CustomFormatter
+from mess.utils import CustomFormatter, get_inchikey_dir
 
 
 class ToolManager(object):
@@ -25,13 +29,12 @@ class ToolManager(object):
         self._tools = {}
         self._tool_names = []
         for filename in os.listdir(os.path.join(os.path.dirname(__file__),
-                                   'tools')):
+                                                'tools')):
             base, extension = os.path.splitext(filename)
             if extension == '.py' and not (filename.startswith('_')
                                            or filename.startswith('.')):
                 self._tool_names.append(base)
         self._tool_names.sort()  # so they show up alphabetized in help
-        
     
     def populate_parser(self, parser):
         """Get argparse information from all of the tools."""
@@ -70,6 +73,9 @@ class ToolManager(object):
 # used to instantiate the plugin (e.g. def load():\ return Tool())
 class AbstractTool(object):
     """All tools must inherit from this class."""
+    
+    inchikey = None
+    
     def __init__(self):
         """Raise error if __init__ not implemented."""
         self.description = ''
@@ -88,3 +94,31 @@ class AbstractTool(object):
         # all tools should have a method that executes its tasks
         # based on the given commands
         raise NotImplementedError("every tool needs an 'execute' method")
+    
+    @property
+    def log(self):
+        """Log to console, central log, and molecule log."""
+        if self.inchikey is not None:
+            logger = logging.getLogger('mess')
+            molecule_log_path = '%s/%s.log' % (get_inchikey_dir(self.inchikey),
+                                               self.inchikey)
+            molecule_log_handler = logging.FileHandler(molecule_log_path)
+            for handler in logger.handlers:
+                try:
+                    if 'molecules/' in handler.baseFilename:
+                        logger.removeHandler(handler)
+                        logger.addHandler(molecule_log_handler)
+                        break
+                    if '/dev/null' in handler.baseFilename:
+                        logger.removeHandler(handler)
+                        logger.addHandler(molecule_log_handler)
+                        break
+                except AttributeError:
+                    continue
+        return logging.getLogger('mess.%s' % self.__class__.__name__.lower())
+    
+    @property
+    def log_consoleonly(self):
+        """Log to console only."""
+        return logging.getLogger('mess.%s.consoleonly' %
+                                 self.__class__.__name__.lower())

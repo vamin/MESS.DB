@@ -12,19 +12,20 @@ from __future__ import unicode_literals
 
 import argparse
 import inspect
+import logging
 import os
 import sys
+from datetime import date
 from distutils.version import LooseVersion
 
-mess_dir = os.path.dirname(inspect.getfile(inspect.currentframe()))
-parent_dir = os.path.realpath(os.path.join(mess_dir, '..'))
-if parent_dir not in sys.path:
-    sys.path.insert(1, parent_dir)
+MESS_DIR = os.path.dirname(inspect.getfile(inspect.currentframe()))
+PARENT_DIR = os.path.realpath(os.path.join(MESS_DIR, '..'))
+if PARENT_DIR not in sys.path:
+    sys.path.insert(1, PARENT_DIR)
 
 from mess._tool import ToolManager
-from mess.utils import get_mem_usage
-
-DEBUG_MEM = 0  # set to 1 to print memory info
+from mess.decorators import GetLoggerDecorator
+from mess.utils import CustomFormatter, get_mem_usage
 
 
 def check_dependencies():
@@ -40,25 +41,56 @@ def check_dependencies():
         sys.exit(emsg)
 
 
+def setup_logger(verbose):
+    """Setup logging environemnt, including stream and file handlers."""
+    logging_formatter = logging.Formatter(('[%(asctime)s] '
+                                           '%(modifiedname)s '
+                                           '%(levelname)s: '
+                                           '%(message)s'), '%Y-%m-%d %H:%M:%S')
+    logging._defaultFormatter = logging_formatter
+    logging.getLogger = GetLoggerDecorator(logging.getLogger)
+    # setup main logger and stream handler
+    logger = logging.getLogger('mess')
+    stream_handler = logging.StreamHandler()
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+        stream_handler.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+    logger.addHandler(stream_handler)
+    # setup file handlers
+    central_log_name = '%s.log' % date.today().strftime('%Y-%m-%d')
+    central_log_path = os.path.join(MESS_DIR, '../logs/%s' % central_log_name)
+    central_log_handler = logging.FileHandler(central_log_path)
+    central_log_handler.setLevel(logging.INFO)
+    logger.addHandler(central_log_handler)
+    molecule_log_handler = logging.FileHandler('/dev/null')
+    molecule_log_handler.setLevel(logging.INFO)
+    logger.addHandler(molecule_log_handler)
+    return logger
+
+
 def main():
     """Parse args, load the user-specified tool and execute it."""
     check_dependencies()
     toolmanager = ToolManager()
     parser = argparse.ArgumentParser(
         description='A collection of tools for interacting with MESS.DB',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=CustomFormatter)
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help=('increase output verbosity to include '
+                              'debugging messages'))
     toolmanager.populate_parser(parser)
     args = parser.parse_args()
+    logger = setup_logger(args.verbose)
+    logger.debug(get_mem_usage())
     tool = toolmanager.load_tool(args.subparser_name)
     tool.execute(args)
+    logger.debug(get_mem_usage())
 
 if __name__ == '__main__':
     try:
-        if DEBUG_MEM:
-            print(get_mem_usage('Memory Start'), file=sys.stderr)
         main()
-        if DEBUG_MEM:
-            print(get_mem_usage('Memeory Finish'), file=sys.stderr)
     except IOError, err:
         if err.errno == 32:
             pass  # broken pipe, fail silently
