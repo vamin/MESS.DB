@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
+"""MESS.DB annotate module
+
+This module contains the annotate tool class and load function.
+"""
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -18,9 +26,13 @@ from mess.tools.match import Match
 
 
 class Annotate(AbstractTool):
+    """This tool annotates molecules with synonyms (common names, CAS, etc) and
+    various fingerprints.
+    """
+    
     def __init__(self):
         """Set description of tool."""
-        self.description = 'Import molecule synonyms and fingerprints'
+        self.description = 'Annotate molecules with synonyms and fingerprints'
         self.epilog = ''
     
     def subparse(self, subparser):
@@ -88,45 +100,106 @@ class Annotate(AbstractTool):
                            'stereo': args.spectrophore_stereospecificity,
                            'resolution': args.spectrophore_resolution}
         self.db = MessDB()
-        inchi_query = 'SELECT inchi FROM molecule WHERE inchikey = ?'
-        fp_query = ('INSERT OR IGNORE INTO molecule_fingerprint '
-                    '(inchikey, name, settings, fingerprint, method_path_id)'
-                    'VALUES (?, ?, ?, ?, ?)')
+        inchi_select_query = 'SELECT inchi FROM molecule WHERE inchikey = ?'
+        fp_select_query = ('SELECT fingerprint FROM molecule_fingerprint '
+                           'WHERE inchikey = ? '
+                           'AND name = ? '
+                           'AND settings = ? '
+                           'AND method_path_id = ?')
+        fp_insert_query = ('INSERT INTO molecule_fingerprint '
+                           '(inchikey, name, settings, '
+                           'fingerprint, method_path_id) '
+                           'VALUES (?, ?, ?, ?, ?)')
         for row in args.inchikeys:
-            inchikey = row.split()[0].strip()
+            self.inchikey = row.split()[0].strip()
             if args.cir:
-                self.update_iupac(inchikey)
-                self.update_synonyms(inchikey)
+                self.update_iupac(self.inchikey)
+                self.update_synonyms(self.inchikey)
             if args.fingerprint:
-                inchi = self.db.execute(inchi_query, (inchikey,)).fetchone()[0]
+                inchi = self.db.execute(inchi_select_query,
+                                        (self.inchikey,)).fetchone()[0]
                 mol = pybel.readstring('inchi', 'InChI=%s' % inchi)
-                canonical = pybel.ob.OBOp.FindType(b"canonical")
+                canonical = pybel.ob.OBOp.FindType(b'canonical')
                 canonical.Do(mol.OBMol)
                 fp = Match.calculate_fingerprint(mol, args.fingerprint)
-                self.db.execute(fp_query, (inchikey, args.fingerprint, '',
-                                           str(fp), ''))
+                try:
+                    db_fp = self.db.execute(fp_select_query,
+                                            (self.inchikey,
+                                             args.fingerprint,
+                                             '',
+                                             '')).fetchone()[0]
+                    if not str(fp) == db_fp:
+                        self.log_consoleonly.warning(('new %s fingerprint for '
+                                                      '%s did not match '
+                                                      'fingerprint in db, '
+                                                      'db not updated'),
+                                                     args.fingerprint,
+                                                     self.inchikey)
+                except TypeError:
+                    self.db.execute(fp_insert_query, (self.inchikey,
+                                                      args.fingerprint,
+                                                      '',
+                                                      str(fp),
+                                                      ''))
+                    self.log.info('%s fingerprint for %s added to db',
+                                  args.fingerprint, self.inchikey)
             if args.spectrophore:
-                xyz_file = os.path.join(get_inchikey_dir(inchikey),
+                xyz_file = os.path.join(get_inchikey_dir(self.inchikey),
                                         method_dir,
-                                        '%s.xyz' % inchikey)
+                                        '%s.xyz' % self.inchikey)
                 mol = pybel.readfile('xyz', xyz_file).next()
                 sp = Match.calculate_spectrophore(mol, sp_args)
-                self.db.execute(fp_query, (inchikey, 'Spectrophore',
-                                           json.dumps(sp_args, sort_keys=True),
-                                           str(sp), args.path))
+                try:
+                    db_sp = self.db.execute(fp_select_query,
+                                            (self.inchikey,
+                                             'Spectrophore',
+                                             json.dumps(sp_args,
+                                                        sort_keys=True),
+                                             args.path)).fetchone()[0]
+                    if not str(sp) == db_sp:
+                        self.log_consoleonly.warning(('new Spectrophore '
+                                                      'fingerprint for '
+                                                      '%s did not match '
+                                                      'fingerprint in db, '
+                                                      'db not updated'),
+                                                     self.inchikey)
+                except TypeError:
+                    json_sp_args = json.dumps(sp_args, sort_keys=True)
+                    self.db.execute(fp_insert_query, (self.inchikey,
+                                                      'Spectrophore',
+                                                      json_sp_args,
+                                                      str(sp),
+                                                      args.path))
+                    self.log.info(('Spectrophore fingerprint for %s '
+                                   'with parameters %s and '
+                                   'geometry from path %i '
+                                   'added to db'),
+                                  self.inchikey, json_sp_args, args.path)
     
     def update_synonyms(self, inchikey):
         """Get synonyms from CIR and load them into mess.db."""
+        new_synonyms = 0
         synonyms = self.cir_request(inchikey, 'names')
         if synonyms:
-            query = ('INSERT OR IGNORE INTO molecule_synonym (inchikey, name) '
-                     'VALUES (?, ?)')
+            select_query = ('SELECT inchikey FROM molecule_synonym '
+                            'WHERE inchikey = ? AND name = ?')
+            insert_query = ('INSERT INTO molecule_synonym (inchikey, name) '
+                            'VALUES (?, ?)')
             for synonym in synonyms.split('\n'):
-                self.db.execute(query, (inchikey, synonym))
+                if self.db.execute(select_query,
+                                   (inchikey, synonym)).fetchone() is None:
+                    self.db.execute(insert_query, (inchikey, synonym))
+                    new_synonyms += 1
+            if new_synonyms > 0:
+                self.log.info('%i new synonyms for %s added',
+                              new_synonyms,
+                              inchikey)
     
     def update_iupac(self, inchikey):
+        """Get IUPAC name from CIR and load it into mess.db."""
         iupacs = []
         iupac = None
+        new_synonyms = 0
         try:
             iupacs = self.cir_request(inchikey,
                                       'iupac_name').splitlines(True)
@@ -135,18 +208,35 @@ class Annotate(AbstractTool):
         except AttributeError:
             return
         if iupac is not None:
-            query = ('UPDATE molecule SET iupac = ? '
-                     'WHERE inchikey = ?')
-            self.db.execute(query, (iupac, inchikey))
+            iupac_select_query = ('SELECT iupac FROM molecule '
+                                  'WHERE inchikey = ?')
+            iupac_update_query = ('UPDATE molecule SET iupac = ? '
+                                  'WHERE inchikey = ?')
+            db_iupac = self.db.execute(iupac_select_query,
+                                       (inchikey, )).fetchone()[0]
+            if not db_iupac == iupac:
+                self.db.execute(iupac_update_query, (iupac, inchikey))
+                self.log.info('iupac name for %s updated', inchikey)
             if len(iupacs) > 1:  # if multiple, add others as synonym
-                query = ('INSERT OR IGNORE INTO molecule_synonym '
-                         '(inchikey, name) VALUES (?, ?)')
+                select_query = ('SELECT inchikey FROM molecule_synonym '
+                                'WHERE inchikey = ? AND name = ?')
+                insert_query = ('INSERT INTO molecule_synonym '
+                                '(inchikey, name) VALUES (?, ?)')
                 for i in iupacs:
                     if i != max(iupacs, key=len):  # ignore longest iupac
-                        self.db.execute(query, (inchikey, i.rstrip()))
+                        synonym = i.rstrip()
+                        if self.db.execute(select_query,
+                                           (inchikey,
+                                            synonym)).fetchone() is None:
+                            self.db.execute(insert_query, (inchikey,
+                                                           synonym))
+                            new_synonyms += 1
+                if new_synonyms > 0:
+                    self.log.info('%i new synonyms for %s added',
+                                  new_synonyms,
+                                  inchikey)
     
-    @classmethod
-    def cir_request(cls, inchikey, representation):
+    def cir_request(self, inchikey, representation):
         """Make request to CIR (Chemical Information Resolver).
         
         Args:
@@ -167,8 +257,9 @@ class Annotate(AbstractTool):
                 return response.read()
         except urllib2.URLError as err:
             if hasattr(err, 'reason'):
-                print('%s %s: %s' % (inchikey, representation, err.reason),
-                      file=sys.stderr)
+                reason = err.reason.lower()
+                self.log_consoleonly.info('%s %s %s in cir',
+                                          inchikey, representation, reason)
         return None
 
 
