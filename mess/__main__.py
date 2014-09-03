@@ -24,7 +24,7 @@ if PARENT_DIR not in sys.path:
     sys.path.insert(1, PARENT_DIR)
 
 from mess._tool import ToolManager
-from mess.decorators import GetLoggerDecorator
+from mess.decorators import decorate, GetLoggerDecorator, UnicodeDecorator
 from mess.utils import CustomFormatter, get_mem_usage
 
 
@@ -34,6 +34,7 @@ def check_dependencies():
             'version >=2.3.0.')
     try:
         import pybel
+        decorate(pybel, UnicodeDecorator)
         version = pybel.ob.OBReleaseVersion()
         if LooseVersion(version) < LooseVersion('2.3.0'):
             sys.exit('%s Current version is %s.' % (emsg, version))
