@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
+"""MESS.DB match module
+
+This module contains the match tool class and load function.
+"""
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -5,6 +13,7 @@ import argparse
 import csv
 import codecs
 import json
+import logging
 import os
 import sys
 
@@ -18,6 +27,8 @@ from mess.utils import get_inchikey_dir
 
 
 class Match(AbstractTool):
+    """This tool finds matches to SMARTS patterns or other molecules."""
+    
     def __init__(self):
         """Set description of tool."""
         self.description = ('Find matches to target molecules or SMARTS '
@@ -99,8 +110,8 @@ class Match(AbstractTool):
                       '--fingerprint, and --spectrophore are mutually '
                       'exclusive.'))
         if args.smarts and args.target:
-            print('Warning: --target ignored, proceeding with SMARTS matching',
-                  file=sys.stderr)
+            self.log_consoleonly.warning(('--target ignored, proceeding with '
+                                          'SMARTS matching'))
         if args.spectrophore:
             if args.path is None:
                 sys.exit(('Spectrophore calculation requires 3D geometry. '
@@ -184,6 +195,15 @@ class Match(AbstractTool):
     
     @classmethod
     def calculate_fingerprint(cls, mol, fp='FP2'):
+        """Caclulate fingerprint given pybel molecule object.
+        
+        Args:
+            mol: a pybel molecule object
+            fp: a fingerprint name that pybel understands
+        
+        Returns:
+            fingerprint as string representation of array
+        """
         if fp.upper() == 'FP2':
             return mol.calcfp('FP2').bits
         elif fp.upper() == 'FP3':
@@ -204,16 +224,27 @@ class Match(AbstractTool):
     
     @classmethod
     def calculate_spectrophore(cls, mol, args=None):
+        """Calculate spectrophore given 3D pybel molecule object.
+        
+        Args:
+            mol: a pybel molecule object with 3D coordinates
+            args: a dictionary of spectrophore arguments, potentially
+                  including 'normalization', 'accuracy', 'stereo',
+                  or 'resolution'
+        Returns:
+            Spectrophore as string representation of array
+        """
+        logger = logging.getLogger('mess.calculate_spectrophore.consoleonly')
         if not mol.dim == 3:
-            print(('Warning: molecule representation not 3D. Spectrophore '
-                   'will return vector of nan and 0.0.'), file=sys.stderr)
+            logger.warning(('molecule representation not 3D, Spectrophore '
+                            'will return vector of nan and 0.0'))
         spec = pybel.ob.OBSpectrophore()
         if args is not None:
             for key in args:
                 if key not in ('normalization', 'accuracy',
                                'stereo', 'resolution'):
-                    print(('Warning: ignored unrecognized Spectrophore option '
-                           '(%s).') % key, file=sys.stderr)
+                    logger.warning(('ignored unrecognized '
+                                    'Spectrophore option (%s)'), key)
             if 'normalization' in args and args['normalization']:
                 normalization = args['normalization']
                 if normalization == 'No':
@@ -230,10 +261,9 @@ class Match(AbstractTool):
                         pybel.ob.OBSpectrophore()
                         .NormalizationTowardsZeroMeanAndUnitStd)
                 else:
-                    print(('Warning: unrecognized Spectrophore normalization '
-                           'argument (%s), normalization '
-                           'set to default (No).') % normalization,
-                          file=sys.stderr)
+                    logger.warning(('unrecognized Spectrophore normalization '
+                                    'argument (%s), normalization '
+                                    'set to default (No)'), normalization)
                     spec.SetNormalization(
                         pybel.ob.OBSpectrophore().NoNormalization)
             if 'accuracy' in args and args['accuracy']:
@@ -251,10 +281,9 @@ class Match(AbstractTool):
                     60: pybel.ob.OBSpectrophore().AngStepSize60
                 }
                 if accuracy not in accuracy_map:
-                    print(('Warning: unrecognized Spectrophore accuracy '
-                           'argument (%s), accuracy '
-                           'set to default (20).') % accuracy,
-                          file=sys.stderr)
+                    logger.warning(('unrecognized Spectrophore accuracy '
+                                    'argument (%s), accuracy '
+                                    'set to default (20)'), accuracy)
                     accuracy = 20
                 spec.SetAccuracy(accuracy_map[accuracy])
             if 'stereo' in args and args['stereo']:
@@ -270,10 +299,10 @@ class Match(AbstractTool):
                     spec.SetStereo(pybel.ob.OBSpectrophore()
                                    .AllStereoSpecificProbes)
                 else:
-                    print(('Warning: unrecognized Spectrophore '
-                           'stereospecificity argument (%s), cage type '
-                           'set to default (No).') % args['stereo'],
-                          file=sys.stderr)
+                    logger.warning(('unrecognized Spectrophore '
+                                    'stereospecificity argument '
+                                    '(%s), cage type '
+                                    'set to default (No)'), args['stereo'])
                     spec.SetStereo(0)
             if 'resolution' in args and args['resolution']:
                 try:
@@ -282,15 +311,16 @@ class Match(AbstractTool):
                     else:
                         raise ValueError
                 except ValueError:
-                    print(('Warning: invalid Spectrophore resolution '
-                           'argument (%s), resolution '
-                           'set to default (3.0).') % args['resolution'],
-                          file=sys.stderr)
+                    logger.warning(('invalid Spectrophore resolution '
+                                    'argument (%s), resolution '
+                                    'set to default (3.0)'),
+                                   args['resolution'])
                     spec.SetResolution(3.0)
         return [element for element in spec.GetSpectrophore(mol.OBMol)]
     
     @classmethod
     def calculate_similarity(cls, target, query, method='tanimoto'):
+        """Calculate similarity between two arrays."""
         if (method.lower().startswith('tan')
                 or method.lower().startswith('jac')):
             # Tanimoto / Jaccard similarity
@@ -307,6 +337,8 @@ class Match(AbstractTool):
     
     @classmethod
     def smarts_generator(cls, smarts):
+        """Generate (pybel smarts object, smarts string) tuples from a newline
+        delimited string or file."""
         smarts_strings = []
         # check if file or string
         if os.path.exists(smarts):
