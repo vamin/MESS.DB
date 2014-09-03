@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
+"""MESS.DB remove module
+
+This module contains the remove tool class and load function.
+"""
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -8,23 +16,23 @@ import sys
 
 from mess._db import MessDB
 from mess._tool import AbstractTool
-
-### TODO: handle source, method (level, program, method*, parameter,
-### property) pruning
+from mess.utils import get_inchikey_dir
 
 
 class Remove(AbstractTool):
+    """This tool removes molecules from the molecules directory and the
+    database."""
+    
     def __init__(self):
         """Set description of tool."""
-        self.description = ('Remove molecules or calculations from MESS.DB')
+        self.description = ('Remove molecules from MESS.DB')
         self.epilog = ''
     
     def subparse(self, subparser):
         """Set tool-specific argparse arguments."""
         subparser.add_argument('inchikeys', nargs='?',
                                type=argparse.FileType('r'), default=sys.stdin,
-                               help=('A list of inchikeys, file or passed in '
-                                     'through STDIN'))
+                               help='a list of inchikeys (default: STDIN)')
     
     def execute(self, args):
         """Remove specified elements."""
@@ -33,12 +41,12 @@ class Remove(AbstractTool):
         for row in args.inchikeys:
             inchikey = row.split()[0].strip()
             try:
-                inchikey_dir = self.get_inchikey_dir(inchikey)
+                inchikey_dir = get_inchikey_dir(inchikey)
                 shutil.rmtree(inchikey_dir)
-                print('%s dir removed\n' % inchikey, file=sys.stderr)
+                self.log.info('%s dir removed', inchikey)
             except OSError:
-                print('%s did not have a directory\n' % inchikey,
-                      file=sys.stderr)
+                self.log_consoleonly.info('%s did not have a directory',
+                                          inchikey)
             try:
                 parent = os.path.relpath(os.path.join(inchikey_dir, '../'))
                 os.removedirs(parent)
@@ -59,8 +67,7 @@ class Remove(AbstractTool):
             cur.execute(query, (inchikey,))
             records += cur.rowcount
             db.commit()
-            print('%i %s records removed from db\n\n' % (records, inchikey),
-                  file=sys.stderr)
+            self.log.info('%i %s records removed from db', records, inchikey)
 
 
 def load():
