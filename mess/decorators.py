@@ -167,7 +167,7 @@ class UnicodeDecorator(object):
         result = self.func(*encoded_args, **encoded_kwargs)
         if isinstance(result, (list, set)):
             result = type(result)(map(unicode_replace, result))
-        elif isinstance(r, collections.Mapping):
+        elif isinstance(result, collections.Mapping):
             result = dict(map(unicode_replace, result.iteritems()))
         elif isinstance(result, str):
             result = unicode_replace(result)
