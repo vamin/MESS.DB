@@ -46,14 +46,14 @@ class HandlerSelectiveFilter(object):
     """Filter messages depending on handler type.
     
     Attributes:
-        _handler (str): The name of the handler being filtered. 
+        _handler (str): The name of the handler being filtered.
     """
     
     def __init__(self, handler):
         """Initialize attributes.
         
         Args:
-            handler (str): The name of the handler being filtered. 
+            handler (str): The name of the handler being filtered.
         """
         self._handler = handler
     
