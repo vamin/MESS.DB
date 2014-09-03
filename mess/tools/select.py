@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
+"""MESS.DB remove module
+
+This module contains the select tool class and load function.
+"""
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -5,6 +13,7 @@ import codecs
 import csv
 import re
 import string
+import sqlite3
 import sys
 
 import pybel
@@ -16,6 +25,9 @@ from mess.tools.match import Match
 
 
 class Select(AbstractTool):
+    """This tool selects molecules and properties from the database and
+    outputs them in tabular form."""
+    
     def __init__(self):
         """Set description of tool."""
         self.description = 'Select a list of molecules based on properties'
@@ -130,6 +142,7 @@ class Select(AbstractTool):
     
     @classmethod
     def property_query(cls, prop, operator, value, path=None):
+        """Generate a property query."""
         query = ('SELECT inchikey, name, result, units '
                  'FROM molecule_method_property_denorm '
                  'WHERE name = ? AND result %s ?') % operator
