@@ -191,9 +191,12 @@ class Annotate(AbstractTool):
                     self.db.execute(insert_query, (inchikey, synonym))
                     new_synonyms += 1
             if new_synonyms > 0:
-                self.log.info('%i new synonyms for %s added',
-                              new_synonyms,
-                              inchikey)
+                if new_synonyms > 1:
+                    plural = 's'
+                else:
+                    plural = ''
+                self.log.info('%i new synonym%s for %s added',
+                              new_synonyms, plural, inchikey)
     
     def update_iupac(self, inchikey):
         """Get IUPAC name from CIR and load it into mess.db."""
@@ -232,9 +235,12 @@ class Annotate(AbstractTool):
                                                            synonym))
                             new_synonyms += 1
                 if new_synonyms > 0:
-                    self.log.info('%i new synonyms for %s added',
-                                  new_synonyms,
-                                  inchikey)
+                    if new_synonyms > 1:
+                        plural = 's'
+                    else:
+                        plural = ''
+                    self.log.info('%i new synonym%s for %s added',
+                                  new_synonyms, plural, inchikey)
     
     def cir_request(self, inchikey, representation):
         """Make request to CIR (Chemical Information Resolver).
