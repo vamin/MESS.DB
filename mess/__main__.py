@@ -25,7 +25,9 @@ if PARENT_DIR not in sys.path:
 
 from mess._tool import ToolManager
 from mess.decorators import decorate, GetLoggerDecorator, UnicodeDecorator
-from mess.utils import CustomFormatter, get_mem_usage
+from mess.utils import (CustomArgparseFormatter,
+                        CustomLoggingFormatter,
+                        get_mem_usage)
 
 
 def check_dependencies():
@@ -44,10 +46,11 @@ def check_dependencies():
 
 def setup_logger(verbose):
     """Setup logging environemnt, including stream and file handlers."""
-    logging_formatter = logging.Formatter(('[%(asctime)s] '
-                                           '%(modifiedname)s '
-                                           '%(levelname)s: '
-                                           '%(message)s'), '%Y-%m-%d %H:%M:%S')
+    logging_formatter = CustomLoggingFormatter(('[%(asctime)s] '
+                                                '%(modifiedname)s '
+                                                '%(levelname)s: '
+                                                '%(message)s'),
+                                               '%Y-%m-%d %H:%M:%S')
     logging._defaultFormatter = logging_formatter
     logging.getLogger = GetLoggerDecorator(logging.getLogger)
     # setup main logger and stream handler
@@ -77,7 +80,7 @@ def main():
     toolmanager = ToolManager()
     parser = argparse.ArgumentParser(
         description='A collection of tools for interacting with MESS.DB',
-        formatter_class=CustomFormatter)
+        formatter_class=CustomArgparseFormatter)
     parser.add_argument('-v', '--verbose', action='store_true',
                         help=('increase output verbosity to include '
                               'debugging messages'))

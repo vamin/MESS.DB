@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import logging
 import os
 
-from mess.utils import CustomFormatter, get_inchikey_dir
+from mess.utils import CustomArgparseFormatter, get_inchikey_dir
 
 
 class ToolManager(object):
@@ -41,10 +41,11 @@ class ToolManager(object):
         subparsers = parser.add_subparsers(help='tools', dest='subparser_name')
         for tool_name in self._tool_names:
             tool = self.load_tool(tool_name)
-            subparser = subparsers.add_parser(tool_name, help=tool.description,
-                                              description=tool.description,
-                                              epilog=tool.epilog,
-                                              formatter_class=CustomFormatter)
+            subparser = subparsers.add_parser(
+                tool_name, help=tool.description,
+                description=tool.description,
+                epilog=tool.epilog,
+                formatter_class=CustomArgparseFormatter)
             tool.subparse(subparser)
     
     def load_tool(self, tool_name):

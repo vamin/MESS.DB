@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
 """MESS.DB utilities module
 
 This module contains helper functions and classes that are used by many mess
@@ -12,9 +14,11 @@ import argparse
 import codecs
 import hashlib
 import json
+import logging
 import os
 import resource
 import sys
+import textwrap
 from datetime import datetime
 
 
@@ -157,7 +161,7 @@ def xstr(s):
         return str(s)
 
 
-class CustomFormatter(argparse.HelpFormatter):
+class CustomArgparseFormatter(argparse.HelpFormatter):
     """Custom formatter for setting argparse formatter_class. Very similar to
     ArgumentDefaultsHelpFormatter, except that:
     1) (default: %%(default)s) is not shown if it is set to None or False, or
@@ -196,3 +200,39 @@ class CustomFormatter(argparse.HelpFormatter):
                 return ', '.join(parts)
             else:
                 return ',\n  '.join(parts)
+
+
+class CustomLoggingFormatter(logging.Formatter):
+    """This logging function overrides the default format method in
+    logging.Formatter. The only change is the addition of a hanging indent
+    using textwrap.
+    """
+    
+    def format(self, record):
+        """Format record with hanging indent."""
+        record.message = record.getMessage()
+        if self.usesTime():
+            record.asctime = self.formatTime(record, self.datefmt)
+        s = self._fmt % record.__dict__
+        if record.exc_info:
+            # Cache the traceback text to avoid converting it multiple times
+            # (it's constant anyway)
+            if not record.exc_text:
+                record.exc_text = self.formatException(record.exc_info)
+        if record.exc_text:
+            if s[-1:] != "\n":
+                s = s + "\n"
+            try:
+                s = s + record.exc_text
+            except UnicodeError:
+                # Sometimes filenames have non-ASCII chars, which can lead
+                # to errors when s is Unicode and record.exc_text is str
+                # See issue 8924.
+                # We also use replace for when there are multiple
+                # encodings, e.g. UTF-8 for the filesystem and latin-1
+                # for a script. See issue 13232.
+                s = s + record.exc_text.decode(sys.getfilesystemencoding(),
+                                               'replace')
+        hanging_indent = '                       '
+        return textwrap.fill(s, width=79, initial_indent='',
+                             subsequent_indent=hanging_indent)
