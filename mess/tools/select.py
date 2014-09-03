@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright 2013-2014 Victor Amin, http://vamin.net/
 
-"""MESS.DB remove module
+"""MESS.DB select module
 
 This module contains the select tool class and load function.
 """
