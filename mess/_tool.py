@@ -11,10 +11,10 @@ from.
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import logging
 import os
 
-from mess.utils import CustomArgparseFormatter, get_inchikey_dir
+from mess.log import Log
+from mess.utils import CustomArgparseFormatter, is_inchikey
 
 
 class ToolManager(object):
@@ -75,7 +75,9 @@ class ToolManager(object):
 class AbstractTool(object):
     """All tools must inherit from this class."""
     
-    inchikey = None
+    log_console = Log('console')
+    log_all = Log('all')
+    _inchikey = None
     
     def __init__(self):
         """Raise error if __init__ not implemented."""
@@ -97,29 +99,14 @@ class AbstractTool(object):
         raise NotImplementedError("every tool needs an 'execute' method")
     
     @property
-    def log(self):
-        """Log to console, central log, and molecule log."""
-        if self.inchikey is not None:
-            logger = logging.getLogger('mess')
-            molecule_log_path = '%s/%s.log' % (get_inchikey_dir(self.inchikey),
-                                               self.inchikey)
-            molecule_log_handler = logging.FileHandler(molecule_log_path)
-            for handler in logger.handlers:
-                try:
-                    if 'molecules/' in handler.baseFilename:
-                        logger.removeHandler(handler)
-                        logger.addHandler(molecule_log_handler)
-                        break
-                    if '/dev/null' in handler.baseFilename:
-                        logger.removeHandler(handler)
-                        logger.addHandler(molecule_log_handler)
-                        break
-                except AttributeError:
-                    continue
-        return logging.getLogger('mess.%s' % self.__class__.__name__.lower())
+    def inchikey(self):
+        """Get inchikey."""
+        return self._inchikey
     
-    @property
-    def log_consoleonly(self):
-        """Log to console only."""
-        return logging.getLogger('mess.%s.consoleonly' %
-                                 self.__class__.__name__.lower())
+    @inchikey.setter
+    def inchikey(self, inchikey):
+        """Set inchikey, and update inchikey of logger."""
+        if inchikey is not None and not is_inchikey(inchikey):
+            raise RuntimeError('invalid inchikey: %s' % inchikey)
+        self._inchikey = inchikey
+        self.log_all.inchikey = inchikey

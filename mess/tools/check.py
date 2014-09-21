@@ -42,8 +42,8 @@ class Check(AbstractTool):
             if is_inchikey(result.inchikey, enforce_standard=True):
                 self.db_inchikeys.add(result.inchikey)
             else:
-                self.log_consoleonly.warning(('%s is not a valid standard '
-                                              'InChiKey!'), result.inchikey)
+                self.log_console.warning(('%s is not a valid standard '
+                                          'InChiKey!'), result.inchikey)
         self.check_dir_structure()
         self.check_db_structure()
         self.check_db_dir_inchikey_concordance()
@@ -62,12 +62,12 @@ class Check(AbstractTool):
         in_db_not_dir = self.db_inchikeys - dir_inchikeys
         in_db_msg = '%d InChIKeys in mess.db that are not in molecules dir'
         if len(in_db_not_dir) > 0:
-            self.log_consoleonly.warning(in_db_msg, len(in_db_not_dir))
+            self.log_console.warning(in_db_msg, len(in_db_not_dir))
             print('\n'.join(i for i in in_db_not_dir), file=sys.stderr)
         in_dir_not_db = dir_inchikeys - self.db_inchikeys
         in_dir_msg = '%d InChIKeys in molecules dir that are not in mess.db'
         if len(in_dir_not_db) > 0:
-            self.log_consoleonly.warning(in_dir_msg, len(in_db_not_dir))
+            self.log_console.warning(in_dir_msg, len(in_db_not_dir))
             print('\n'.join(i for i in in_dir_not_db), file=sys.stderr)
     
     def check_dir_structure(self):
@@ -77,36 +77,36 @@ class Check(AbstractTool):
             lp = os.path.join(moldir, l)
             if not os.path.isdir(lp):
                 if 'README' not in l and not l.startswith('.'):
-                    self.log_consoleonly.warning(('Unexpected file in '
-                                                  'molecules dir: %s'), l)
+                    self.log_console.warning(('Unexpected file in '
+                                              'molecules dir: %s'), l)
                 continue
             if not len(l) == 1:
-                self.log_consoleonly.warning(('Unexpected dir in '
-                                              'molecules dir: %s'), l)
+                self.log_console.warning(('Unexpected dir in '
+                                          'molecules dir: %s'), l)
                 continue
             for ll in os.listdir(lp):
                 llp = os.path.join(moldir, l, ll)
                 if not os.path.isdir(llp):
-                    self.log_consoleonly.warning(('Unexpected file '
-                                                  'in molecules dir: '
-                                                  '%s/%s'), l, ll)
+                    self.log_console.warning(('Unexpected file '
+                                              'in molecules dir: '
+                                              '%s/%s'), l, ll)
                     continue
                 if not (len(ll) == 2 and ll.isalpha()):
-                    self.log_consoleonly.warning(('Unexpected dir '
-                                                  'in molecules dir: '
-                                                  '%s/%s'), l, ll)
+                    self.log_console.warning(('Unexpected dir '
+                                              'in molecules dir: '
+                                              '%s/%s'), l, ll)
                     continue
                 for lll in os.listdir(llp):
                     lllp = os.path.join(moldir, l, ll, lll)
                     if not os.path.isdir(lllp):
-                        self.log_consoleonly.warning(('Unexpected file '
-                                                      'in molecules dir: '
-                                                      '%s/%s/%s'), l, ll, lll)
+                        self.log_console.warning(('Unexpected file '
+                                                  'in molecules dir: '
+                                                  '%s/%s/%s'), l, ll, lll)
                         continue
                     if not is_inchikey(l + ll + lll, enforce_standard=True):
-                        self.log_consoleonly.warning(('Unexpected dir '
-                                                      'in molecules dir: '
-                                                      '%s/%s/%s'), l, ll, lll)
+                        self.log_console.warning(('Unexpected dir '
+                                                  'in molecules dir: '
+                                                  '%s/%s/%s'), l, ll, lll)
                         continue
                     self.check_molecule_dir(l + ll + lll, lllp)
     
@@ -114,20 +114,20 @@ class Check(AbstractTool):
         """Check that molecule directory has the proper file in it."""
         l = os.listdir(d)
         if not inchikey + '.inchi' in l:
-            self.log_consoleonly.warning('%s does not contain inchi',
-                                         inchikey)
+            self.log_console.warning('%s does not contain inchi',
+                                     inchikey)
         if not inchikey + '.log' in l:
-            self.log_consoleonly.warning('%s does not contain log file',
-                                         inchikey)
+            self.log_console.warning('%s does not contain log file',
+                                     inchikey)
         if not inchikey + '.notes' in l:
-            self.log_consoleonly.warning('%s does not contain notes',
-                                         inchikey)
+            self.log_console.warning('%s does not contain notes',
+                                     inchikey)
         if not inchikey + '.png' in l:
-            self.log_consoleonly.warning('%s does not contain png',
-                                         inchikey)
+            self.log_console.warning('%s does not contain png',
+                                     inchikey)
         if 'sources.tsv' not in l:
-            self.log_consoleonly.warning(('%s does not contain '
-                                          'sources.tsv file'), inchikey)
+            self.log_console.warning(('%s does not contain '
+                                      'sources.tsv file'), inchikey)
         else:
             self.check_sources_tsv(os.path.join(d, 'sources.tsv'))
         for ll in l:
@@ -162,19 +162,19 @@ class Check(AbstractTool):
         loose_keys_mol_met_prp = (molecule_method_property_inchikeys -
                                   self.db_inchikeys)
         if len(loose_keys_mol_syn) > 0:
-            self.log_consoleonly.warning(('%d loose InChIKeys in '
-                                          'molecule_synonym table'),
-                                         len(loose_keys_mol_syn))
+            self.log_console.warning(('%d loose InChIKeys in '
+                                      'molecule_synonym table'),
+                                     len(loose_keys_mol_syn))
             print('\n'.join(i for i in loose_keys_mol_syn), file=sys.stderr)
         if len(loose_keys_mol_src) > 0:
-            self.log_consoleonly.warning(('%d loose InChIKeys in '
-                                          'molecule_source table'),
-                                         len(loose_keys_mol_src))
+            self.log_console.warning(('%d loose InChIKeys in '
+                                      'molecule_source table'),
+                                     len(loose_keys_mol_src))
             print('\n'.join(i for i in loose_keys_mol_src), file=sys.stderr)
         if len(loose_keys_mol_met_prp) > 0:
-            self.log_consoleonly.warning(('%d loose InChIKeys in '
-                                          'molecule_method_property table'),
-                                         len(loose_keys_mol_met_prp))
+            self.log_console.warning(('%d loose InChIKeys in '
+                                      'molecule_method_property table'),
+                                     len(loose_keys_mol_met_prp))
             print('\n'.join(i for i in loose_keys_mol_met_prp),
                   file=sys.stderr)
         # check that sources in db exist in sources dir
@@ -184,8 +184,8 @@ class Check(AbstractTool):
         for r in self.db.execute(q).fetchall():
             source_ids.add(r.source_id)
             if not os.path.isdir(os.path.join(source_path, r.dirname)):
-                self.log_consoleonly.warning('%s not in sources directory',
-                                             r.dirname)
+                self.log_console.warning('%s not in sources directory',
+                                         r.dirname)
         # check source foreign keys
         molecule_source_ids = set()
         q = 'SELECT DISTINCT source_id FROM molecule_source'
@@ -193,9 +193,9 @@ class Check(AbstractTool):
             molecule_source_ids.add(r.source_id)
         loose_source_ids = molecule_source_ids - source_ids
         if len(loose_source_ids) > 0:
-            self.log_consoleonly.warning(('%d loose source_ids in '
-                                          'molecule_source table'),
-                                         len(loose_source_ids))
+            self.log_console.warning(('%d loose source_ids in '
+                                      'molecule_source table'),
+                                     len(loose_source_ids))
             print('\n'.join(i for i in loose_source_ids), file=sys.stderr)
         # check program foreign keys
         program_ids = set()
@@ -208,9 +208,9 @@ class Check(AbstractTool):
             method_program_ids.add(r.program_id)
         loose_program_ids = method_program_ids - program_ids
         if len(loose_program_ids) > 0:
-            self.log_consoleonly.warning(('%d loose program_ids in '
-                                          'method table'),
-                                         len(loose_program_ids))
+            self.log_console.warning(('%d loose program_ids in '
+                                      'method table'),
+                                     len(loose_program_ids))
             print('\n'.join(i for i in loose_program_ids), file=sys.stderr)
         # check parameter foreign keys
         parameter_ids = set()
@@ -227,15 +227,15 @@ class Check(AbstractTool):
             method_tag_parameter_ids.add(r.parameter_id)
         loose_m_pids = method_parameter_ids - parameter_ids
         if len(loose_m_pids) > 0:
-            self.log_consoleonly.warning(('%d loose parameter_ids in '
-                                          'method_parameter table'),
-                                         len(loose_m_pids))
+            self.log_console.warning(('%d loose parameter_ids in '
+                                      'method_parameter table'),
+                                     len(loose_m_pids))
             print('\n'.join(i for i in loose_m_pids), file=sys.stderr)
         loose_mt_pids = method_tag_parameter_ids - parameter_ids
         if len(loose_mt_pids) > 0:
-            self.log_consoleonly.warning(('%d loose parameter_ids in '
-                                          'method_tag table'),
-                                         len(loose_mt_pids))
+            self.log_console.warning(('%d loose parameter_ids in '
+                                      'method_tag table'),
+                                     len(loose_mt_pids))
             print('\n'.join(i for i in loose_mt_pids), file=sys.stderr)
         property_ids = set()
         q = 'SELECT property_id FROM property'
@@ -247,9 +247,9 @@ class Check(AbstractTool):
             mmp_property_ids.add(r.property_id)
         loose_mmp_property_ids = mmp_property_ids - property_ids
         if len(loose_mmp_property_ids) > 0:
-            self.log_consoleonly.warning(('%d loose property_ids in '
-                                          'method_tag table'),
-                                         len(loose_mmp_property_ids))
+            self.log_console.warning(('%d loose property_ids in '
+                                      'method_tag table'),
+                                     len(loose_mmp_property_ids))
             print('\n'.join(i for i in loose_mmp_property_ids),
                   file=sys.stderr)
         # check that methods in db exist in methods dir
@@ -270,16 +270,16 @@ class Check(AbstractTool):
             method_edge_mids.add(r.child_method_id)
         loose_method_parameter_mids = method_parameter_mids - method_ids
         if len(loose_method_parameter_mids) > 0:
-            self.log_consoleonly.warning(('%d loose method_ids in '
-                                          'method_parameter table'),
-                                         len(loose_method_parameter_mids))
+            self.log_console.warning(('%d loose method_ids in '
+                                      'method_parameter table'),
+                                     len(loose_method_parameter_mids))
             print('\n'.join(i for i in loose_method_parameter_mids),
                   file=sys.stderr)
         loose_method_edge_mids = method_edge_mids - method_ids
         if len(loose_method_edge_mids) > 0:
-            self.log_consoleonly.warning(('%d loose method_ids in '
-                                          'method_edge table'),
-                                         len(loose_method_edge_mids))
+            self.log_console.warning(('%d loose method_ids in '
+                                      'method_edge table'),
+                                     len(loose_method_edge_mids))
             print('\n'.join(i for i in loose_method_edge_mids),
                   file=sys.stderr)
         # check edge foreign keys
@@ -293,9 +293,9 @@ class Check(AbstractTool):
             method_path_edge_ids.add(r.method_edge_id)
         loose_method_path_edge_ids = method_path_edge_ids - method_edge_ids
         if len(loose_method_path_edge_ids) > 0:
-            self.log_consoleonly.warning(('%d loose method_edge_ids in '
-                                          'method_path_edge table'),
-                                         len(loose_method_path_edge_ids))
+            self.log_console.warning(('%d loose method_edge_ids in '
+                                      'method_path_edge table'),
+                                     len(loose_method_path_edge_ids))
             print('\n'.join(i for i in loose_method_path_edge_ids),
                   file=sys.stderr)
         # check path foreign keys
@@ -309,9 +309,9 @@ class Check(AbstractTool):
             method_path_edge_pids.add(r.method_path_id)
         loose_method_path_edge_pids = method_path_edge_pids - method_path_ids
         if len(loose_method_path_edge_pids) > 0:
-            self.log_consoleonly.warning(('%d loose method_path_ids in '
-                                          'method_path_edge table'),
-                                         len(loose_method_path_edge_pids))
+            self.log_console.warning(('%d loose method_path_ids in '
+                                      'method_path_edge table'),
+                                     len(loose_method_path_edge_pids))
             print('\n'.join(i for i in loose_method_path_edge_pids),
                   file=sys.stderr)
         # check edge closure
@@ -319,8 +319,8 @@ class Check(AbstractTool):
     
     def summary(self):
         """Print summary statistics about molecules in MESS.DB."""
-        self.log_consoleonly.info('%d molecules in MESS.DB',
-                                  len(self.db_inchikeys))
+        self.log_console.info('%d molecules in MESS.DB',
+                              len(self.db_inchikeys))
 
 
 def load():

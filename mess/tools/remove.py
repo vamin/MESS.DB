@@ -43,10 +43,9 @@ class Remove(AbstractTool):
             try:
                 inchikey_dir = get_inchikey_dir(inchikey)
                 shutil.rmtree(inchikey_dir)
-                self.log.info('%s dir removed', inchikey)
+                self.log_all.info('%s dir removed', inchikey)
             except OSError:
-                self.log_consoleonly.info('%s did not have a directory',
-                                          inchikey)
+                self.log_console.info('%s did not have a directory', inchikey)
             try:
                 parent = os.path.relpath(os.path.join(inchikey_dir, '../'))
                 os.removedirs(parent)
@@ -67,7 +66,8 @@ class Remove(AbstractTool):
             cur.execute(query, (inchikey,))
             records += cur.rowcount
             db.commit()
-            self.log.info('%i %s records removed from db', records, inchikey)
+            self.log_all.info('%i %s records removed from db',
+                              records, inchikey)
 
 
 def load():

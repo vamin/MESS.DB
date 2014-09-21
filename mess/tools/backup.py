@@ -60,8 +60,7 @@ class Backup(AbstractTool):
         sources_path = os.path.relpath(os.path.join(os.path.dirname(__file__),
                                                     '../../sources'))
         if args.restore:
-            self.log_consoleonly.info('validating integrity of %s',
-                                      args.restore)
+            self.log_console.info('validating integrity of %s', args.restore)
             mess_db_check = 0
             molecules_dir_check = 0
             try:
@@ -78,8 +77,8 @@ class Backup(AbstractTool):
                 except IndexError:
                     pass
                 if mess_db_check and molecules_dir_check:
-                    self.log_consoleonly.info('restore from %s initiated',
-                                              args.restore)
+                    self.log_console.info('restore from %s initiated',
+                                          args.restore)
                     try:
                         shutil.rmtree(db_path)
                         shutil.rmtree(mol_path)
@@ -89,13 +88,12 @@ class Backup(AbstractTool):
                         pass  # already deleted
                     subprocess.call(['tar', '-jxvf',
                                      os.path.relpath(args.restore)])
-                    self.log_consoleonly.info('backup %s restored',
-                                              args.restore)
+                    self.log_console.info('backup %s restored', args.restore)
                     sys.exit()
             sys.exit('%s is not a valid backup file' % args.restore)
         else:
             backup_name = 'MESS.DB.%s.tbz2' % str(time.time())
-            self.log_consoleonly.info('backup to %s initiated', backup_name)
+            self.log_console.info('backup to %s initiated', backup_name)
             backup_out = os.path.join(args.backups_dir, backup_name)
             if args.max_procs > 1:
                 self.check_for_parallel()
@@ -118,7 +116,7 @@ class Backup(AbstractTool):
                 subprocess.Popen(['bzip2', '--best', '-c'], stdin=tar.stdout,
                                  stdout=open(backup_out, 'w'))
                 tar.wait()
-            self.log_consoleonly.info('backup to %s completed', backup_name)
+            self.log_console.info('backup to %s completed', backup_name)
     
     def check_for_parallel(self):
         """Make sure GNU parallel is available on the system, otherwise exit.
@@ -127,7 +125,7 @@ class Backup(AbstractTool):
             check = subprocess.check_output(['which', 'parallel'],
                                             stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
-            self.log_consoleonly.info('backup cancelled')
+            self.log_console.info('backup cancelled')
             sys.exit(("'parallel' needs to be installed "
                       'to use more than one processor '
                       'for compression'))

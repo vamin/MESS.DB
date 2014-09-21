@@ -110,8 +110,8 @@ class Match(AbstractTool):
                       '--fingerprint, and --spectrophore are mutually '
                       'exclusive.'))
         if args.smarts and args.target:
-            self.log_consoleonly.warning(('--target ignored, proceeding with '
-                                          'SMARTS matching'))
+            self.log_console.warning(('--target ignored, proceeding with '
+                                      'SMARTS matching'))
         if args.spectrophore:
             if args.path is None:
                 sys.exit(('Spectrophore calculation requires 3D geometry. '

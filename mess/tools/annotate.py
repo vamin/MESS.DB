@@ -129,20 +129,20 @@ class Annotate(AbstractTool):
                                              '',
                                              '')).fetchone()[0]
                     if not str(fp) == db_fp:
-                        self.log_consoleonly.warning(('new %s fingerprint for '
-                                                      '%s did not match '
-                                                      'fingerprint in db, '
-                                                      'db not updated'),
-                                                     args.fingerprint,
-                                                     self.inchikey)
+                        self.log_console.warning(('new %s fingerprint '
+                                                  'for %s did not match '
+                                                  'fingerprint in db, '
+                                                  'db not updated'),
+                                                 args.fingerprint,
+                                                 self.inchikey)
                 except TypeError:
                     self.db.execute(fp_insert_query, (self.inchikey,
                                                       args.fingerprint,
                                                       '',
                                                       str(fp),
                                                       ''))
-                    self.log.info('%s fingerprint for %s added to db',
-                                  args.fingerprint, self.inchikey)
+                    self.log_all.info('%s fingerprint for %s added to db',
+                                      args.fingerprint, self.inchikey)
             if args.spectrophore:
                 xyz_file = os.path.join(get_inchikey_dir(self.inchikey),
                                         method_dir,
@@ -157,12 +157,12 @@ class Annotate(AbstractTool):
                                                         sort_keys=True),
                                              args.path)).fetchone()[0]
                     if not str(sp) == db_sp:
-                        self.log_consoleonly.warning(('new Spectrophore '
-                                                      'fingerprint for '
-                                                      '%s did not match '
-                                                      'fingerprint in db, '
-                                                      'db not updated'),
-                                                     self.inchikey)
+                        self.log_console.warning(('new Spectrophore '
+                                                  'fingerprint for '
+                                                  '%s did not match '
+                                                  'fingerprint in db, '
+                                                  'db not updated'),
+                                                 self.inchikey)
                 except TypeError:
                     json_sp_args = json.dumps(sp_args, sort_keys=True)
                     self.db.execute(fp_insert_query, (self.inchikey,
@@ -170,11 +170,11 @@ class Annotate(AbstractTool):
                                                       json_sp_args,
                                                       str(sp),
                                                       args.path))
-                    self.log.info(('Spectrophore fingerprint for %s '
-                                   'with parameters %s and '
-                                   'geometry from path %i '
-                                   'added to db'),
-                                  self.inchikey, json_sp_args, args.path)
+                    self.log_all.info(('Spectrophore fingerprint for %s '
+                                       'with parameters %s and '
+                                       'geometry from path %i '
+                                       'added to db'),
+                                      self.inchikey, json_sp_args, args.path)
     
     def update_synonyms(self, inchikey):
         """Get synonyms from CIR and load them into mess.db."""
@@ -195,8 +195,8 @@ class Annotate(AbstractTool):
                     plural = 's'
                 else:
                     plural = ''
-                self.log.info('%i new synonym%s for %s added',
-                              new_synonyms, plural, inchikey)
+                self.log_all.info('%i new synonym%s for %s added',
+                                  new_synonyms, plural, inchikey)
     
     def update_iupac(self, inchikey):
         """Get IUPAC name from CIR and load it into mess.db."""
@@ -219,7 +219,7 @@ class Annotate(AbstractTool):
                                        (inchikey, )).fetchone()[0]
             if not db_iupac == iupac:
                 self.db.execute(iupac_update_query, (iupac, inchikey))
-                self.log.info('iupac name for %s updated', inchikey)
+                self.log_all.info('iupac name for %s updated', inchikey)
             if len(iupacs) > 1:  # if multiple, add others as synonym
                 select_query = ('SELECT inchikey FROM molecule_synonym '
                                 'WHERE inchikey = ? AND name = ?')
@@ -239,8 +239,8 @@ class Annotate(AbstractTool):
                         plural = 's'
                     else:
                         plural = ''
-                    self.log.info('%i new synonym%s for %s added',
-                                  new_synonyms, plural, inchikey)
+                    self.log_all.info('%i new synonym%s for %s added',
+                                      new_synonyms, plural, inchikey)
     
     def cir_request(self, inchikey, representation):
         """Make request to CIR (Chemical Information Resolver).
@@ -264,8 +264,8 @@ class Annotate(AbstractTool):
         except urllib2.URLError as err:
             if hasattr(err, 'reason'):
                 reason = err.reason.lower()
-                self.log_consoleonly.info('%s %s %s in cir',
-                                          inchikey, representation, reason)
+                self.log_console.info('%s %s %s in cir',
+                                      inchikey, representation, reason)
         return None
 
 
