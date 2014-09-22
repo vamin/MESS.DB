@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
 """MESS.DB source module
 
 This module contains the Source class, which is used to interact with and
 import molecule source directories.
 """
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -12,6 +15,8 @@ import csv
 import os
 import re
 import sys
+
+from mess.utils import get_inchikey_dir
 
 
 class Source(object):
@@ -85,6 +90,7 @@ class Source(object):
         return filter(self.is_source_file, os.listdir(self.source_dir))
     
     def is_source_file(self, file_):
+        """Check if file is a valid .sources.tsv file. Returns boolean."""
         return not (file_.split('.')[-1] == 'sql'
                     or file_.split('.')[-1] == 'txt'
                     or file_.split('.')[-1] == 'bak'
@@ -102,7 +108,7 @@ class Source(object):
                  'VALUES (?, ?, ?)')
         self.db.execute(query, (inchikey, self.id, identifier))
     
-    def update_source_tsv(self, inchikey_dir, identifier):
+    def update_source_tsv(self, inchikey, identifier):
         """Update the sources.tsv file.
         
         Args:
@@ -110,13 +116,13 @@ class Source(object):
             identifier: A source identifier (usually a catalog number).
         
         """
+        inchikey_dir = get_inchikey_dir(inchikey)
         name = self.name.encode('ascii', 'replace')
         dirname = self.dirname.encode('ascii', 'replace')
         identifier = identifier.encode('ascii', 'replace')
-        with codecs.open(os.path.join(inchikey_dir, 'sources.tsv'),
-                         'r', 'ascii') as sources_in:
-            with codecs.open(os.path.join(inchikey_dir, 'sources.tsv'),
-                             'a', 'ascii') as sources_out:
+        sources_tsv = os.path.join(inchikey_dir, '%s.sources.tsv' % inchikey)
+        with codecs.open(sources_tsv, 'r', 'ascii') as sources_in:
+            with codecs.open(sources_tsv, 'a', 'ascii') as sources_out:
                 sources_in = csv.reader(sources_in, delimiter=b'\t')
                 sources_out = csv.writer(sources_out, delimiter=b'\t')
                 # check if source has been recorded

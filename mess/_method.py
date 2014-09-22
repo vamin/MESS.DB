@@ -13,6 +13,9 @@ import json
 import sys
 import time
 
+from mess.log import Log
+from mess.utils import is_inchikey
+
 
 class AbstractMethod(object):
     """All methods must inherit from this class.
@@ -31,10 +34,13 @@ class AbstractMethod(object):
         parameters (dict): Parameters that affect program execution
         tags (list of str): List of parameters that identify the method
     """
+    log_console = Log('console')
+    log_all = Log('all')
     parameters = dict()
     tags = list()
     status = None
     is_setup = False
+    _inchikey = None
     
     def __init__(self, db):
         """Set up db, check for attributes, dependencies, and setup.
@@ -73,27 +79,13 @@ class AbstractMethod(object):
         raise NotImplementedError(("every method needs a 'check_dependencies' "
                                    'method'))
     
-    def check(self, args):
+    def check(self):
         """If check is not implemented, raise error."""
         # the check method should be called before a calculation (so
         # calculations are not repeated) and after (to verify success)
         raise NotImplementedError("every method needs a 'check' method")
     
-    def log(self, args):
-        """If log is not implemented, raise error."""
-        # the log method should be called at the end of every execute method
-        # to record that a calculation has been attempted (in the main log)
-        # and to record method-specific messages into the method log
-        raise NotImplementedError("every method needs a 'log' method")
-    
-    def import_properties(self):
-        """If import_properties is not implemented, raise error."""
-        # this method reads molecule-proprty values from calc
-        # into db
-        raise NotImplementedError(("every method needs an 'import_properties' "
-                                   'method'))
-    
-    def map():
+    def map(self):
         """Generally, maps molecule to calculation via method, emits
         query/value pairs.
         """
@@ -113,7 +105,7 @@ class AbstractMethod(object):
             self.insert_tags()
             self.is_setup = True
     
-    def insert_method(self): # WITH:
+    def insert_method(self):
         """Set insert program to db, set up hash, and insert method to db."""
         query = ('INSERT OR IGNORE INTO method '
                  '(program_id, geop, name, hash) '
@@ -178,7 +170,7 @@ class AbstractMethod(object):
         return self.get_insert_property_query(inchikey, path_id, 'runtime',
                                               'execution time',
                                               type(start).__name__,
-                                              time.time()-start, 's')
+                                              time.time() - start, 's')
     
     @classmethod
     def get_method_name(cls):
@@ -195,4 +187,18 @@ class AbstractMethod(object):
     
     @property
     def hash(self):
+        """Get hash."""
         return self.__hash__()
+        
+    @property
+    def inchikey(self):
+        """Get inchikey."""
+        return self._inchikey
+    
+    @inchikey.setter
+    def inchikey(self, inchikey):
+        """Set inchikey, and update inchikey of logger."""
+        if inchikey is not None and not is_inchikey(inchikey):
+            raise RuntimeError('invalid inchikey: %s' % inchikey)
+        self._inchikey = inchikey
+        self.log_all.inchikey = inchikey
