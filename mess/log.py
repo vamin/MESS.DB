@@ -146,43 +146,49 @@ class Log(object):
             raise RuntimeError(('Log object must be initialized with valid '
                                 'scope: \'console\' or \'all\'.'))
         self.scope = scope
+        self.context = self._context()
     
     def critical(self, *args):
         """Log a critical message."""
+        self.context = self._context()
         if self.scope == 'console':
-            self.to_console().critical(*args)
+            self._to_console().critical(*args)
         elif self.scope == 'all':
-            self.to_all(self.inchikey).critical(*args)
+            self._to_all(self.inchikey).critical(*args)
     
     def error(self, *args):
         """Log an error."""
+        self.context = self._context()
         if self.scope == 'console':
-            self.to_console().error(*args)
+            self._to_console().error(*args)
         elif self.scope == 'all':
-            self.to_all(self.inchikey).error(*args)
+            self._to_all(self.inchikey).error(*args)
     
     def warning(self, *args):
         """Log a warning."""
+        self.context = self._context()
         if self.scope == 'console':
-            self.to_console().warning(*args)
+            self._to_console().warning(*args)
         elif self.scope == 'all':
-            self.to_all(self.inchikey).warning(*args)
+            self._to_all(self.inchikey).warning(*args)
     
     def info(self, *args):
         """Log information."""
+        self.context = self._context()
         if self.scope == 'console':
-            self.to_console().info(*args)
+            self._to_console().info(*args)
         elif self.scope == 'all':
-            self.to_all(self.inchikey).info(*args)
+            self._to_all(self.inchikey).info(*args)
     
     def debug(self, *args):
         """Log a debug message."""
+        self.context = self._context()
         if self.scope == 'console':
-            self.to_console().debug(*args)
+            self._to_console().debug(*args)
         elif self.scope == 'all':
-            self.to_all(self.inchikey).debug(*args)
+            self._to_all(self.inchikey).debug(*args)
     
-    def to_all(self, inchikey=None):
+    def _to_all(self, inchikey=None):
         """Log to console, central log, and molecule log. Use to report things
         that change the database."""
         if inchikey is not None and not is_inchikey(inchikey):
@@ -205,18 +211,17 @@ class Log(object):
                         break
             except AttributeError:
                 continue
-        context = self._context()
-        if context is not None:
-            return logging.getLogger('mess.%s' % context.lower())
+        if self.context is not None:
+            return logging.getLogger('mess.%s' % self.context.lower())
         else:
             return logging.getLogger('mess')
     
-    def to_console(self):
+    def _to_console(self):
         """Log to console only. Use to report things that don't result in a
         change in the database."""
-        context = self._context()
-        if context is not None:
-            return logging.getLogger('mess.%s.consoleonly' % context.lower())
+        if self.context is not None:
+            return logging.getLogger('mess.%s.consoleonly' %
+                                     self.context.lower())
         else:
             return logging.getLogger('mess.consoleonly')
     
