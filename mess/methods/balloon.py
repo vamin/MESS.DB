@@ -16,7 +16,6 @@ from _method import AbstractMethod
 from decorators import decorate, UnicodeDecorator
 from utils import get_inchikey_dir, setup_dir
 
-decorate(pybel, UnicodeDecorator)
 
 class Balloon(AbstractMethod):
     # method info

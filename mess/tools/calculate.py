@@ -14,8 +14,6 @@ from mess._tool import AbstractTool
 from mess.decorators import decorate, UnicodeDecorator
 from mess.utils import is_inchikey, load_method
 
-decorate(pybel, UnicodeDecorator)
-
 
 class Calculate(AbstractTool):
     def __init__(self):
