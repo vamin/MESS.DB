@@ -9,7 +9,7 @@ import sys
 import time
 
 from _method import AbstractMethod
-from utils import get_inchikey_dir, setup_dir, write_to_log
+from utils import get_inchikey_dir, setup_dir
 
 
 class Mopac(AbstractMethod):
@@ -55,23 +55,24 @@ class Mopac(AbstractMethod):
     
     def map(self, inchikey, args):
         start = time.time()
+        self.inchikey = inchikey
         (path_id, method_dir, parent_method_dir) = (args['path_id'],
                                                     args['method_dir'],
                                                     args['parent_method_dir'])
         if parent_method_dir is None:
             sys.exit(('This method requires a parent path with a valid '
                       'xyz file (i.e., it cannot accept an InChI).'))
-        inchikey_dir = get_inchikey_dir(inchikey)
+        inchikey_dir = get_inchikey_dir(self.inchikey)
         out_dir = os.path.realpath(os.path.join(inchikey_dir, method_dir))
         setup_dir(out_dir)
-        mop_file = os.path.join(out_dir, '%s.mop' % inchikey)
-        out_file = os.path.join(out_dir, '%s.out' % inchikey)
+        mop_file = os.path.join(out_dir, '%s.mop' % self.inchikey)
+        out_file = os.path.join(out_dir, '%s.out' % self.inchikey)
         xyz_in = os.path.abspath(os.path.join(inchikey_dir, parent_method_dir,
-                                              '%s.xyz' % inchikey))
+                                              '%s.xyz' % self.inchikey))
         if not os.path.isfile(xyz_in):
             sys.exit('xyz file expected but not found: %s.' % xyz_in)
         xyz_out = os.path.abspath(os.path.join(out_dir,
-                                               '%s.xyz' % inchikey))
+                                               '%s.xyz' % self.inchikey))
         if not self.check(out_file, xyz_out):
             keywords = ''
             for k, v in self.parameters.items():
@@ -84,7 +85,7 @@ class Mopac(AbstractMethod):
                      'FROM molecule_method_property mpp '
                      'JOIN property p ON mpp.property_id = p.property_id '
                      "WHERE p.name='charge' AND mpp.inchikey=?")
-            charge = self.db.execute(query, (inchikey,)).fetchone()[0]
+            charge = self.db.execute(query, (self.inchikey,)).fetchone()[0]
             keywords += 'CHARGE=%i' % charge
             babel = subprocess.Popen(['obabel', '-ixyz', xyz_in, '-omop',
                                       '-xk' + keywords],
@@ -94,20 +95,22 @@ class Mopac(AbstractMethod):
             babel_stderr = babel.stderr.read()
             pwd = os.getcwd()
             os.chdir(out_dir)  # mopac unhappy if not run in same dir as input
-            subprocess.Popen(['MOPAC2012.exe', '%s.mop' % inchikey]).wait()
+            subprocess.Popen(['MOPAC2012.exe',
+                              '%s.mop' % self.inchikey]).wait()
             os.chdir(pwd)
             self.moo_to_xyz(os.path.abspath(out_file), xyz_out)
             if self.check(out_file, xyz_out):
-                yield self.get_timing_query(inchikey, path_id, start)
-                for query, values in self.import_properties(inchikey,
+                self.log_all.info('%s calculation successful', self.inchikey)
+                yield self.get_timing_query(self.inchikey, path_id, start)
+                for query, values in self.import_properties(self.inchikey,
                                                             path_id,
                                                             out_file):
                     yield query, values
             else:
                 print(babel_stderr, file=sys.stderr)
         else:
-            self.status = 'calculation skipped'
-            for query, values in self.import_properties(inchikey,
+            self.log_console.info('%s calculation skipped', self.inchikey)
+            for query, values in self.import_properties(self.inchikey,
                                                         path_id,
                                                         out_file):
                 yield query, values
@@ -157,20 +160,6 @@ class Mopac(AbstractMethod):
         else:
             self.status = 'PM7 calculation or xyz conversion failed'
             return False
-    
-    def log(self, inchikey, inchikey_dir, method_dir):
-        """Log messages to base log and method log.
-        
-        Args:
-            inchikey: An inchikey.
-            inchikey_dir: Directory of molecule.
-        
-        """
-        base_log_path = os.path.join(inchikey_dir, '%s.log' % inchikey)
-        method_log_path = os.path.join(inchikey_dir, method_dir,
-                                       '%s.log' % inchikey)
-        write_to_log(base_log_path, ['status: %s' % self.status])
-        write_to_log(method_log_path, ['status: %s' % self.status])
     
     def import_properties(self, inchikey, method_path_id, moo_out):
         """Load properties available in Mopac output into mess.db.

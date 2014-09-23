@@ -28,8 +28,7 @@ class Calculate(AbstractTool):
         subparser.add_argument('method', type=str, help='A method name')
         subparser.add_argument('inchikeys', nargs='?',
                                type=argparse.FileType('r'), default=sys.stdin,
-                               help=('A list of inchikeys, file or passed in '
-                                     'through STDIN'))
+                               help='a list of inchikeys (default: STDIN)')
         subparser.add_argument('-p', '--parent-path', type=int, default=None,
                                help=('Specify a parent path id. If not set, '
                                      'start from InChI'))
@@ -81,7 +80,7 @@ class Calculate(AbstractTool):
             method.reduce(key, values)
 
     def mapreduce_server(self, inchikeys, method, map_args):
-        print('Hostname is: %s' % gethostname(), file=sys.stderr)
+        self.log_console.info('hostname is %s' % gethostname())
         datasource = {}
         for row in inchikeys:
             inchikey = row.split()[0].strip()
@@ -92,25 +91,23 @@ class Calculate(AbstractTool):
         server.datasource = datasource
         server.password = method.hash
         results = server.run(debug=0)
-        print('Done!', file=sys.stderr)
+        self.log_console.info('Done!')
     
     def map_client(self, method, hostname):
-        print('Connecting to mapreduce server at: %s' % hostname,
-              file=sys.stderr)
+        self.log_console.info('connecting to mapreduce server at %s', hostname)
         client = mapreduce.Client()
         client.password = method.hash
         client.mapfn = method.map
         client.run(hostname, mapreduce.DEFAULT_PORT, debug=0)
-        print('Done!', file=sys.stderr)
+        self.log_console.info('Done!')
     
     def reduce_client(self, method, hostname):
-        print('Connecting to mapreduce server at: %s' % hostname,
-              file=sys.stderr)
+        self.log_console.info('connecting to mapreduce server at %s', hostname)
         client = mapreduce.Client()
         client.password = method.hash
         client.reducefn = method.reduce
         client.run(hostname, mapreduce.DEFAULT_PORT, debug=0)
-        print('Done!', file=sys.stderr)
+        self.log_console.info('Done!')
     
     
 def load():
