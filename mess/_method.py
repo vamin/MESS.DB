@@ -95,6 +95,7 @@ class AbstractMethod(object):
         """Run queries/values on the db."""
         if query or values[0]:
             self.db.executemany(query, values)
+            self.log_all.info('%i properties added to MESS.DB', len(values))
     
     def setup(self):
         """Set up method."""
