@@ -191,12 +191,14 @@ class Log(object):
     def _to_all(self, inchikey=None):
         """Log to console, central log, and molecule log. Use to report things
         that change the database."""
-        if inchikey is not None and not is_inchikey(inchikey):
-            sys.exit('invalid inchikey passed to logger')
+        if inchikey is not None:
+            if not is_inchikey(inchikey):
+                sys.exit('invalid inchikey passed to logger')
+            molecule_log_path = '%s/%s.log' % (get_inchikey_dir(inchikey),
+                                               inchikey)
+            molecule_log_handler = logging.FileHandler(molecule_log_path)
         logger = logging.getLogger('mess')
-        molecule_log_path = '%s/%s.log' % (get_inchikey_dir(inchikey),
-                                           inchikey)
-        molecule_log_handler = logging.FileHandler(molecule_log_path)
+        
         for handler in logger.handlers:
             try:
                 if ('molecules/' in handler.baseFilename
