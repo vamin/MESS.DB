@@ -146,6 +146,12 @@ class MessDB(object):
                       'journal_mode=wal in SQLite before continuing.'))
         print('New mess.db initialized.', file=sys.stderr)
     
+    @property
+    def total_changes(self):
+        """Returns the total number of database rows that have been modified,
+        inserted, or deleted since the db connection was opened."""
+        return self.conn.total_changes
+    
     def __del__(self):
         """On deletion, commit transations and close the connection."""
         try:
