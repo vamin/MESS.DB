@@ -18,8 +18,8 @@ import sys
 
 import pybel
 
-from mess._db import MessDB
-from mess._tool import AbstractTool
+from mess.db import MessDB
+from mess.tool import AbstractTool
 from mess.utils import xstr
 from mess.tools.match import Match
 

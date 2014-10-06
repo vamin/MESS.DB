@@ -20,9 +20,9 @@ import sys
 import numpy as np
 import pybel
 
-from mess._db import MessDB
-from mess._path import MethodPath
-from mess._tool import AbstractTool
+from mess.db import MessDB
+from mess.path import MethodPath
+from mess.tool import AbstractTool
 from mess.utils import get_inchikey_dir
 
 

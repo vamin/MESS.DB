@@ -20,8 +20,8 @@ from distutils.version import LooseVersion
 
 import pybel
 
-from _method import AbstractMethod
 from decorators import decorate, UnicodeDecorator
+from method import AbstractMethod
 from utils import setup_dir
 
 

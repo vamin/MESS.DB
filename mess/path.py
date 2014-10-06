@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 
 import sys
 
-from mess._db import MessDB
+from mess.db import MessDB
 
 
 class Node(object):

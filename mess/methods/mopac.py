@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 
-from _method import AbstractMethod
+from method import AbstractMethod
 from utils import get_inchikey_dir, setup_dir
 
 

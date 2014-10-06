@@ -18,7 +18,7 @@ import sys
 import time
 from cStringIO import StringIO
 
-from mess._tool import AbstractTool
+from mess.tool import AbstractTool
 
 
 class Backup(AbstractTool):

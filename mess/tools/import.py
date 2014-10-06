@@ -15,12 +15,12 @@ import os
 
 import pybel
 
-from mess._db import MessDB
-from mess._method import AbstractMethod
-from mess._path import MethodPath
-from mess._source import Source
-from mess._tool import AbstractTool
+from mess.db import MessDB
 from mess.decorators import decorate, UnicodeDecorator
+from mess.method import AbstractMethod
+from mess.path import MethodPath
+from mess.source import Source
+from mess.tool import AbstractTool
 from mess.utils import get_inchikey_dir, is_inchikey, setup_dir, touch
 
 

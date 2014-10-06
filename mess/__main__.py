@@ -21,9 +21,9 @@ PARENT_DIR = os.path.realpath(os.path.join(MESS_DIR, '..'))
 if PARENT_DIR not in sys.path:
     sys.path.insert(1, PARENT_DIR)
 
-from mess._tool import ToolManager
 from mess.decorators import decorate, UnicodeDecorator
 from mess.log import Log
+from mess.tool import ToolManager
 from mess.utils import CustomArgparseFormatter, get_mem_usage
 
 

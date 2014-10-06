@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 
 import argparse
 
-from mess._tool import AbstractTool
+from mess.tool import AbstractTool
 
 
 class Transform(AbstractTool):
