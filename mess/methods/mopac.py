@@ -382,6 +382,6 @@ class Mopac(AbstractMethod):
                     break
 
 
-def load(db, path):
-    """Load Mopac(db, path)."""
-    return Mopac(db, path)
+def load():
+    """Load Mopac()."""
+    return Mopac()

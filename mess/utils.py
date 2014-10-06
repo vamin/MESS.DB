@@ -82,12 +82,12 @@ def is_inchikey(inchikey, enforce_standard=False):
     return False
 
 
-def load_method(method_name, db, path):
+def load_method(method_name):
     """Locate a method in mess/methods and return an instance of it."""
     try:
         module = __import__('mess.methods.%s' % method_name,
                             fromlist=['methods'])
-        method = module.load(db, path)
+        method = module.load()
     except ImportError as err:
         print('Error: %s;' % err, file=sys.stderr)
         sys.exit('\'%s\' is not a valid method.' % method_name)

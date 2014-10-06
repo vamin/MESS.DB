@@ -137,6 +137,6 @@ class Balloon(AbstractMethod):
             return False
 
 
-def load(db, path):
-    """Load Balloon(db, path)."""
-    return Balloon(db, path)
+def load():
+    """Load Balloon()."""
+    return Balloon()

@@ -50,7 +50,7 @@ class Calculate(AbstractTool):
     
     def execute(self, args):
         """Run calculations."""
-        method = load_method(args.method, MessDB(), MethodPath())
+        method = load_method(args.method)
         method.set_parent_path(args.parent_path)
         if args.map:
             args.inchikeys.close()

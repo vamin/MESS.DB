@@ -13,7 +13,9 @@ import json
 import sys
 import time
 
+from mess.db import MessDB
 from mess.log import Log
+from mess.path import MethodPath
 from mess.utils import is_inchikey
 
 
@@ -34,26 +36,22 @@ class AbstractMethod(object):
         parameters (dict): Parameters that affect program execution
         tags (list of str): List of parameters that identify the method
     """
-    log_console = Log('console')
-    log_all = Log('all')
     parameters = dict()
-    _is_setup = False
     _inchikey = None
     _path_id = None
     _parent_path_id = None
     _method_dir = None
     _parent_method_dir = None
     
-    def __init__(self, db, path):
-        """Set up db, check for attributes, dependencies, and setup.
-        
-        Args:
-            db (obj): A MessDB object
-        """
-        self.db = db
-        self.path = path
+    def __init__(self):
+        """Set up db, check for attributes, dependencies, and setup."""
+        self.db = MessDB()
+        self.path = MethodPath()
+        self.log_console = Log('console')
+        self.log_all = Log('all')
         self.method_name = self.get_method_name()
         try:
+            self.parameters
             self.description
             self.geop  # flag indicates method results in new xyz coordinates
             self.prog_name
@@ -63,7 +61,7 @@ class AbstractMethod(object):
             print(''.join([str(err), '\n']), file=sys.stderr)
             sys.exit(('Each method class needs to define description, geop, '
                       'prog_name, prog_version, prog_url, '
-                      'parameters, tags as attributes.'))
+                      'parameters as attributes.'))
         self.check_dependencies()
     
     def __hash__(self):
@@ -76,6 +74,144 @@ class AbstractMethod(object):
         return hashlib.sha1(self.method_name +
                             json.dumps(self.parameters,
                                        sort_keys=True)).hexdigest()
+    
+    @property
+    def hash(self):
+        """Get hash."""
+        return self.__hash__()
+    
+    @property
+    def method_id(self):
+        """Get the object's method_id attribute."""
+        query = ('SELECT method_id FROM method '
+                 'WHERE hash = ?;')
+        row = self.db.execute(query, (self.hash,)).fetchone()
+        return row.method_id
+    
+    @property
+    def path_id(self):
+        """Get the path id of the method."""
+        if not self.path.get_method_id() == self.method_id:
+            self._setup_path()
+        return self._path_id
+    
+    @property
+    def method_dir(self):
+        """Get the directory name of the method."""
+        if not self.path.get_method_id() == self.method_id:
+            self._setup_path()
+        return self._method_dir
+    
+    @property
+    def parent_method_dir(self):
+        """Get the parent directory name of the method."""
+        if not self.path.get_method_id() == self.method_id:
+            self._setup_path()
+        return self._parent_method_dir
+    
+    @property
+    def inchikey(self):
+        """Get inchikey."""
+        return self._inchikey
+    
+    @inchikey.setter
+    def inchikey(self, inchikey):
+        """Set inchikey, and update inchikey of logger."""
+        if inchikey is not None and not is_inchikey(inchikey):
+            raise RuntimeError('invalid inchikey: %s' % inchikey)
+        self._inchikey = inchikey
+        self.log_all.inchikey = inchikey
+    
+    @classmethod
+    def get_method_name(cls):
+        """Return the name of the method, derived from the subclass name."""
+        return cls.__name__.replace('_', '').lower()
+    
+    def _setup_path(self):
+        """Setup path given current method id and parent path."""
+        self.path.setup_path(self.method_id, self._parent_path_id)
+        self._path_id = self.path.get_path_id()
+        self._method_dir = self.path.get_path_directory()
+        self._parent_method_dir = self.path.get_parent_path_directory()
+    
+    def _insert_method(self):
+        """Set insert program to db, set up hash, and insert method to db."""
+        total_changes = self.db.total_changes
+        query = ('INSERT OR IGNORE INTO method '
+                 '(program_id, geop, name, hash) '
+                 'SELECT program.program_id, ?, ?, ? '
+                 'FROM program '
+                 'WHERE program.name=? AND program.version=?')
+        self.db.execute(query, (self.geop, self.method_name, self.hash,
+                                self.prog_name, self.prog_version))
+        if self.db.total_changes - total_changes > 0:
+            self.log_all.info('new %s method added to MESS.DB',
+                              self.method_name)
+    
+    def _insert_program(self):
+        """Adds row to program table in mess.db."""
+        total_changes = self.db.total_changes
+        query = ('INSERT OR IGNORE INTO program (name, version, url) '
+                 'VALUES (?, ?, ?)')
+        self.db.execute(query,
+                        (self.prog_name, self.prog_version, self.prog_url))
+        if self.db.total_changes - total_changes > 0:
+            self.log_all.info('program %s %s added to MESS.DB',
+                              self.prog_name, self.prog_version)
+    
+    def _insert_parameters(self):
+        """Import paramaters dict to mess.db.
+        
+        Args:
+            name: Name of parameter.
+            setting: The value the parameter is set to.
+        """
+        added_parameters = 0
+        for name, setting in self.parameters.items():
+            query = ('INSERT OR IGNORE INTO parameter (name) VALUES (?)')
+            self.db.execute(query, (name, ))
+            total_changes = self.db.total_changes
+            query = ('INSERT OR IGNORE INTO method_parameter '
+                     '(method_id, parameter_id, setting) '
+                     'SELECT ?, parameter.parameter_id, ? '
+                     'FROM program, parameter '
+                     'WHERE parameter.name=?')
+            self.db.execute(query, (self.method_id, setting, name))
+            added_parameters += (self.db.total_changes - total_changes)
+        if added_parameters > 0:
+            self.log_all.info('%i method parameters added to MESS.DB',
+                              added_parameters)
+    
+    def get_insert_property_query(self, inchikey, method_path_id, name,
+                                  description, format_, value, units):
+        """Returns query to insert property value to mess.db.
+        
+        Args:
+            inchikey: The inchikey of a molecule in MESS.DB.
+            method_path_id: Path id for the calculations that generated the
+                            property.
+            name: The property name.
+            description: A description of the property.
+            format_: A description of the format the property is in.
+            value: The calculated property.
+            units: Units for the property value.
+        """
+        query = ('INSERT OR IGNORE INTO molecule_method_property_denorm '
+                 'VALUES (?, ?, ?, ?, ?, ?, ?);')
+        return (query, (inchikey, method_path_id, name, description,
+                        format_, units, value))
+    
+    def get_timing_query(self, inchikey, path_id, start):
+        """Get a query to insert execution time property into db."""
+        return self.get_insert_property_query(inchikey, path_id, 'runtime',
+                                              'execution time',
+                                              type(start).__name__,
+                                              time.time() - start, 's')
+    
+    def set_parent_path(self, parent_path):
+        """Set the parent path (e.g., path to method containing input 
+        geometry.)"""
+        self._parent_path_id = parent_path
     
     def check_dependencies(self):
         """If check_dependencies is not implemented, raise error."""
@@ -99,131 +235,12 @@ class AbstractMethod(object):
         total_changes = self.db.total_changes
         if query or values[0]:
             self.db.executemany(query, values)
-            recent_changes = self.db.total_changes - total_changes
+            self.log_all.info('%i properties added to MESS.DB',
+                              self.db.total_changes - total_changes)
             total_changes = self.db.total_changes
-            self.log_all.info('%i properties added to MESS.DB', recent_changes)
-    
-    def set_parent_path(self, parent_path):
-        self._parent_path_id = parent_path
-    
-    def _setup_path(self):
-        self.path.setup_path(self.method_id, self._parent_path_id)
-        self._path_id = self.path.get_path_id()
-        self._method_dir = self.path.get_path_directory()
-        self._parent_method_dir = self.path.get_parent_path_directory()
     
     def setup(self):
         """Set up method."""
-        if not self._is_setup:
-            self.insert_program()
-            self.insert_method()
-            self.insert_parameters()
-            self._is_setup = True
-    
-    def insert_method(self):
-        """Set insert program to db, set up hash, and insert method to db."""
-        query = ('INSERT OR IGNORE INTO method '
-                 '(program_id, geop, name, hash) '
-                 'SELECT program.program_id, ?, ?, ? '
-                 'FROM program '
-                 'WHERE program.name=? AND program.version=?')
-        self.db.execute(query, (self.geop, self.method_name, self.hash,
-                                self.prog_name, self.prog_version))
-    
-    def insert_program(self):
-        """Adds row to program table in mess.db."""
-        query = ('INSERT OR IGNORE INTO program (name, version, url) '
-                 'VALUES (?, ?, ?)')
-        self.db.execute(query,
-                        (self.prog_name, self.prog_version, self.prog_url))
-    
-    def insert_parameters(self):
-        """Import paramaters dict to mess.db.
-        
-        Args:
-            name: Name of parameter.
-            setting: The value the parameter is set to.
-        """
-        for name, setting in self.parameters.items():
-            query = ('INSERT OR IGNORE INTO parameter (name) VALUES (?)')
-            self.db.execute(query, (name, ))
-            query = ('INSERT OR IGNORE INTO method_parameter '
-                     '(method_id, parameter_id, setting) '
-                     'SELECT ?, parameter.parameter_id, ? '
-                     'FROM program, parameter '
-                     'WHERE parameter.name=?')
-            self.db.execute(query, (self.method_id, setting, name))
-    
-    def get_insert_property_query(self, inchikey, method_path_id, name,
-                                  description, format_, value, units):
-        """Adds property value to mess.db.
-        
-        Args:
-            inchikey: The inchikey of a molecule in MESS.DB.
-            method_path_id: Path id for the calculations that generated the
-                            property.
-            name: The property name.
-            description: A description of the property.
-            format_: A description of the format the property is in.
-            value: The calculated property.
-            units: Units for the property value.
-        """
-        query = ('INSERT OR IGNORE INTO molecule_method_property_denorm '
-                 'VALUES (?, ?, ?, ?, ?, ?, ?);')
-        return (query, (inchikey, method_path_id, name, description,
-                        format_, units, value))
-    
-    def get_timing_query(self, inchikey, path_id, start):
-        return self.get_insert_property_query(inchikey, path_id, 'runtime',
-                                              'execution time',
-                                              type(start).__name__,
-                                              time.time() - start, 's')
-    
-    @classmethod
-    def get_method_name(cls):
-        """Return the name of the method, derived from the subclass name."""
-        return cls.__name__.replace('_', '').lower()
-    
-    @property
-    def method_id(self):
-        """Get the object's method_id attribute."""
-        query = ('SELECT method_id FROM method '
-                 'WHERE hash = ?;')
-        row = self.db.execute(query, (self.hash,)).fetchone()
-        return row.method_id
-    
-    @property
-    def hash(self):
-        """Get hash."""
-        return self.__hash__()
-    
-    @property
-    def path_id(self):
-        if not self.path.get_method_id() == self.method_id:
-            self._setup_path()
-        return self._path_id
-    
-    @property
-    def method_dir(self):
-        if not self.path.get_method_id() == self.method_id:
-            self._setup_path()
-        return self._method_dir
-    
-    @property
-    def parent_method_dir(self):
-        if not self.path.get_method_id() == self.method_id:
-            self._setup_path()
-        return self._parent_method_dir
-    
-    @property
-    def inchikey(self):
-        """Get inchikey."""
-        return self._inchikey
-    
-    @inchikey.setter
-    def inchikey(self, inchikey):
-        """Set inchikey, and update inchikey of logger."""
-        if inchikey is not None and not is_inchikey(inchikey):
-            raise RuntimeError('invalid inchikey: %s' % inchikey)
-        self._inchikey = inchikey
-        self.log_all.inchikey = inchikey
+        self._insert_program()
+        self._insert_method()
+        self._insert_parameters()

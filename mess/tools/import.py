@@ -18,7 +18,6 @@ import pybel
 from mess.db import MessDB
 from mess.decorators import decorate, UnicodeDecorator
 from mess.method import AbstractMethod
-from mess.path import MethodPath
 from mess.source import Source
 from mess.tool import AbstractTool
 from mess.utils import get_inchikey_dir, is_inchikey, setup_dir, touch
@@ -39,7 +38,7 @@ class Import(AbstractTool):
     
     def execute(self, args):
         """Run import method for every molecule in source."""
-        imp = ImportHelper(MessDB(), MethodPath())
+        imp = ImportHelper()
         imp.setup()
         source = Source(MessDB())
         source.setup(args.source)
