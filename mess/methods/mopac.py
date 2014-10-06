@@ -53,12 +53,14 @@ class Mopac(AbstractMethod):
         
         """
         try:
-            subprocess.check_output(['MOPAC2012.exe'],
-                                    stderr=open(os.devnull, 'w'))
+            output = subprocess.check_output(['MOPAC2012.exe'],
+                                             stderr=subprocess.STDOUT)
         except OSError:
             sys.exit(('The %s method requires MOPAC2012.exe (%s) to be '
                       'installed and in PATH.') % (self.method_name,
                                                    self.prog_url))
+        if 'expired' in output:
+            sys.exit('\n'.join(output.splitlines()[3:5]))
         return True
     
     def map(self, inchikey, inchikey_dir):
@@ -74,7 +76,6 @@ class Mopac(AbstractMethod):
         xyz_in = os.path.abspath(os.path.join(inchikey_dir,
                                               self.parent_method_dir,
                                               '%s.xyz' % self.inchikey))
-        print(xyz_in)
         if not os.path.isfile(xyz_in):
             sys.exit('xyz file expected but not found: %s.' % xyz_in)
         xyz_out = os.path.abspath(os.path.join(out_dir,
