@@ -70,16 +70,6 @@ class HandlerSelectiveFilter(object):
         """
         self._handler = handler
     
-    def filter(self, record):
-        """Returns true if record should be processed."""
-        record.modifiedname = record.name
-        if self._handler == 'StreamHandler':
-            return self._stream_filter(record)
-        elif self._handler == 'FileHandler':
-            return self._file_filter(record)
-        else:
-            return True
-    
     def _stream_filter(self, record):
         """Returns true if record name indicates console-specific."""
         if 'console' in record.name.split('.')[-1]:
@@ -90,6 +80,16 @@ class HandlerSelectiveFilter(object):
         """Returns false if record name indicates console-specific."""
         if 'console' in record.name.split('.')[-1]:
             return False
+        else:
+            return True
+    
+    def filter(self, record):
+        """Returns true if record should be processed."""
+        record.modifiedname = record.name
+        if self._handler == 'StreamHandler':
+            return self._stream_filter(record)
+        elif self._handler == 'FileHandler':
+            return self._file_filter(record)
         else:
             return True
 
@@ -148,85 +148,6 @@ class Log(object):
         self.scope = scope
         self.context = self._context()
     
-    def critical(self, *args):
-        """Log a critical message."""
-        self.context = self._context()
-        if self.scope == 'console':
-            self._to_console().critical(*args)
-        elif self.scope == 'all':
-            self._to_all(self.inchikey).critical(*args)
-    
-    def error(self, *args):
-        """Log an error."""
-        self.context = self._context()
-        if self.scope == 'console':
-            self._to_console().error(*args)
-        elif self.scope == 'all':
-            self._to_all(self.inchikey).error(*args)
-    
-    def warning(self, *args):
-        """Log a warning."""
-        self.context = self._context()
-        if self.scope == 'console':
-            self._to_console().warning(*args)
-        elif self.scope == 'all':
-            self._to_all(self.inchikey).warning(*args)
-    
-    def info(self, *args):
-        """Log information."""
-        self.context = self._context()
-        if self.scope == 'console':
-            self._to_console().info(*args)
-        elif self.scope == 'all':
-            self._to_all(self.inchikey).info(*args)
-    
-    def debug(self, *args):
-        """Log a debug message."""
-        self.context = self._context()
-        if self.scope == 'console':
-            self._to_console().debug(*args)
-        elif self.scope == 'all':
-            self._to_all(self.inchikey).debug(*args)
-    
-    def _to_all(self, inchikey=None):
-        """Log to console, central log, and molecule log. Use to report things
-        that change the database."""
-        if inchikey is not None:
-            if not is_inchikey(inchikey):
-                sys.exit('invalid inchikey passed to logger')
-            molecule_log_path = '%s/%s.log' % (get_inchikey_dir(inchikey),
-                                               inchikey)
-            molecule_log_handler = logging.FileHandler(molecule_log_path)
-        logger = logging.getLogger('mess')
-        
-        for handler in logger.handlers:
-            try:
-                if ('molecules/' in handler.baseFilename
-                        or '/dev/null' in handler.baseFilename):
-                    if inchikey is not None:
-                        logger.removeHandler(handler)
-                        logger.addHandler(molecule_log_handler)
-                        break
-                    else:
-                        logger.removeHandler(handler)
-                        logger.addHandler('/dev/null')
-                        break
-            except AttributeError:
-                continue
-        if self.context is not None:
-            return logging.getLogger('mess.%s' % self.context.lower())
-        else:
-            return logging.getLogger('mess')
-    
-    def _to_console(self):
-        """Log to console only. Use to report things that don't result in a
-        change in the database."""
-        if self.context is not None:
-            return logging.getLogger('mess.%s.consoleonly' %
-                                     self.context.lower())
-        else:
-            return logging.getLogger('mess.consoleonly')
-    
     @classmethod
     def setup(cls, mess_dir, verbose=False):
         """Setup logging environment, including stream and file handlers."""
@@ -271,3 +192,82 @@ class Log(object):
                 return None
         except IndexError:
             return None
+    
+    def _to_all(self, inchikey=None):
+        """Log to console, central log, and molecule log. Use to report things
+        that change the database."""
+        if inchikey is not None:
+            if not is_inchikey(inchikey):
+                sys.exit('invalid inchikey passed to logger')
+            molecule_log_path = '%s/%s.log' % (get_inchikey_dir(inchikey),
+                                               inchikey)
+            molecule_log_handler = logging.FileHandler(molecule_log_path)
+        logger = logging.getLogger('mess')
+        
+        for handler in logger.handlers:
+            try:
+                if ('molecules/' in handler.baseFilename
+                        or '/dev/null' in handler.baseFilename):
+                    if inchikey is not None:
+                        logger.removeHandler(handler)
+                        logger.addHandler(molecule_log_handler)
+                        break
+                    else:
+                        logger.removeHandler(handler)
+                        logger.addHandler('/dev/null')
+                        break
+            except AttributeError:
+                continue
+        if self.context is not None:
+            return logging.getLogger('mess.%s' % self.context.lower())
+        else:
+            return logging.getLogger('mess')
+    
+    def _to_console(self):
+        """Log to console only. Use to report things that don't result in a
+        change in the database."""
+        if self.context is not None:
+            return logging.getLogger('mess.%s.consoleonly' %
+                                     self.context.lower())
+        else:
+            return logging.getLogger('mess.consoleonly')
+    
+    def critical(self, *args):
+        """Log a critical message."""
+        self.context = self._context()
+        if self.scope == 'console':
+            self._to_console().critical(*args)
+        elif self.scope == 'all':
+            self._to_all(self.inchikey).critical(*args)
+    
+    def error(self, *args):
+        """Log an error."""
+        self.context = self._context()
+        if self.scope == 'console':
+            self._to_console().error(*args)
+        elif self.scope == 'all':
+            self._to_all(self.inchikey).error(*args)
+    
+    def warning(self, *args):
+        """Log a warning."""
+        self.context = self._context()
+        if self.scope == 'console':
+            self._to_console().warning(*args)
+        elif self.scope == 'all':
+            self._to_all(self.inchikey).warning(*args)
+    
+    def info(self, *args):
+        """Log information."""
+        self.context = self._context()
+        if self.scope == 'console':
+            self._to_console().info(*args)
+        elif self.scope == 'all':
+            self._to_all(self.inchikey).info(*args)
+    
+    def debug(self, *args):
+        """Log a debug message."""
+        self.context = self._context()
+        if self.scope == 'console':
+            self._to_console().debug(*args)
+        elif self.scope == 'all':
+            self._to_all(self.inchikey).debug(*args)
