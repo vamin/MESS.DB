@@ -24,17 +24,13 @@ class AbstractMethod(object):
     
     Attributes:
         db (obj): A MessDB object
-        cur (obj): db.cursor()
         method_name (str): The name of the method
-        status (str): The current status of the method
-        is_setup (bool): Indicates whether setup() has been run
         description (str): Description of method
         geop (bool): Whether the method generates a new geometry
         prog_name (str): Program name
         prog_version (str): Program version
         prog_url (str): Program url
         parameters (dict): Parameters that affect program execution
-        tags (list of str): List of parameters that identify the method
     """
     parameters = dict()
     _inchikey = None
