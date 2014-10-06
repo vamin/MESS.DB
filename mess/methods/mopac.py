@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
+"""MESS.DB mopac method
+
+This module contains the mopac method class and load function.
+"""
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -53,22 +61,20 @@ class Mopac(AbstractMethod):
                                                    self.prog_url))
         return True
     
-    def map(self, inchikey, args):
+    def map(self, inchikey, inchikey_dir):
         start = time.time()
         self.inchikey = inchikey
-        (path_id, method_dir, parent_method_dir) = (args['path_id'],
-                                                    args['method_dir'],
-                                                    args['parent_method_dir'])
-        if parent_method_dir is None:
+        if self.parent_method_dir is None:
             sys.exit(('This method requires a parent path with a valid '
                       'xyz file (i.e., it cannot accept an InChI).'))
-        inchikey_dir = get_inchikey_dir(self.inchikey)
-        out_dir = os.path.realpath(os.path.join(inchikey_dir, method_dir))
+        out_dir = os.path.realpath(os.path.join(inchikey_dir, self.method_dir))
         setup_dir(out_dir)
         mop_file = os.path.join(out_dir, '%s.mop' % self.inchikey)
         out_file = os.path.join(out_dir, '%s.out' % self.inchikey)
-        xyz_in = os.path.abspath(os.path.join(inchikey_dir, parent_method_dir,
+        xyz_in = os.path.abspath(os.path.join(inchikey_dir,
+                                              self.parent_method_dir,
                                               '%s.xyz' % self.inchikey))
+        print(xyz_in)
         if not os.path.isfile(xyz_in):
             sys.exit('xyz file expected but not found: %s.' % xyz_in)
         xyz_out = os.path.abspath(os.path.join(out_dir,
@@ -101,9 +107,9 @@ class Mopac(AbstractMethod):
             self.moo_to_xyz(os.path.abspath(out_file), xyz_out)
             if self.check(out_file, xyz_out):
                 self.log_all.info('%s calculation successful', self.inchikey)
-                yield self.get_timing_query(self.inchikey, path_id, start)
+                yield self.get_timing_query(self.inchikey, self.path_id, start)
                 for query, values in self.import_properties(self.inchikey,
-                                                            path_id,
+                                                            self.path_id,
                                                             out_file):
                     yield query, values
             else:
@@ -111,7 +117,7 @@ class Mopac(AbstractMethod):
         else:
             self.log_console.info('%s calculation skipped', self.inchikey)
             for query, values in self.import_properties(self.inchikey,
-                                                        path_id,
+                                                        self.path_id,
                                                         out_file):
                 yield query, values
     
@@ -375,6 +381,6 @@ class Mopac(AbstractMethod):
                     break
 
 
-def load(db):
-    """Load Mopac(db)."""
-    return Mopac(db)
+def load(db, path):
+    """Load Mopac(db, path)."""
+    return Mopac(db, path)

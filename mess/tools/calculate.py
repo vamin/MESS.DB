@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
+"""MESS.DB calculate module
+
+This module contains the calculate tool class and load function.
+"""
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -5,17 +13,16 @@ import argparse
 import sys
 from socket import gethostname
 
-import pybel
-
 import mess.mapreduce as mapreduce
 from mess._db import MessDB
 from mess._path import MethodPath
 from mess._tool import AbstractTool
-from mess.decorators import decorate, UnicodeDecorator
-from mess.utils import is_inchikey, load_method
+from mess.utils import get_inchikey_dir, is_inchikey, load_method
 
 
 class Calculate(AbstractTool):
+    """This tool runs calculations on molecules in MESS.DB."""
+
     def __init__(self):
         """Set description of tool."""
         self.description = 'Calculate molecular properties with mapreduce'
@@ -43,33 +50,32 @@ class Calculate(AbstractTool):
     
     def execute(self, args):
         """Run calculations."""
-        method = load_method(args.method, MessDB())
+        method = load_method(args.method, MessDB(), MethodPath())
+        method.set_parent_path(args.parent_path)
         if args.map:
+            args.inchikeys.close()
             self.map_client(method, args.hostname)
             return
         elif args.reduce:
+            args.inchikeys.close()
             self.reduce_client(method, args.hostname)
             return
         if args.inchikeys.name == '<stdin>' and args.inchikeys.isatty():
             sys.exit('No input specified.')
         method.setup()
-        path = MethodPath()
-        path.setup_path(method.method_id, args.parent_path)
-        map_args = {'path_id': path.get_path_id(),
-                    'method_dir': path.get_path_directory(),
-                    'parent_method_dir': path.get_parent_path_directory()}
         if args.mapreduce_server:
-            self.mapreduce_server(args.inchikeys, method, map_args)
+            self.mapreduce_server(args.inchikeys, method)
         else:
-            self.mapreduce_local(args.inchikeys, method, map_args)
+            self.mapreduce_local(args.inchikeys, method)
 
-    def mapreduce_local(self, inchikeys, method, map_args):
+    def mapreduce_local(self, inchikeys, method):
+        """Run a method's map and reduce functions locally."""
         keys = {}
         for row in inchikeys:
             inchikey = row.split()[0].strip()
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
-            for key, values in method.map(inchikey, map_args):
+            for key, values in method.map(inchikey, get_inchikey_dir(inchikey)):
                 try:
                     keys[key].append(values)
                 except KeyError:
@@ -77,35 +83,38 @@ class Calculate(AbstractTool):
         for key, values in keys.iteritems():
             method.reduce(key, values)
 
-    def mapreduce_server(self, inchikeys, method, map_args):
+    def mapreduce_server(self, inchikeys, method):
+        """Start a mapreduce server."""
         self.log_console.info('hostname is %s' % gethostname())
         datasource = {}
         for row in inchikeys:
             inchikey = row.split()[0].strip()
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
-            datasource[inchikey] = map_args
+            datasource[inchikey] = get_inchikey_dir(inchikey)
         server = mapreduce.Server()
         server.datasource = datasource
         server.password = method.hash
-        results = server.run(debug=0)
-        self.log_console.info('Done!')
+        server.run()
+        self.log_console.info('all mappers and reducers have finished')
     
     def map_client(self, method, hostname):
-        self.log_console.info('connecting to mapreduce server at %s', hostname)
+        """Start a map client."""
+        self.log_console.info('map client connecting to mapreduce server at %s', hostname)
         client = mapreduce.Client()
         client.password = method.hash
         client.mapfn = method.map
-        client.run(hostname, mapreduce.DEFAULT_PORT, debug=0)
-        self.log_console.info('Done!')
+        client.run(hostname, mapreduce.DEFAULT_PORT)
+        self.log_console.info('map client done')
     
     def reduce_client(self, method, hostname):
-        self.log_console.info('connecting to mapreduce server at %s', hostname)
+        """Start a reduce client."""
+        self.log_console.info('reduce client connecting to mapreduce server at %s', hostname)
         client = mapreduce.Client()
         client.password = method.hash
         client.reducefn = method.reduce
-        client.run(hostname, mapreduce.DEFAULT_PORT, debug=0)
-        self.log_console.info('Done!')
+        client.run(hostname, mapreduce.DEFAULT_PORT)
+        self.log_console.info('reduce client done')
     
     
 def load():

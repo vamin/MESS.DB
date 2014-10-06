@@ -37,18 +37,21 @@ class AbstractMethod(object):
     log_console = Log('console')
     log_all = Log('all')
     parameters = dict()
-    tags = list()
-    status = None
-    is_setup = False
+    _is_setup = False
     _inchikey = None
+    _path_id = None
+    _parent_path_id = None
+    _method_dir = None
+    _parent_method_dir = None
     
-    def __init__(self, db):
+    def __init__(self, db, path):
         """Set up db, check for attributes, dependencies, and setup.
         
         Args:
             db (obj): A MessDB object
         """
         self.db = db
+        self.path = path
         self.method_name = self.get_method_name()
         try:
             self.description
@@ -93,18 +96,29 @@ class AbstractMethod(object):
     
     def reduce(self, query, values):
         """Run queries/values on the db."""
+        total_changes = self.db.total_changes
         if query or values[0]:
             self.db.executemany(query, values)
-            self.log_all.info('%i properties added to MESS.DB', len(values))
+            recent_changes = self.db.total_changes - total_changes
+            total_changes = self.db.total_changes
+            self.log_all.info('%i properties added to MESS.DB', recent_changes)
+    
+    def set_parent_path(self, parent_path):
+        self._parent_path_id = parent_path
+    
+    def _setup_path(self):
+        self.path.setup_path(self.method_id, self._parent_path_id)
+        self._path_id = self.path.get_path_id()
+        self._method_dir = self.path.get_path_directory()
+        self._parent_method_dir = self.path.get_parent_path_directory()
     
     def setup(self):
         """Set up method."""
-        if not self.is_setup:
+        if not self._is_setup:
             self.insert_program()
             self.insert_method()
             self.insert_parameters()
-            self.insert_tags()
-            self.is_setup = True
+            self._is_setup = True
     
     def insert_method(self):
         """Set insert program to db, set up hash, and insert method to db."""
@@ -140,14 +154,6 @@ class AbstractMethod(object):
                      'WHERE parameter.name=?')
             self.db.execute(query, (self.method_id, setting, name))
     
-    def insert_tags(self):
-        """Add tags to method_tag table in mess.db."""
-        query = ('INSERT OR IGNORE INTO method_tag (method_id, parameter_id) '
-                 'SELECT ?, parameter.parameter_id FROM parameter '
-                 'WHERE parameter.name= ?')
-        for tag in self.tags:
-            self.db.execute(query, (self.method_id, tag))
-    
     def get_insert_property_query(self, inchikey, method_path_id, name,
                                   description, format_, value, units):
         """Adds property value to mess.db.
@@ -162,7 +168,7 @@ class AbstractMethod(object):
             value: The calculated property.
             units: Units for the property value.
         """
-        query = ('INSERT INTO molecule_method_property_denorm '
+        query = ('INSERT OR IGNORE INTO molecule_method_property_denorm '
                  'VALUES (?, ?, ?, ?, ?, ?, ?);')
         return (query, (inchikey, method_path_id, name, description,
                         format_, units, value))
@@ -190,7 +196,25 @@ class AbstractMethod(object):
     def hash(self):
         """Get hash."""
         return self.__hash__()
-        
+    
+    @property
+    def path_id(self):
+        if not self.path.get_method_id() == self.method_id:
+            self._setup_path()
+        return self._path_id
+    
+    @property
+    def method_dir(self):
+        if not self.path.get_method_id() == self.method_id:
+            self._setup_path()
+        return self._method_dir
+    
+    @property
+    def parent_method_dir(self):
+        if not self.path.get_method_id() == self.method_id:
+            self._setup_path()
+        return self._parent_method_dir
+    
     @property
     def inchikey(self):
         """Get inchikey."""

@@ -24,7 +24,7 @@ from mess.decorators import decorate, UnicodeDecorator
 from mess.utils import get_inchikey_dir, is_inchikey, setup_dir, touch
 
 
-class ImportTool(AbstractTool):
+class Import(AbstractTool):
     """This tool imports molecules into MESS.DB from a source directory."""
     
     def __init__(self):
@@ -39,13 +39,12 @@ class ImportTool(AbstractTool):
     
     def execute(self, args):
         """Run import method for every molecule in source."""
-        imp = ImportMethod(MessDB())
+        imp = ImportHelper(MessDB(), MethodPath())
         imp.setup()
         source = Source(MessDB())
         source.setup(args.source)
-        path = MethodPath()
-        path.setup_path(imp.method_id)
-        path_id = path.get_path_id()
+        self.log_console.info('reading molecules')
+        molecules = {}
         pybel.ob.obErrorLog.StopLogging()
         for file_ in source.files():
             for mol in pybel.readfile(file_.split('.')[-1],
@@ -56,7 +55,6 @@ class ImportTool(AbstractTool):
                 pybel.ob.obErrorLog.StopLogging()
                 cansmi = mol.write('can').split()[0]
                 for fragment in cansmi.split('.'):
-                    method_args = {}
                     if cansmi.count('.') > 0:
                         frag = pybel.readstring('can', fragment)
                         decorate(frag, UnicodeDecorator)
@@ -69,11 +67,10 @@ class ImportTool(AbstractTool):
                                 "'%s' is not an importable molecule.",
                                 fragment)
                             continue
-                        method_args['identifier'] = ('fragment of: %s' %
-                                                     unicode(mol.title,
-                                                             'utf-8',
-                                                             'replace'))
-                        method_args['mol'] = frag
+                        frag.title = ('fragment of: %s' % unicode(mol.title,
+                                                                  'utf-8',
+                                                                  'replace'))
+                        molecules[inchikey] = (frag, source)
                     else:
                         inchikey = mol.write('inchikey').rstrip()
                         if not is_inchikey(inchikey):
@@ -81,13 +78,21 @@ class ImportTool(AbstractTool):
                                 "'%s' is not an importable molecule.",
                                 fragment)
                             continue
-                        method_args['mol'] = mol
-                    method_args['source'] = source
-                    method_args['path_id'] = path_id
-                    imp.execute(inchikey, method_args)
+                        molecules[inchikey] = (mol, source)
+        self.log_console.info('setting up molecule dirs')
+        queries = {}
+        for inchikey, (mol, source) in molecules.iteritems():
+            for query, values in imp.map(mol, source):
+                try:
+                    queries[query].append(values)
+                except KeyError:
+                    queries[query] = [values]
+        self.log_console.info('loading simple properties')
+        for query, values in queries.iteritems():
+            imp.reduce(query, values)
 
 
-class ImportMethod(AbstractMethod):
+class ImportHelper(AbstractMethod):
     """This class adds an individual molecule to MESS.DB."""
     
     # method info
@@ -99,28 +104,18 @@ class ImportMethod(AbstractMethod):
     prog_url = 'http://openbabel.org/wiki/Main_Page'
     # parameters
     parameters = {}
-    tags = []
     
     def check_dependencies(self):
         """Return True, no external dependencies to check."""
         return True
-    
-    def map(self):
-        pass
-    
-    def execute(self, inchikey, args):
+
+    def map(self, mol, source):
         """Import molecule into MESS.DB."""
         # setup local variables
-        self.inchikey = inchikey
-        mol = args['mol']
-        source = args['source']
-        path_id = args['path_id']
+        self.inchikey = mol.write('inchikey').rstrip()
         inchikey_dir = get_inchikey_dir(self.inchikey)
         inchikey_basename = os.path.join(inchikey_dir, self.inchikey)
-        try:
-            identifier = args['identifier']
-        except KeyError:
-            identifier = unicode(mol.title, 'utf-8', 'replace')
+        identifier = unicode(mol.title, 'utf-8', 'replace')
         # setup directory
         setup_dir(inchikey_dir)
         if not self.check():
@@ -137,14 +132,13 @@ class ImportMethod(AbstractMethod):
                                '%s.sources.tsv' % inchikey_basename))
             self.log_all.info('%s molecule directory initialized',
                               self.inchikey)
-        self.insert_molecule(self.inchikey, mol)
-        self.insert_basic_properties(self.inchikey, path_id, mol)
-        source.update_molecule_source(self.inchikey, identifier)
         source.update_source_tsv(self.inchikey, identifier)
-        if self.check():
-            self.log_all.info('import of %s successful', self.inchikey)
-        else:
-            self.log_console.warning('import failed for %s', self.inchikey)
+        yield source.update_molecule_source_query(self.inchikey, identifier)
+        yield self.insert_molecule_query(self.inchikey, mol)
+        for query, values in self.insert_property_queries(self.inchikey,
+                                                          self.path_id,
+                                                          mol):
+            yield query, values
         
     def check(self):
         """Check that a valid molecule folder was created and that there is
@@ -185,29 +179,23 @@ class ImportMethod(AbstractMethod):
         except IOError:
             return False
     
-    def insert_molecule(self, inchikey, mol):
+    def insert_molecule_query(self, inchikey, mol):
         """Load basic molecule attributes into mess.db.
         
         Args:
             inchikey: The molecule InChIKey.
             mol: A pybel mol object for the molecule.
         """
-        query = 'SELECT inchi FROM molecule WHERE inchikey=?'
-        inchikey_check_row = self.db.execute(query, (inchikey,)).fetchone()
         inchi = mol.write('inchi').rstrip().split('=')[1]
-        if (inchikey_check_row is not None and
-                inchikey_check_row.inchi == inchi):
-            self.status = 'updated'
-        else:
-            smiles = mol.write('can').rstrip()  # canonical smiles
-            formula = mol.formula
-            # insert molecule identifiers
-            query = ('INSERT OR IGNORE INTO molecule '
-                     '(inchikey, inchi, smiles, formula) '
-                     'VALUES (?, ?, ?, ?)')
-            self.reduce(query, [(inchikey, inchi, smiles, formula)])
+        smiles = mol.write('can').rstrip()  # canonical smiles
+        formula = mol.formula
+        # insert molecule identifiers
+        query = ('INSERT OR IGNORE INTO molecule '
+                 '(inchikey, inchi, smiles, formula) '
+                 'VALUES (?, ?, ?, ?)')
+        return (query, (inchikey, inchi, smiles, formula))     
     
-    def insert_basic_properties(self, inchikey, method_path_id, mol):
+    def insert_property_queries(self, inchikey, method_path_id, mol):
         """Load properties available in Open Babel into mess.db.
         
         Args:
@@ -217,38 +205,32 @@ class ImportMethod(AbstractMethod):
         
         """
         # insert Open Babel molecule attributes
-        query, values = self.get_insert_property_query(
+        yield self.get_insert_property_query(
             inchikey, method_path_id,
             'charge', 'Open Babel molecule attribute',
             type(mol.charge).__name__, mol.charge, '')
-        all_values = [values]
-        query, values = self.get_insert_property_query(
+        yield self.get_insert_property_query(
             inchikey, method_path_id,
             'exactmass', 'Open Babel molecule attribute',
             type(mol.exactmass).__name__, mol.exactmass, 'g/mol')
-        all_values.append(values)
-        query, values = self.get_insert_property_query(
+        yield self.get_insert_property_query(
             inchikey, method_path_id,
             'molwt', 'Open Babel descriptor value', type(mol.molwt).__name__,
             mol.molwt, 'g/mol')
-        all_values.append(values)
-        query, values = self.get_insert_property_query(
+        yield self.get_insert_property_query(
             inchikey, method_path_id,
             'spin', 'Open Babel descriptor value', type(mol.spin).__name__,
             mol.spin, '')
-        all_values.append(values)
         # insert Open Babel descriptors
         for property_name, property_value in mol.calcdesc().iteritems():
             if math.isnan(property_value):
                 continue
-            query, values = self.get_insert_property_query(
+            yield self.get_insert_property_query(
                 inchikey, method_path_id,
                 property_name, 'Open Babel descriptor value',
                 type(property_value).__name__, property_value, '')
-            all_values.append(values)
-        self.reduce(query, all_values)
 
 
 def load():
     """Load Import()."""
-    return ImportTool()
+    return Import()

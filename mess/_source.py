@@ -16,6 +16,7 @@ import os
 import re
 import sys
 
+from mess.log import Log
 from mess.utils import get_inchikey_dir
 
 
@@ -43,6 +44,7 @@ class Source(object):
             db (obj): A MessDB object
         """
         self.db = db
+        self.log = Log('all')
     
     def setup(self, source):
         """Setup source in mess.db.
@@ -72,6 +74,7 @@ class Source(object):
         # insert/update source in the database
         self.db.executescript(codecs.open(source_sql,
                                           encoding='utf-8').read())
+        # TODO if source is new: self.log.info('%s added to sources')
         # get source id
         query = ('SELECT source_id, name, dirname, '
                  'url, url_template, last_update '
@@ -96,7 +99,7 @@ class Source(object):
                     or file_.split('.')[-1] == 'bak'
                     or file_[-1] == '~')
     
-    def update_molecule_source(self, inchikey, identifier):
+    def update_molecule_source_query(self, inchikey, identifier):
         """Update the source in mess.db.
         
         Args:
@@ -106,7 +109,7 @@ class Source(object):
         query = ('INSERT OR IGNORE INTO molecule_source '
                  '(inchikey, source_id, identifier) '
                  'VALUES (?, ?, ?)')
-        self.db.execute(query, (inchikey, self.id, identifier))
+        return (query, (inchikey, self.id, identifier))
     
     def update_source_tsv(self, inchikey, identifier):
         """Update the sources.tsv file.
@@ -146,3 +149,5 @@ class Source(object):
                     sid_url = source_identifier_url.encode('ascii', 'replace')
                     sources_out.writerow([name, dirname, identifier,
                                           sid_url])
+                    self.log.info('%s added to %s sources', identifier,
+                                                            inchikey)

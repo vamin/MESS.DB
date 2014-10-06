@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
+"""MESS.DB balloon method
+
+This module contains the balloon method class and load function.
+"""
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -14,7 +22,7 @@ import pybel
 
 from _method import AbstractMethod
 from decorators import decorate, UnicodeDecorator
-from utils import get_inchikey_dir, setup_dir
+from utils import setup_dir
 
 
 class Balloon(AbstractMethod):
@@ -53,15 +61,11 @@ class Balloon(AbstractMethod):
                       'variable to the path to MMFF94.mff.'))
         return True
     
-    def map(self, inchikey, args):
+    def map(self, inchikey, inchikey_dir):
         """Generate 3D structures with Balloon."""
         self.inchikey = inchikey
         start = time.time()
-        (path_id, method_dir, parent_method_dir) = (args['path_id'],
-                                                    args['method_dir'],
-                                                    args['parent_method_dir'])
-        inchikey_dir = get_inchikey_dir(self.inchikey)
-        out_dir = os.path.realpath(os.path.join(inchikey_dir, method_dir))
+        out_dir = os.path.realpath(os.path.join(inchikey_dir, self.method_dir))
         setup_dir(out_dir)
         sdf_out = os.path.realpath(os.path.join(out_dir,
                                                 '%s.sdf' % self.inchikey))
@@ -105,7 +109,7 @@ class Balloon(AbstractMethod):
             else:
                 self.log_all.warning('%s coordinate generation failed',
                                          self.inchikey)
-            yield self.get_timing_query(inchikey, path_id, start)
+            yield self.get_timing_query(inchikey, self.path_id, start)
         else:
             self.log_console.info('%s skipped', self.inchikey)
     
@@ -133,6 +137,6 @@ class Balloon(AbstractMethod):
             return False
 
 
-def load(db):
-    """Load Balloon(db)."""
-    return Balloon(db)
+def load(db, path):
+    """Load Balloon(db, path)."""
+    return Balloon(db, path)
