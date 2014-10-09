@@ -8,8 +8,8 @@ import sys
 import unittest
 
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '../..'))
-from mess._path import Node, DirectedGraph, MethodPath
-from mess._db import MessDB
+from mess.path import Node, DirectedGraph, MethodPath
+from mess.db import MessDB
 from mess.tests.helpers import suppress_stderr
 
 
@@ -126,6 +126,16 @@ class TestMethodPath(unittest.TestCase):
         self.assertEquals(self.path._path, [1])
         self.assertEquals(self.path.get_length(), 0)
         self.assert_path_consistency()
+        # check that new path isn't added for same method
+        new_path = MethodPath()
+        new_path._db = self.path._db
+        new_path._graph = DirectedGraph()
+        new_path._load_graph()
+        new_path.setup_path(1)
+        self.assertEquals(new_path._graph._node_count, 1)
+        self.assertEquals(new_path._path, [1])
+        self.assertEquals(new_path.get_length(), 0)
+
         
     def test_extend_path(self):
         self.path.setup_path(42)
