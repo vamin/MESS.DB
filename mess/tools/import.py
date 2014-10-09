@@ -38,7 +38,7 @@ class Import(AbstractTool):
     
     def execute(self, args):
         """Run import method for every molecule in source."""
-        imp = ImportHelper()
+        imp = Importer()
         imp.setup()
         source = Source(MessDB())
         source.setup(args.source)
@@ -91,11 +91,11 @@ class Import(AbstractTool):
             imp.reduce(query, values)
 
 
-class ImportHelper(AbstractMethod):
+class Importer(AbstractMethod):
     """This class adds an individual molecule to MESS.DB."""
     
     # method info
-    description = 'Initial import'
+    description = 'import'
     geop = 0
     # program info
     prog_name = 'Open Babel'
@@ -192,7 +192,7 @@ class ImportHelper(AbstractMethod):
         query = ('INSERT OR IGNORE INTO molecule '
                  '(inchikey, inchi, smiles, formula) '
                  'VALUES (?, ?, ?, ?)')
-        return (query, (inchikey, inchi, smiles, formula))     
+        return (query, (inchikey, inchi, smiles, formula))
     
     def insert_property_queries(self, inchikey, method_path_id, mol):
         """Load properties available in Open Babel into mess.db.
