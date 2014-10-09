@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import sys
 
 from mess.db import MessDB
+from mess.log import Log
 
 
 class Node(object):
@@ -213,6 +214,7 @@ class MethodPath(object):
         self._path = []
         self._db = MessDB()
         self._graph = DirectedGraph()
+        self._log = Log('all')
         self._load_graph()
     
     def _load_graph(self):
@@ -224,6 +226,126 @@ class MethodPath(object):
                                  row.parent_method_id,
                                  row.child_method_id)
 
+    def _insert_edge(self, parent_id, child_id):
+        """Insert edge between vertecies (methods) in mess.db. Returns edge id.
+        """
+        if parent_id is None:
+            parent_id = child_id
+        total_changes = self._db.total_changes
+        insert_query = ('INSERT OR IGNORE INTO method_edge '
+                        '(parent_method_id, child_method_id) '
+                        'SELECT parent_method_id, ? FROM method_edge '
+                        'WHERE child_method_id = ? UNION ALL SELECT ?, ?')
+        self._db.execute(insert_query,
+                         (child_id, parent_id, child_id, child_id))
+        select_query = ('SELECT method_edge_id FROM method_edge '
+                        'WHERE parent_method_id = ? AND child_method_id = ?')
+        edge_id = self._db.execute(select_query,
+                                   (parent_id, child_id)).fetchone()[0]
+        self._load_graph()
+        if self._db.total_changes - total_changes > 0:
+            self._log.info('edge added to method calculation graph')
+        return edge_id
+    
+    def _get_path_id_query(self, path):
+        """Return a query that will return a path id.
+
+        Args:
+            path (dict): A path dictionary, like self._path
+        """
+        distance_query = ('SELECT method_path_id FROM method_path_edge '
+                          'GROUP BY method_path_id HAVING sum(distance) = ?')
+        edge_query = ('SELECT method_path_id FROM method_path_edge '
+                      'WHERE method_edge_id = ?')
+        return (' INTERSECT '.join([distance_query]
+                                   + [edge_query]
+                                   * len(path)),
+                (sum(range(len(path))), ) + tuple(path))
+    
+    def _get_directory(self, parent_id, method_id, path_id):
+        """Return a descriptive directory name, or None if none exists.
+
+        Args:
+            parent_id: Method id for parent method
+            method_id: Method id for endpoint of path
+            path_id: Path id
+        """
+        method_query = 'SELECT name, hash FROM method WHERE method_id = ?'
+        method_result = self._db.execute(method_query,
+                                         (method_id, )).fetchone()
+        parent_method_result = self._db.execute(method_query,
+                                                (parent_id, )).fetchone()
+        if method_result == parent_method_result:
+            return None
+        try:
+            return '%s-%s_FROM_%s-%s_PATH_%s' % (method_result.name,
+                                                 method_result.hash[:7],
+                                                 parent_method_result.name,
+                                                 parent_method_result.hash[:7],
+                                                 path_id)
+        except AttributeError:
+            return None
+    
+    def get_length(self):
+        """Returns the length of the path."""
+        return len(self._path) - 1
+    
+    def get_method_id(self):
+        """Returns the proximal method id, or None if the path is empty."""
+        try:
+            child_id = self._graph.get_edge_node_ids(self._path[-1])[1]
+            return child_id
+        except (IndexError, TypeError):
+            return None
+    
+    def get_parent_method_id(self):
+        """Returns the method id of the penultimate method id, or None if the
+        path is less than two methods long."""
+        try:
+            parent_id = self._graph.get_edge_node_ids(self._path[-1])[0]
+            return parent_id
+        except (IndexError, TypeError):
+            return None
+    
+    def get_superparent_method_id(self):
+        """Returns the method id of the grandparent method to the end method of
+        the current path, or None if the path is less than three methods long.
+        """
+        try:
+            superparent_id = self._graph.get_edge_node_ids(self._path[-2])[0]
+            return superparent_id
+        except (IndexError, TypeError):
+            return None
+    
+    def get_path_id(self):
+        """Return the current path_id, or None if the path is empty."""
+        query, values = self._get_path_id_query(self._path)
+        try:
+            return self._db.execute(query, values).fetchone()[0]
+        except TypeError:
+            return None
+    
+    def get_parent_path_id(self):
+        """Return the path id for the path that does not contain the last
+        method of the current path."""
+        query, values = self._get_path_id_query(self._path[:-1])
+        try:
+            return self._db.execute(query, values).fetchone()[0]
+        except TypeError:
+            return None
+    
+    def get_path_directory(self):
+        """Return a directory name for the current path."""
+        return self._get_directory(self.get_parent_method_id(),
+                                   self.get_method_id(),
+                                   self._path_id)
+    
+    def get_parent_path_directory(self):
+        """Return a directory name for the parent path."""
+        return self._get_directory(self.get_superparent_method_id(),
+                                   self.get_parent_method_id(),
+                                   self.get_parent_path_id())
+    
     def set_path(self, path_id):
         """Load path from method_path/method_path_edge DB tables.
 
@@ -276,7 +398,12 @@ class MethodPath(object):
             method_id: A unique method identifier
         """
         edge_id = self._insert_edge(self.get_method_id(), method_id)
-        self._path.append(edge_id)
+        if len(self._path) == 0 or edge_id != self._path[-1]:
+            self._path.append(edge_id)
+        elif (len(self._path) > 1
+              and self.get_method_id() == method_id
+              and edge_id == self._path[-1]):
+            self._path.append(edge_id)
         parent_path_id = self._path_id
         self._path_id = self.get_path_id()
         if self._path_id is None:
@@ -303,120 +430,4 @@ class MethodPath(object):
                          self.get_method_id(),
                          self._path_id, parent_path_id))
             self._db.commit()
-    
-    def _insert_edge(self, parent_id, child_id):
-        """Insert edge between vertecies (methods) in mess.db. Returns edge id.
-        """
-        if parent_id is None:
-            parent_id = child_id
-        insert_query = ('INSERT OR IGNORE INTO method_edge '
-                        '(parent_method_id, child_method_id) '
-                        'SELECT parent_method_id, ? FROM method_edge '
-                        'WHERE child_method_id = ? UNION ALL SELECT ?, ?')
-        self._db.execute(insert_query,
-                         (child_id, parent_id, child_id, child_id))
-        select_query = ('SELECT method_edge_id FROM method_edge '
-                        'WHERE parent_method_id = ? AND child_method_id = ?')
-        edge_id = self._db.execute(select_query,
-                                   (parent_id, child_id)).fetchone()[0]
-        self._load_graph()
-        return edge_id
-    
-    def get_length(self):
-        """Returns the length of the path."""
-        return len(self._path) - 1
-    
-    def get_method_id(self):
-        """Returns the proximal method id, or None if the path is empty."""
-        try:
-            child_id = self._graph.get_edge_node_ids(self._path[-1])[1]
-            return child_id
-        except (IndexError, TypeError):
-            return None
-    
-    def get_parent_method_id(self):
-        """Returns the method id of the penultimate method id, or None if the
-        path is less than two methods long."""
-        try:
-            parent_id = self._graph.get_edge_node_ids(self._path[-1])[0]
-            return parent_id
-        except (IndexError, TypeError):
-            return None
-    
-    def get_superparent_method_id(self):
-        """Returns the method id of the grandparent method to the end method of
-        the current path, or None if the path is less than three methods long.
-        """
-        try:
-            superparent_id = self._graph.get_edge_node_ids(self._path[-2])[0]
-            return superparent_id
-        except (IndexError, TypeError):
-            return None
-    
-    def get_path_id(self):
-        """Return the current path_id, or None if the path is empty."""
-        query, values = self._get_path_id_query(self._path)
-        try:
-            return self._db.execute(query, values).fetchone()[0]
-        except TypeError:
-            return None
-    
-    def get_parent_path_id(self):
-        """Return the path id for the path that does not contain the last
-        method of the current path."""
-        query, values = self._get_path_id_query(self._path[:-1])
-        try:
-            return self._db.execute(query, values).fetchone()[0]
-        except TypeError:
-            return None
-     
-    def _get_path_id_query(self, path):
-        """Return a query that will return a path id.
-
-        Args:
-            path (dict): A path dictionary, like self._path
-        """
-        distance_query = ('SELECT method_path_id FROM method_path_edge '
-                          'GROUP BY method_path_id HAVING sum(distance) = ?')
-        edge_query = ('SELECT method_path_id FROM method_path_edge '
-                      'WHERE method_edge_id = ?')
-        return (' INTERSECT '.join([distance_query]
-                                   + [edge_query]
-                                   * len(path)),
-                (sum(range(len(path))), ) + tuple(path))
-    
-    def get_path_directory(self):
-        """Return a directory name for the current path."""
-        return self._get_directory(self.get_parent_method_id(),
-                                   self.get_method_id(),
-                                   self._path_id)
-    
-    def get_parent_path_directory(self):
-        """Return a directory name for the parent path."""
-        return self._get_directory(self.get_superparent_method_id(),
-                                   self.get_parent_method_id(),
-                                   self.get_parent_path_id())
-    
-    def _get_directory(self, parent_id, method_id, path_id):
-        """Return a descriptive directory name, or None if none exists.
-
-        Args:
-            parent_id: Method id for parent method
-            method_id: Method id for endpoint of path
-            path_id: Path id
-        """
-        method_query = 'SELECT name, hash FROM method WHERE method_id = ?'
-        method_result = self._db.execute(method_query,
-                                         (method_id, )).fetchone()
-        parent_method_result = self._db.execute(method_query,
-                                                (parent_id, )).fetchone()
-        if method_result == parent_method_result:
-            return None
-        try:
-            return '%s-%s_FROM_%s-%s_PATH_%s' % (method_result.name,
-                                                 method_result.hash[:7],
-                                                 parent_method_result.name,
-                                                 parent_method_result.hash[:7],
-                                                 path_id)
-        except AttributeError:
-            return None
+            self._log.info('method path extended by one in calculation graph')
