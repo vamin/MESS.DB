@@ -1,0 +1,9 @@
+#!/bin/sh
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
+module load python/2.7.7
+module load sqlite
+module load openbabel
+module load balloon
+module load mopac
+

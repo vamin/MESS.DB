@@ -1,0 +1,16 @@
+#!/bin/sh
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
+
+# To keep this file scheduler agnostic, refer to:
+# http://wiki.ibest.uidaho.edu/index.php/Tutorials:_SGE_PBS_Converting
+
+# Active comments for PBS
+#PBS -N '__NAME__'
+#PBS -V
+#PBS -j oe
+
+# Active comments for SGE
+#$ -N '__NAME__'
+#$ -V
+#$ -j yes
+
