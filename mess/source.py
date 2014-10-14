@@ -16,6 +16,7 @@ import os
 import re
 import sys
 
+from mess.db import MessDB
 from mess.log import Log
 from mess.utils import get_inchikey_dir
 
@@ -26,8 +27,8 @@ class Source(object):
     
     Attributes:
         db (obj): A MessDB object
-        cur (obj): db.cursor()
-        source_dir (str): The user-supplied source directory
+        log (obj): A Log('all') object
+        source_dir (str): A path to the source directory
         id (int): The source_id in the mess.db source table
         name (str): A name for the source
         dirname (str): The name of the source subdirectory in the 'sources'
@@ -37,45 +38,67 @@ class Source(object):
                             page for a particular molecule in a source catalog
         last_update (str): Date when source was last downloaded
     """
-    def __init__(self, db):
+    def __init__(self):
         """Initialize db cursor.
         
         Args:
             db (obj): A MessDB object
         """
-        self.db = db
+        self.db = MessDB()
         self.log = Log('all')
+        self.source_dir = None
+        self.id = None
+        self.name = None
+        self.dirname = None
+        self.url = None
+        self.url_template = None
+        self.last_update = None
+    
+    @classmethod
+    def get_source_dir(cls, source):
+        """Returns source directory from user-supplied source, which may be a
+        directory or may be the name of a source in the source directory."""
+        if not os.path.isdir(source):
+            source_dir = os.path.join(os.path.dirname(__file__), '../',
+                                      'sources/', source)
+            if not os.path.isdir(source_dir):
+                sys.exit('%s is not a valid source or source directory.' %
+                         source)
+        else:
+            source_dir = source
+        source_path_parent = os.path.abspath(os.path.join(source_dir, '..'))
+        if not source_path_parent.split('/')[-1] == 'sources':
+            sys.exit("All sources must reside in the 'sources' directory.")
+        return os.path.abspath(source_dir)
+    
+    def files(self):
+        """Returns a list of files in the source directory, excluding files
+        that are definitely not molecule source files."""
+        return [f for f in os.listdir(self.source_dir)
+                if not (f.split('.')[-1] == 'sql'
+                        or f.split('.')[-1] == 'txt'
+                        or f.split('.')[-1] == 'bak'
+                        or f[-1] == '~')]
     
     def setup(self, source):
         """Setup source in mess.db.
         
         Args:
-            source_path: A path to a directory containing source molecules.
+            source: A path to a source directory or a source basename.
         """
-        if not os.path.isdir(source):
-            self.source_dir = os.path.join(os.path.dirname(__file__), '../',
-                                           'sources/', source)
-            if not os.path.isdir(self.source_dir):
-                sys.exit('%s is not a valid source or source directory.' %
-                         source)
-        else:
-            self.source_dir = source
-        source_path_parent = os.path.abspath(os.path.join(self.source_dir,
-                                                          '..'))
-        if not source_path_parent.split('/')[-1] == 'sources':
-            sys.exit("All sources must reside in the 'sources' directory.")
-        source_basename = self.source_dir.strip('/').split('/')[-1]
-        source_basename = os.path.basename(source_basename)
+        self.source_dir = self.get_source_dir(source)
+        source_basename = os.path.basename(self.source_dir.split('/')[-1])
         source_sql = os.path.join(os.path.splitext(self.source_dir)[0],
                                   '%s.sql' % source_basename)
         if not os.path.isfile(source_sql):
             sys.exit(('All sources must have a corresponding sql file '
                       'in their directory.'))
         # insert/update source in the database
+        total_changes = self.db.total_changes
         self.db.executescript(codecs.open(source_sql,
                                           encoding='utf-8').read())
-        # TODO if source is new: self.log.info('%s added to sources')
-        # get source id
+        if self.db.total_changes - total_changes > 0:
+            self.log.info('%s added to sources in database', source_basename)
         query = ('SELECT source_id, name, dirname, '
                  'url, url_template, last_update '
                  'FROM source WHERE dirname=?')
@@ -87,17 +110,6 @@ class Source(object):
         self.url = source_row.url
         self.url_template = source_row.url_template
         self.last_update = source_row.last_update
-    
-    def files(self):
-        """Returns a list of files in the source directory."""
-        return filter(self.is_source_file, os.listdir(self.source_dir))
-    
-    def is_source_file(self, file_):
-        """Check if file is a valid .sources.tsv file. Returns boolean."""
-        return not (file_.split('.')[-1] == 'sql'
-                    or file_.split('.')[-1] == 'txt'
-                    or file_.split('.')[-1] == 'bak'
-                    or file_[-1] == '~')
     
     def update_molecule_source_query(self, inchikey, identifier):
         """Update the source in mess.db.
@@ -137,17 +149,16 @@ class Source(object):
                     except IndexError:
                         pass
                 if not source_present:
-                    if self.url_template and 'from:' not in identifier:
+                    if self.url_template:
                         url_split = re.split(r"\[|\]", self.url_template)
                         (match, replace) = re.split(r",\s?", url_split[1])
                         url_identifier = re.sub(match, replace, identifier)
-                        source_identifier_url = url_split[0] + url_identifier
+                        source_url = url_split[0] + url_identifier
                         if 2 < len(url_split):
-                            source_identifier_url += url_split[2]
+                            source_url += url_split[2]
                     else:
-                        source_identifier_url = ''
-                    sid_url = source_identifier_url.encode('ascii', 'replace')
+                        source_url = ''
                     sources_out.writerow([name, dirname, identifier,
-                                          sid_url])
-                    self.log.info('%s added to %s sources', identifier,
-                                                            inchikey)
+                                          source_url.encode('ascii',
+                                                            'replace')])
+                    self.log.info('%s added to %s sources', name, inchikey)
