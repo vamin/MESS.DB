@@ -1,62 +1,55 @@
 #!/bin/bash
+# Copyright 2013-2014 Victor Amin, http://vamin.net/
 
 function usage {
     echo "
-    This script will submit a MESS.DB job to a PBS queue.
+    This script will submit a 'mess calculate' job to a PBS or SGE queue.
     
     TYPICAL USAGE:
-    $0 -t <tool> [tool-specific options]
+    mess select | $0 <method> [options]
     
-    GLOBAL OPTIONS:
-        -h Show this message
-        -t <tool> import, backup, or calculate [required]
-
-    IMPORT OPTIONS:
-        -s <source> Base name of source (i.e., not a path) [required]
-
-    BACKUP OPTIONS:
-        -r <backup> Path of a backup to restore from
-        -n <threads> # of threads (limited to single node) [default=1]
-
-    CALCULATE OPTIONS:
-        -m <method> Name of method to calculate [required]
-        -p <path_id> Path id of parent path [default=0]
-        -q <query> Query file
-        -n <threads> # of threads [default=1]
+    OPTIONS:
+        <method> Name of method to calculate [required]
+        -p <path> Parent path
+        
+        -N <threads> # of threads [default=3; 1 server, 1 mapper, 1 reducer]
+        -H Show this message
         "
 }
 
-# Set the defaults
+# Set and check the defaults
+if [ -t 0 ]; then
+    echo "You must provide a list of INCHIKEYs to apply the method to."
+    usage
+    exit 1
+else
+    INPUT=$(cat)
+fi
+
+METHOD=$1
 PATH_ID=0
-THREADS=1
+THREADS=3
+
+if [[ $METHOD == '' ]] || [[ $METHOD == -* ]]; then
+    echo "You must specify a method first."
+    usage
+    exit 1
+else
+    shift
+fi
 
 # Override defaults with options from command line if they are set
-while getopts "t:s:r:m:p:q:n:h" OPT; do
+while getopts "p:N:H" OPT; do
     case $OPT in
-        h)
+        H)
             usage
             exit 0
             ;;
-        t)
-            TOOL=$OPTARG
-            ;;
-        s)
-            SOURCE=$OPTARG
-            ;;
-        r)
-            RESTORE='-r '$OPTARG
-            ;;
-        m)
-            METHOD=$OPTARG
+        N)
+            THREADS=$OPTARG
             ;;
         p)
             PATH_ID=$OPTARG
-            ;;
-        q)
-            QUERY='-q '`readlink -f $OPTARG`
-            ;;
-        n)
-            THREADS=$OPTARG
             ;;
         \?) # if illegal options
             usage
@@ -69,28 +62,11 @@ while getopts "t:s:r:m:p:q:n:h" OPT; do
     esac
 done
 
-# Check arguments
-if [[ $TOOL != 'import' ]] && [[ $TOOL != 'backup' ]] && \
-   [[ $TOOL != 'calculate' ]]; then
-   echo "Tool must be set to import, backup, or calculate."
-   usage
-   exit 1
-fi
-
-if [[ $TOOL == 'import' ]]; then
-    if [[ -z $SOURCE ]]; then
-        echo "You must specify a source to run import."
-        usage
-        exit 1
-    fi
-fi
-
-if [[ $TOOL == 'calculate' ]]; then
-    if [[ -z $METHOD ]]; then
-        echo "You must specify a method to run calculate."
-        usage
-        exit 1
-    fi
+# Check overridden arguments
+if [[ $THREADS < 3 ]]; then
+    echo "You must ask for at least 3 threads."
+    echo "The first two threads are reserved for the server and the reducer."
+    echo "Additional threads are assigned to mappers."
 fi
 
 # Detect msub/qsub
@@ -104,25 +80,36 @@ else
 fi
 
 # Find the directory that this script resides in
-QUEUEDIR=`dirname $0`
+QUEUEDIR=$(cd $(dirname $0); pwd -P)
 MESSDIR=$QUEUEDIR'/../..'
-LOGS=$MESSDIR'/logs'
-SUB=$MESSDIR/$TOOL.sub
+TEMPDIR=$MESSDIR'/temp/'
+SUB=$TEMPDIR'mess.qsub'
+#LOGS=$MESSDIR'/logs'
 
-for i in $(seq 1 $THREADS); do
-    # Replace template stand-ins with specified variables and pipe to sub
-    sed "s,__PATH_TO_LOGS__,$LOGS,g" $QUEUEDIR/$TOOL.pbs \
-    | sed "s,__SOURCE__,$SOURCE,g" \
-    | sed "s,__RESTORE__,$RESTORE,g" \
-    | sed "s,__METHOD__,$METHOD,g" \
-    | sed "s,__PATH_ID__,$PATH_ID,g" \
-    | sed "s,__QUERY__,$QUERY,g" \
-    | sed "s,__PART__,$i,g" \
-    | sed "s,__THREADS__,$THREADS,g" >$SUB
-    $SUB_CMD $SUB
-    sleep 0.2
-    rm $SUB
-    if [[ $TOOL == 'backup' ]]; then
-        break
-    fi 
+# Create temp directory if it does not exist
+if [ ! -d $TEMPDIR ]
+    then
+        mkdir $TEMPDIR
+fi
+
+echo "Deploying server for '$METHOD' calculation."
+sed "s,__NAME__,MESS.DB-server-$METHOD,g" $QUEUEDIR/qsub/active_comments.qsub >$SUB
+cat $COMMENTS $QUEUEDIR/qsub/dependencies.qsub $QUEUEDIR/qsub/mess-server.qsub >>$SUB
+$SUB_CMD -vMESSDIR=$MESSDIRMETHOD=$METHOD,PARENT=$PATH_ID $SUB
+sleep 2
+
+echo "Deploying reducer for '$METHOD' calculation."
+sed "s,__NAME__,MESS.DB-reducer-$METHOD,g" $QUEUEDIR/qsub/active_comments.qsub >$SUB
+cat $COMMENTS $QUEUEDIR/qsub/dependencies.qsub $QUEUEDIR/qsub/mess-reducer.qsub >>$SUB
+$SUB_CMD -vMESSDIR=$MESSDIR,METHOD=$METHOD,PARENT=$PATH_ID $SUB
+sleep 0.2
+
+echo "Deploying mappers ($(($THREADS-2))) for '$METHOD' calculation."
+sed "s,__NAME__,MESS.DB-mapper-$METHOD,g" $QUEUEDIR/qsub/active_comments.qsub >$SUB
+cat $COMMENTS $QUEUEDIR/qsub/dependencies.qsub $QUEUEDIR/qsub/mess-mapper.qsub >>$SUB
+for i in $(seq 1 $(($THREADS-2))); do
+    $SUB_CMD -vMESSDIR=$MESSDIR,METHOD=$METHOD,PARENT=$PATH_ID $SUB
+    sleep 0.1
 done
+
+#rm
