@@ -271,3 +271,19 @@ class Log(object):
             self._to_console().debug(*args)
         elif self.scope == 'all':
             self._to_all(self.inchikey).debug(*args)
+    
+    def exception(self, *args):
+        """Log a debug message."""
+        self.context = self._context()
+        if self.scope == 'console':
+            self._to_console().exception(*args)
+        elif self.scope == 'all':
+            self._to_all(self.inchikey).exception(*args)
+    
+    def log(self, *args):
+        """Log a debug message."""
+        self.context = self._context()
+        if self.scope == 'console':
+            self._to_console().log(*args)
+        elif self.scope == 'all':
+            self._to_all(self.inchikey).log(*args)
