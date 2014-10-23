@@ -1,0 +1,26 @@
+# S22 set from Jurecka et al. PCCP 8 (2006) 1985
+# ... but with revised S22B values from: 
+#     Marshall et al. J. Chem. Phys. 135 (2011) 194102.
+# all values in kcal/mol
+                        nh3_nh3      -3.133
+                        h2o_h2o      -4.989
+                    h2co2_h2co2     -18.753
+            formamide_formamide     -16.062
+               uracil_uracil_hb     -20.641
+       pyridoxine_aminopyridine     -16.934
+           adenine_thymine_wcc1     -16.660
+                        ch4_ch4      -0.527
+                      c2h4_c2h4      -1.472
+                       c6h6_ch4      -1.448
+                   c6h6_c6h6_pd      -2.654
+              pyrazine_pyrazine      -4.255
+            uracil_uracil_stack      -9.805
+              indole_c6h6_stack      -4.524
+          adenine_thymine_stack     -11.730
+                      c2h4_c2h2      -1.496
+                       c6h6_h2o      -3.275
+                       c6h6_nh3      -2.312
+                       c6h6_hcn      -4.541
+                    c6h6_c6h6_t      -2.717
+                  indole_c6h6_t      -5.627
+                  phenol_phenol      -7.097
