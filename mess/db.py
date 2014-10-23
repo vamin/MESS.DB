@@ -74,7 +74,7 @@ class MessDB(object):
         """Check that mess.db has the right number of tables in it."""
         query = 'SELECT count(*) count FROM sqlite_master WHERE type=?'
         result = self.cursor().execute(query, ('table',)).next()
-        if result.count != 15:
+        if result.count != 14:
             return False
         return True
     
