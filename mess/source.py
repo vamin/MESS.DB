@@ -11,10 +11,13 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import codecs
+import ConfigParser as cp
 import csv
 import os
 import re
 import sys
+
+import pybel
 
 from mess.db import MessDB
 from mess.log import Log
@@ -72,13 +75,10 @@ class Source(object):
         return os.path.abspath(source_dir)
     
     def files(self):
-        """Returns a list of files in the source directory, excluding files
-        that are definitely not molecule source files."""
+        """Returns a list of importable files in the source directory."""
         return [f for f in os.listdir(self.source_dir)
-                if not (f.split('.')[-1] == 'sql'
-                        or f.split('.')[-1] == 'txt'
-                        or f.split('.')[-1] == 'bak'
-                        or f[-1] == '~')]
+                if not (f.startswith('.') or f.startswith('~'))
+                and f.split('.')[-1] in pybel.informats]
     
     def setup(self, source):
         """Setup source in mess.db.
@@ -87,22 +87,35 @@ class Source(object):
             source: A path to a source directory or a source basename.
         """
         self.source_dir = self.get_source_dir(source)
+        # read attributes
         source_basename = os.path.basename(self.source_dir.split('/')[-1])
-        source_sql = os.path.join(os.path.splitext(self.source_dir)[0],
-                                  '%s.sql' % source_basename)
-        if not os.path.isfile(source_sql):
-            sys.exit(('All sources must have a corresponding sql file '
+        source_ini = os.path.join(os.path.splitext(self.source_dir)[0],
+                                  '%s.ini' % source_basename)
+        if not os.path.isfile(source_ini):
+            sys.exit(('All sources must have a corresponding INI file '
                       'in their directory.'))
+        source_attributes = self.parse_ini(source_ini)
         # insert/update source in the database
         total_changes = self.db.total_changes
-        self.db.executescript(codecs.open(source_sql,
-                                          encoding='utf-8').read())
+        insert_query = ('INSERT OR IGNORE INTO source '
+                        '(name, dirname, url, url_template, last_update) '
+                        'VALUES (?, ?, null, null, null)')
+        update_query = ('UPDATE source '
+                        'SET url=?, url_template=?, last_update=? '
+                        'WHERE dirname=?;')
+        self.db.execute(insert_query, (source_attributes['name'],
+                                       source_basename))
+        self.db.execute(update_query, (source_attributes['url'],
+                                       source_attributes['url_template'],
+                                       source_attributes['last_update'],
+                                       source_basename))
         if self.db.total_changes - total_changes > 0:
             self.log.info('%s added to sources in database', source_basename)
-        query = ('SELECT source_id, name, dirname, '
-                 'url, url_template, last_update '
-                 'FROM source WHERE dirname=?')
-        source_row = self.db.execute(query, (source_basename,)).fetchone()
+        select_query = ('SELECT source_id, name, dirname, '
+                        'url, url_template, last_update '
+                        'FROM source WHERE dirname=?')
+        source_row = self.db.execute(select_query,
+                                     (source_basename,)).fetchone()
         # set attributes
         self.id = source_row.source_id
         self.name = source_row.name
@@ -110,6 +123,23 @@ class Source(object):
         self.url = source_row.url
         self.url_template = source_row.url_template
         self.last_update = source_row.last_update
+    
+    def parse_ini(self, ini):
+        """Parse source ini and return attributes."""
+        source_attributes = {
+            'url': None,
+            'url_template': None,
+        }
+        config = cp.ConfigParser(dict_type=CaseInsensitiveDict)
+        config.read(ini)
+        for section in config.sections():
+            for option in config.options(section):
+                source_attributes[option] = config.get(section, option)
+        required_attributes = ('name', 'last_update')
+        if not all(att in source_attributes for att in required_attributes):
+            sys.exit('Source INI missing required attributes: %s.'
+                     % ' and/or '.join(required_attributes))
+        return source_attributes
     
     def update_molecule_source_query(self, inchikey, identifier):
         """Update the source in mess.db.
@@ -162,3 +192,14 @@ class Source(object):
                                           source_url.encode('ascii',
                                                             'replace')])
                     self.log.info('%s added to %s sources', name, inchikey)
+
+
+class CaseInsensitiveDict(dict):
+    """Case insensitive dict."""
+    def __setitem__(self, key, value):
+        """Make all keys lowercase when setting."""
+        super(CaseInsensitiveDict, self).__setitem__(key.lower(), value)
+
+    def __getitem__(self, key):
+        """Request key as lowercase when getting."""
+        return super(CaseInsensitiveDict, self).__getitem__(key.lower())
