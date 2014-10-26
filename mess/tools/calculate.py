@@ -10,6 +10,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import os
 import sys
 from socket import gethostname
 
@@ -95,6 +96,10 @@ class Calculate(AbstractTool):
         server = mapreduce.Server()
         server.datasource = datasource
         server.password = method.hash
+        hostfile = os.path.join(os.path.dirname(__file__),
+                                '../../temp/%s.host' % server.password)
+        with open(hostfile, 'w') as f:
+            f.write(gethostname())
         server.run()
         self.log_console.info('all mappers and reducers have finished')
     
@@ -104,6 +109,11 @@ class Calculate(AbstractTool):
         client = mapreduce.Client()
         client.password = method.hash
         client.mapfn = method.map
+        hostfile = os.path.join(os.path.dirname(__file__),
+                                '../../temp/%s.host' % client.password)
+        if hostname == 'localhost' and os.path.isfile(hostfile):
+            with open(hostfile, 'r') as f:
+                hostname = f.readline()
         client.run(hostname, mapreduce.DEFAULT_PORT)
         self.log_console.info('map client done')
     
@@ -113,6 +123,11 @@ class Calculate(AbstractTool):
         client = mapreduce.Client()
         client.password = method.hash
         client.reducefn = method.reduce
+        hostfile = os.path.join(os.path.dirname(__file__),
+                                '../../temp/%s.host' % client.password)
+        if hostname == 'localhost' and os.path.isfile(hostfile):
+            with open(hostfile, 'r') as f:
+                hostname = f.readline()
         client.run(hostname, mapreduce.DEFAULT_PORT)
         self.log_console.info('reduce client done')
     

@@ -1,4 +1,4 @@
 #!/bin/sh
 # Copyright 2013-2014 Victor Amin, http://vamin.net/
 
-$MESSDIR/bin/mess calculate $METHOD -p $PARENT --map
+__MESSDIR__/bin/mess calculate __METHOD__ -p __PARENT__ --map

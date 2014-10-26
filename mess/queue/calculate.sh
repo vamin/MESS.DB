@@ -22,8 +22,6 @@ if [ -t 0 ]; then
     echo "You must provide a list of INCHIKEYs to apply the method to."
     usage
     exit 1
-else
-    INPUT=$(cat)
 fi
 
 METHOD=$1
@@ -83,8 +81,7 @@ fi
 QUEUEDIR=$(cd $(dirname $0); pwd -P)
 MESSDIR=$QUEUEDIR'/../..'
 TEMPDIR=$MESSDIR'/temp/'
-SUB=$TEMPDIR'mess.qsub'
-#LOGS=$MESSDIR'/logs'
+INPUTS=$TEMPDIR'inputs-'$METHOD'.txt'
 
 # Create temp directory if it does not exist
 if [ ! -d $TEMPDIR ]
@@ -92,24 +89,38 @@ if [ ! -d $TEMPDIR ]
         mkdir $TEMPDIR
 fi
 
+echo "Caching inputs."
+cat >$INPUTS
+
 echo "Deploying server for '$METHOD' calculation."
+SUB=$TEMPDIR'mess-server-'$METHOD'.qsub'
 sed "s,__NAME__,MESS.DB-server-$METHOD,g" $QUEUEDIR/qsub/active_comments.qsub >$SUB
-cat $COMMENTS $QUEUEDIR/qsub/dependencies.qsub $QUEUEDIR/qsub/mess-server.qsub >>$SUB
-$SUB_CMD -vMESSDIR=$MESSDIRMETHOD=$METHOD,PARENT=$PATH_ID $SUB
+cat $QUEUEDIR/qsub/dependencies.qsub >>$SUB
+sed "s,__INPUTS__,$INPUTS,g" $QUEUEDIR/qsub/mess-server.qsub \
+	 | sed "s,__MESSDIR__,$MESSDIR,g" \
+	 | sed "s,__METHOD__,$METHOD,g" \
+	 | sed "s,__PARENT__,$PATH_ID,g" >>$SUB
+$SUB_CMD $SUB
 sleep 2
 
 echo "Deploying reducer for '$METHOD' calculation."
+SUB=$TEMPDIR'mess-reducer-'$METHOD'.qsub'
 sed "s,__NAME__,MESS.DB-reducer-$METHOD,g" $QUEUEDIR/qsub/active_comments.qsub >$SUB
-cat $COMMENTS $QUEUEDIR/qsub/dependencies.qsub $QUEUEDIR/qsub/mess-reducer.qsub >>$SUB
-$SUB_CMD -vMESSDIR=$MESSDIR,METHOD=$METHOD,PARENT=$PATH_ID $SUB
+cat $QUEUEDIR/qsub/dependencies.qsub >>$SUB
+sed "s,__MESSDIR__,$MESSDIR,g" $QUEUEDIR/qsub/mess-reducer.qsub \
+	 | sed "s,__METHOD__,$METHOD,g" \
+	 | sed "s,__PARENT__,$PATH_ID,g" >>$SUB
+$SUB_CMD $SUB
 sleep 0.2
 
 echo "Deploying mappers ($(($THREADS-2))) for '$METHOD' calculation."
+SUB=$TEMPDIR'mess-mapper-'$METHOD'.qsub'
 sed "s,__NAME__,MESS.DB-mapper-$METHOD,g" $QUEUEDIR/qsub/active_comments.qsub >$SUB
-cat $COMMENTS $QUEUEDIR/qsub/dependencies.qsub $QUEUEDIR/qsub/mess-mapper.qsub >>$SUB
+cat $QUEUEDIR/qsub/dependencies.qsub >>$SUB
+sed "s,__MESSDIR__,$MESSDIR,g" $QUEUEDIR/qsub/mess-mapper.qsub \
+	 | sed "s,__METHOD__,$METHOD,g" \
+	 | sed "s,__PARENT__,$PATH_ID,g" >>$SUB
 for i in $(seq 1 $(($THREADS-2))); do
-    $SUB_CMD -vMESSDIR=$MESSDIR,METHOD=$METHOD,PARENT=$PATH_ID $SUB
+    $SUB_CMD $SUB
     sleep 0.1
 done
-
-#rm
