@@ -10,6 +10,7 @@ graph, which is described in mess.db and maintained by a MethodPath object.
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import os
 import sys
 
 from mess.db import MessDB
@@ -212,6 +213,7 @@ class MethodPath(object):
         """Initialize all attributes and execute _load_graph."""
         self._path_id = None
         self._path = []
+        self._path_dirs = []
         self._db = MessDB()
         self._graph = DirectedGraph()
         self._log = Log('all')
@@ -262,29 +264,16 @@ class MethodPath(object):
                                    * len(path)),
                 (sum(range(len(path))), ) + tuple(path))
     
-    def _get_directory(self, parent_id, method_id, path_id):
-        """Return a descriptive directory name, or None if none exists.
-
-        Args:
-            parent_id: Method id for parent method
-            method_id: Method id for endpoint of path
-            path_id: Path id
-        """
-        method_query = 'SELECT name, hash FROM method WHERE method_id = ?'
-        method_result = self._db.execute(method_query,
-                                         (method_id, )).fetchone()
-        parent_method_result = self._db.execute(method_query,
-                                                (parent_id, )).fetchone()
-        if method_result == parent_method_result:
-            return None
-        try:
-            return '%s-%s_FROM_%s-%s_PATH_%s' % (method_result.name,
-                                                 method_result.hash[:7],
-                                                 parent_method_result.name,
-                                                 parent_method_result.hash[:7],
-                                                 path_id)
-        except AttributeError:
-            return None
+    def _get_method_dir(self, path_id, method_id):
+        query = 'SELECT name, shortdesc, hash FROM method WHERE method_id = ?'
+        method = self._db.execute(query, (method_id, )).fetchone()
+        if method.name == 'importer':
+            return './'
+        elif method.shortdesc is None or method.shortdesc == '':
+            return '%i_%s_%s' % (path_id, method.name, method.hash[:7])
+        else:
+            return '%i_%s_%s_%s' % (path_id, method.name,
+                                    method.shortdesc, method.hash[:7])
     
     def get_length(self):
         """Returns the length of the path."""
@@ -336,15 +325,14 @@ class MethodPath(object):
     
     def get_path_directory(self):
         """Return a directory name for the current path."""
-        return self._get_directory(self.get_parent_method_id(),
-                                   self.get_method_id(),
-                                   self._path_id)
+        return os.path.join(*self._path_dirs)
     
     def get_parent_path_directory(self):
         """Return a directory name for the parent path."""
-        return self._get_directory(self.get_superparent_method_id(),
-                                   self.get_parent_method_id(),
-                                   self.get_parent_path_id())
+        try:
+            return os.path.join(*self._path_dirs[:-1])
+        except TypeError:
+            return None
     
     def set_path(self, path_id):
         """Load path from method_path/method_path_edge DB tables.
@@ -431,3 +419,4 @@ class MethodPath(object):
                          self._path_id, parent_path_id))
             self._db.commit()
             self._log.info('method path extended by one in calculation graph')
+        self._path_dirs.append(self._get_method_dir(self._path_id, method_id))
