@@ -205,9 +205,10 @@ class AbstractMethod(object):
                                               time.time() - start, 's')
     
     def set_parent_path(self, parent_path):
-        """Set the parent path (e.g., path to method containing input 
+        """Set the parent path (e.g., path to method containing input
         geometry.)"""
-        self._parent_path_id = parent_path
+        if parent_path > 0:
+            self._parent_path_id = parent_path
     
     def check_dependencies(self):
         """If check_dependencies is not implemented, raise error."""
@@ -220,7 +221,7 @@ class AbstractMethod(object):
         # calculations are not repeated) and after (to verify success)
         raise NotImplementedError("every method needs a 'check' method")
     
-    def map(self):
+    def map(self, inchikey, inchikey_dir):
         """Generally, maps molecule to calculation via method, emits
         query/value pairs.
         """
