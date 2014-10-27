@@ -69,7 +69,10 @@ class AbstractMethod(object):
             JSON-serialized self.parameters. Keys are sorted.
         """
         return hashlib.sha1(self.method_name +
-                            json.dumps(self.parameters,
+                            json.dumps(dict((k.lower(),
+                                             v.lower())
+                                            for k, v
+                                            in self.parameters.iteritems()),
                                        sort_keys=True)).hexdigest()
     
     @property
