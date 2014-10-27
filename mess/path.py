@@ -267,8 +267,10 @@ class MethodPath(object):
     def _get_method_dir(self, path_id, method_id):
         query = 'SELECT name, shortdesc, hash FROM method WHERE method_id = ?'
         method = self._db.execute(query, (method_id, )).fetchone()
-        if method.name == 'importer':
+        if method.name == 'import0d':
             return './'
+        elif method.name == 'import3d':
+            return '%i_%s_%s' % (path_id, method.name, method.shortdesc)
         elif method.shortdesc is None or method.shortdesc == '':
             return '%i_%s_%s' % (path_id, method.name, method.hash[:7])
         else:

@@ -15,7 +15,6 @@ import os
 
 import pybel
 
-from mess.db import MessDB
 from mess.decorators import decorate, UnicodeDecorator
 from mess.method import AbstractMethod
 from mess.source import Source
@@ -38,64 +37,67 @@ class Import(AbstractTool):
     
     def execute(self, args):
         """Run import method for every molecule in source."""
-        imp = Importer()
-        imp.setup()
-        source = Source(MessDB())
+        source = Source()
         source.setup(args.source)
         self.log_console.info('reading molecules')
         molecules = {}
-        pybel.ob.obErrorLog.StopLogging()
-        for file_ in source.files():
-            for mol in pybel.readfile(file_.split('.')[-1],
-                                      os.path.join(source.source_dir, file_)):
+        threedee = False
+        pybel.ob.obErrorLog.SetOutputLevel(-1)
+        for source_file in source.files():
+            for mol in pybel.readfile(source_file.split('.')[-1],
+                                      os.path.join(source.source_dir,
+                                                   source_file)):
                 decorate(mol, UnicodeDecorator)
-                pybel.ob.obErrorLog.ClearLog()
-                pybel.ob.obErrorLog.StartLogging()
-                pybel.ob.obErrorLog.StopLogging()
+                if mol.dim == 3:
+                    threedee = True
                 cansmi = mol.write('can').split()[0]
                 for fragment in cansmi.split('.'):
                     if cansmi.count('.') > 0:
                         frag = pybel.readstring('can', fragment)
                         decorate(frag, UnicodeDecorator)
-                        pybel.ob.obErrorLog.ClearLog()
-                        pybel.ob.obErrorLog.StartLogging()
                         inchikey = frag.write('inchikey').rstrip()
-                        pybel.ob.obErrorLog.StopLogging()
                         if not is_inchikey(inchikey):
                             self.log_console.warning(
-                                "'%s' is not an importable molecule.",
-                                fragment)
+                                ("'%s' fragment in %s "
+                                 "is not an importable molecule."),
+                                fragment, mol.title)
                             continue
-                        frag.title = ('fragment of: %s' % unicode(mol.title,
-                                                                  'utf-8',
-                                                                  'replace'))
+                        frag.title = mol.title
                         molecules[inchikey] = (frag, source)
                     else:
                         inchikey = mol.write('inchikey').rstrip()
                         if not is_inchikey(inchikey):
                             self.log_console.warning(
-                                "'%s' is not an importable molecule.",
-                                fragment)
+                                ("'%s' (%s) is not an importable molecule."),
+                                fragment, mol.title)
                             continue
                         molecules[inchikey] = (mol, source)
+        import0d = Import0D()
+        import0d.setup()
+        if threedee:
+            import3d = Import3D()
+            import3d.short_description = source.name
+            import3d.setup()
         self.log_console.info('setting up molecule dirs')
         queries = {}
         for inchikey, (mol, source) in molecules.iteritems():
-            for query, values in imp.map(mol, source):
+            for query, values in import0d.map(mol, source):
                 try:
                     queries[query].append(values)
                 except KeyError:
                     queries[query] = [values]
+            if mol.dim == 3:
+                import3d.map(mol, source)
         self.log_console.info('loading simple properties')
         for query, values in queries.iteritems():
-            imp.reduce(query, values)
+            import0d.reduce(query, values)
 
 
-class Importer(AbstractMethod):
-    """This class adds an individual molecule to MESS.DB."""
+class Import0D(AbstractMethod):
+    """This class adds an individual 0D molecule to MESS.DB."""
     
     # method info
-    description = 'import'
+    description = 'import0d'
     geop = 0
     # program info
     prog_name = 'Open Babel'
@@ -228,6 +230,39 @@ class Importer(AbstractMethod):
                 inchikey, method_path_id,
                 property_name, 'Open Babel descriptor value',
                 type(property_value).__name__, property_value, '')
+
+
+class Import3D(AbstractMethod):
+    """This class adds an individual 3D molecule to MESS.DB."""
+    
+    # method info
+    description = 'import3d'
+    geop = 1
+    # program info
+    prog_name = 'Open Babel'
+    prog_version = ''
+    prog_url = 'http://openbabel.org/wiki/Main_Page'
+    # parameters
+    parameters = {}
+    
+    def check_dependencies(self):
+        """Return True, no external dependencies to check."""
+        return True
+
+    def map(self, mol, source):
+        """Import molecule into MESS.DB."""
+        self.inchikey = mol.write('inchikey').rstrip()
+        inchikey_dir = get_inchikey_dir(self.inchikey)
+        setup_dir(os.path.join(inchikey_dir, self.method_dir))
+        inchikey_basename = os.path.join(inchikey_dir, self.inchikey)
+        mol.write('xyz',
+                  os.path.join(inchikey_dir,
+                               self.method_dir,
+                               '%s.xyz' % self.inchikey),
+                  overwrite=True)
+    
+    def check(self):
+        pass
 
 
 def load():
