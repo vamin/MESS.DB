@@ -34,6 +34,8 @@ class AbstractMethod(object):
     """
     parameters = dict()
     shortdesc = None
+    method_citation = None
+    prog_citation = None
     _inchikey = None
     _path_id = None
     _parent_path_id = None
@@ -138,12 +140,13 @@ class AbstractMethod(object):
         """Set insert program to db, set up hash, and insert method to db."""
         total_changes = self.db.total_changes
         query = ('INSERT OR IGNORE INTO method '
-                 '(program_id, geop, name, shortdesc, hash) '
-                 'SELECT program.program_id, ?, ?, ?, ? '
+                 '(program_id, geop, name, shortdesc, citation, hash) '
+                 'SELECT program.program_id, ?, ?, ?, ?, ? '
                  'FROM program '
                  'WHERE program.name=? AND program.version=?')
         self.db.execute(query, (self.geop, self.method_name, self.shortdesc,
-                                self.hash, self.prog_name, self.prog_version))
+                                self.method_citation, self.hash,
+                                self.prog_name, self.prog_version))
         if self.db.total_changes - total_changes > 0:
             self.log_all.info('new %s method added to MESS.DB',
                               self.method_name)
@@ -151,10 +154,12 @@ class AbstractMethod(object):
     def _insert_program(self):
         """Adds row to program table in mess.db."""
         total_changes = self.db.total_changes
-        query = ('INSERT OR IGNORE INTO program (name, version, url) '
-                 'VALUES (?, ?, ?)')
+        query = ('INSERT OR IGNORE INTO program '
+                 '(name, version, url, citation) '
+                 'VALUES (?, ?, ?, ?)')
         self.db.execute(query,
-                        (self.prog_name, self.prog_version, self.prog_url))
+                        (self.prog_name, self.prog_version, self.prog_url,
+                         self.prog_citation))
         if self.db.total_changes - total_changes > 0:
             self.log_all.info('program %s %s added to MESS.DB',
                               self.prog_name, self.prog_version)

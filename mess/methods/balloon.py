@@ -11,21 +11,20 @@ from __future__ import unicode_literals
 
 import binascii
 import codecs
-import math
 import os
 import subprocess
 import sys
 import time
-from distutils.version import LooseVersion
 
 import pybel
 
-from decorators import decorate, UnicodeDecorator
-from method import AbstractMethod
-from utils import setup_dir
+from mess.decorators import decorate, UnicodeDecorator
+from mess.method import AbstractMethod
+from mess.utils import setup_dir
 
 
 class Balloon(AbstractMethod):
+    """This method uses balloon to generate 3D structures from 0D strings."""
     # method info
     description = 'Generate 3d structures from InChI with balloon'
     geop = 1
@@ -33,6 +32,10 @@ class Balloon(AbstractMethod):
     prog_name = 'Balloon'
     prog_version = ''  # set dynamically by property method
     prog_url = 'http://users.abo.fi/mivainio/balloon/'
+    prog_citation = ('Mikko J. Vainio and Mark S. Johnson (2007) Generating '
+                     'Conformer Ensembles Using a Multiobjective Genetic '
+                     'Algorithm. Journal of Chemical Information and '
+                     'Modeling, 47, 2462 - 2474.')
     # parameters
     parameters = {'-v': '1',
                   '--maxtime': '1024',
@@ -49,7 +52,7 @@ class Balloon(AbstractMethod):
                                        stderr=subprocess.PIPE)
             return balloon.stdout.read().split()[2]
         except OSError:
-            sys.exit('The %s method requires Balloon (%s).' %\
+            sys.exit('The %s method requires Balloon (%s).' %
                      (self.method_name, self.prog_url))
     
     def check_dependencies(self):
@@ -84,7 +87,7 @@ class Balloon(AbstractMethod):
                 if k.startswith('>>>') or v.startswith('>>>'):
                     continue
                 balloon_cmd.append(k)
-                if (v):
+                if v:
                     balloon_cmd.append(v)
             balloon_cmd.extend(['--randomSeed', str(seed), r.smiles, sdf_out])
             balloon = subprocess.Popen(balloon_cmd, cwd=out_dir,
@@ -103,11 +106,10 @@ class Balloon(AbstractMethod):
             mol.localopt(forcefield='mmff94s', steps=128)
             mol.write('xyz', xyz_out)
             if self.check(xyz_out):
-                self.log_all.info('%s 3D coordinates generated',
-                                      self.inchikey)
+                self.log_all.info('%s 3D coordinates generated', self.inchikey)
             else:
                 self.log_all.warning('%s coordinate generation failed',
-                                         self.inchikey)
+                                     self.inchikey)
             yield self.get_timing_query(inchikey, self.path_id, start)
         else:
             self.log_console.info('%s skipped', self.inchikey)
@@ -125,10 +127,10 @@ class Balloon(AbstractMethod):
         try:
             with codecs.open(xyz_out, encoding='utf-8') as f:
                 for i, l in enumerate(f):
-                    if (i == 0):
+                    if i == 0:
                         atoms = l.strip()
             lines = i + 1
-            if (int(atoms) == lines - 2):
+            if int(atoms) == lines - 2:
                 return True
             else:
                 return False

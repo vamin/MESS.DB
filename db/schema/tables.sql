@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS
     name TEXT NOT NULL,
     version TEXT NOT NULL,
     url TEXT,
+    citation TEXT,
     UNIQUE(name, version)
   );
 
@@ -92,6 +93,7 @@ CREATE TABLE IF NOT EXISTS
     --FOREIGN KEY(program_id) REFERENCES program(program_id),
     name TEXT,
     shortdesc TEXT,
+    citation TEXT,
     geop INTEGER, --flag, indicates whether method generates new geometry
     hash TEXT NOT NULL --sha1 hash of method name and parameter settings
   );

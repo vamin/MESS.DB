@@ -101,8 +101,12 @@ class Import0D(AbstractMethod):
     geop = 0
     # program info
     prog_name = 'Open Babel'
-    prog_version = ''
+    prog_version = pybel.ob.OBReleaseVersion()
     prog_url = 'http://openbabel.org/wiki/Main_Page'
+    prog_citation = ('Noel M. O’Boyle, Michael Banck, Craig A. James, '
+                     'Chris Morley, Tim Vandermeersch, Geoffrey R. Hutchison '
+                     'Open Babel: An open chemical toolbox. J. Cheminf. '
+                     '2011, 3, 33.')
     # parameters
     parameters = {}
     
@@ -240,8 +244,12 @@ class Import3D(AbstractMethod):
     geop = 1
     # program info
     prog_name = 'Open Babel'
-    prog_version = ''
+    prog_version = pybel.ob.OBReleaseVersion()
     prog_url = 'http://openbabel.org/wiki/Main_Page'
+    prog_citation = ('Noel M. O’Boyle, Michael Banck, Craig A. James, '
+                     'Chris Morley, Tim Vandermeersch, Geoffrey R. Hutchison '
+                     'Open Babel: An open chemical toolbox. J. Cheminf. '
+                     '2011, 3, 33.')
     # parameters
     parameters = {}
     
@@ -254,7 +262,6 @@ class Import3D(AbstractMethod):
         self.inchikey = mol.write('inchikey').rstrip()
         inchikey_dir = get_inchikey_dir(self.inchikey)
         setup_dir(os.path.join(inchikey_dir, self.method_dir))
-        inchikey_basename = os.path.join(inchikey_dir, self.inchikey)
         mol.write('xyz',
                   os.path.join(inchikey_dir,
                                self.method_dir,

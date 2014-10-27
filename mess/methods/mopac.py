@@ -16,11 +16,12 @@ import subprocess
 import sys
 import time
 
-from method import AbstractMethod
-from utils import get_inchikey_dir, setup_dir
+from mess.method import AbstractMethod
+from mess.utils import setup_dir
 
 
 class Mopac(AbstractMethod):
+    """This method uses MOPAC2012 to calculate semiempirical properties."""
     # method info
     description = ('Semiempirical geometry optimization, energies, and bond '
                    'order analysis')
@@ -29,6 +30,8 @@ class Mopac(AbstractMethod):
     prog_name = 'MOPAC'
     prog_version = '2012'
     prog_url = 'http://openmopac.net/'
+    prog_citation = ('MOPAC2012, James J. P. Stewart, Stewart Computational '
+                     'Chemistry, web: HTTP://OpenMOPAC.net')
     # parameters
     shortdesc = 'PM7'
     parameters = {'PM7': '',
@@ -163,10 +166,8 @@ class Mopac(AbstractMethod):
         except:
             pass
         if moo_check and xyz_check:
-            self.status = 'PM7 calculation completed successfully'
             return True
         else:
-            self.status = 'PM7 calculation or xyz conversion failed'
             return False
     
     def import_properties(self, inchikey, method_path_id, moo_out):
@@ -245,7 +246,6 @@ class Mopac(AbstractMethod):
                 heat_of_formation_kJ, 'kJ/mol')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
         try:
             yield self.get_insert_property_query(
                 inchikey, method_path_id,
@@ -253,7 +253,6 @@ class Mopac(AbstractMethod):
                 total_energy, 'eV')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
         try:
             yield self.get_insert_property_query(
                 inchikey, method_path_id,
@@ -261,7 +260,6 @@ class Mopac(AbstractMethod):
                 electronic_energy, 'eV')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
         try:
             yield self.get_insert_property_query(
                 inchikey, method_path_id,
@@ -269,7 +267,6 @@ class Mopac(AbstractMethod):
                 point_group, '')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
         try:
             yield self.get_insert_property_query(
                 inchikey, method_path_id,
@@ -277,7 +274,6 @@ class Mopac(AbstractMethod):
                 core_repulsion, 'eV')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
         try:
             yield self.get_insert_property_query(
                 inchikey, method_path_id,
@@ -289,7 +285,6 @@ class Mopac(AbstractMethod):
                 cosmo_volume, 'A^3')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
         try:
             yield self.get_insert_property_query(
                 inchikey, method_path_id,
@@ -297,7 +292,6 @@ class Mopac(AbstractMethod):
                 gradient_norm, '')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
         try:
             yield self.get_insert_property_query(
                 inchikey, method_path_id,
@@ -305,7 +299,6 @@ class Mopac(AbstractMethod):
                 ionization_potential, 'eV')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
         try:
             yield self.get_insert_property_query(
                 inchikey, method_path_id,
@@ -317,7 +310,6 @@ class Mopac(AbstractMethod):
                 lumo, 'eV')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
         try:
             yield self.get_insert_property_query(
                 inchikey, method_path_id,
@@ -325,7 +317,6 @@ class Mopac(AbstractMethod):
                 filled_levels, '')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
         try:
             localized_orbitals_dict = {'HOMO': localized_orbitals[-1]}
             n = 1
@@ -341,7 +332,6 @@ class Mopac(AbstractMethod):
                 json.dumps(localized_orbitals_dict, sort_keys=True), '')
         except (UnboundLocalError, IndexError) as e:
             print(e, file=sys.stderr)
-            self.status = 'some properties not parsed'
 
     @classmethod
     def moo_to_xyz(cls, moo, xyz):
