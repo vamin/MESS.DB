@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS
     dirname TEXT NOT NULL,
     url TEXT,
     url_template TEXT,
+    citation TEXT,
     last_update TEXT
   );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_source_name ON source (name);

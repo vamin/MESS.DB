@@ -21,7 +21,7 @@ import pybel
 
 from mess.db import MessDB
 from mess.log import Log
-from mess.utils import get_inchikey_dir
+from mess.utils import get_inchikey_dir, unicode_replace
 
 
 class Source(object):
@@ -98,15 +98,17 @@ class Source(object):
         # insert/update source in the database
         total_changes = self.db.total_changes
         insert_query = ('INSERT OR IGNORE INTO source '
-                        '(name, dirname, url, url_template, last_update) '
-                        'VALUES (?, ?, null, null, null)')
+                        '(name, dirname, url, url_template, '
+                        'citation, last_update) '
+                        'VALUES (?, ?, null, null, null, null)')
         update_query = ('UPDATE source '
-                        'SET url=?, url_template=?, last_update=? '
+                        'SET url=?, url_template=?, citation=?, last_update=? '
                         'WHERE dirname=?;')
         self.db.execute(insert_query, (source_attributes['name'],
                                        source_basename))
         self.db.execute(update_query, (source_attributes['url'],
                                        source_attributes['url_template'],
+                                       source_attributes['citation'],
                                        source_attributes['last_update'],
                                        source_basename))
         if self.db.total_changes - total_changes > 0:
@@ -129,12 +131,14 @@ class Source(object):
         source_attributes = {
             'url': None,
             'url_template': None,
+            'citation': None
         }
         config = cp.ConfigParser(dict_type=CaseInsensitiveDict)
         config.read(ini)
         for section in config.sections():
             for option in config.options(section):
-                source_attributes[option] = config.get(section, option)
+                source_attributes[option] = unicode_replace(config.get(section,
+                                                                       option))
         required_attributes = ('name', 'last_update')
         if not all(att in source_attributes for att in required_attributes):
             sys.exit('Source INI missing required attributes: %s.'
