@@ -33,6 +33,7 @@ class AbstractMethod(object):
         parameters (dict): Parameters that affect program execution
     """
     parameters = dict()
+    shortdesc = None
     _inchikey = None
     _path_id = None
     _parent_path_id = None
@@ -134,12 +135,12 @@ class AbstractMethod(object):
         """Set insert program to db, set up hash, and insert method to db."""
         total_changes = self.db.total_changes
         query = ('INSERT OR IGNORE INTO method '
-                 '(program_id, geop, name, hash) '
-                 'SELECT program.program_id, ?, ?, ? '
+                 '(program_id, geop, name, shortdesc, hash) '
+                 'SELECT program.program_id, ?, ?, ?, ? '
                  'FROM program '
                  'WHERE program.name=? AND program.version=?')
-        self.db.execute(query, (self.geop, self.method_name, self.hash,
-                                self.prog_name, self.prog_version))
+        self.db.execute(query, (self.geop, self.method_name, self.shortdesc,
+                                self.hash, self.prog_name, self.prog_version))
         if self.db.total_changes - total_changes > 0:
             self.log_all.info('new %s method added to MESS.DB',
                               self.method_name)

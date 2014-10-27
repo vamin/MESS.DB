@@ -40,7 +40,6 @@ class Balloon(AbstractMethod):
                   '--singleconf': '',
                   '--randomSeed': '>>>crc32(inchikey)',
                   ">>>pybel mol.localopt(forcefield='uff', steps=128)": ''}
-    tags = []
     
     @property
     def prog_version(self):

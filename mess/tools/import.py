@@ -76,7 +76,7 @@ class Import(AbstractTool):
         import0d.setup()
         if threedee:
             import3d = Import3D()
-            import3d.short_description = source.name
+            import3d.shortdesc = source.dirname
             import3d.setup()
         self.log_console.info('setting up molecule dirs')
         queries = {}

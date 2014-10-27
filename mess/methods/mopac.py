@@ -30,6 +30,7 @@ class Mopac(AbstractMethod):
     prog_version = '2012'
     prog_url = 'http://openmopac.net/'
     # parameters
+    shortdesc = 'PM7'
     parameters = {'PM7': '',
                   'PRECISE': '',
                   'LARGE': '',
@@ -40,10 +41,9 @@ class Mopac(AbstractMethod):
                   'LET': '',
                   'MMOK': '',
                   'DDMIN': 0.0,
+                  'THREADS': 1,
                   'T': '1W',
                   'CYCLES': 2048}
-    tags = ['PM7']
-    threads = 1
     
     def check_dependencies(self):
         """Check that MOPAC2012.exe is installed and runnable.
@@ -77,7 +77,9 @@ class Mopac(AbstractMethod):
                                               self.parent_method_dir,
                                               '%s.xyz' % self.inchikey))
         if not os.path.isfile(xyz_in):
-            sys.exit('xyz file expected but not found: %s.' % xyz_in)
+            self.log_console.warning('xyz file expected but not found: %s.',
+                                     xyz_in)
+            return
         xyz_out = os.path.abspath(os.path.join(out_dir,
                                                '%s.xyz' % self.inchikey))
         if not self.check(out_file, xyz_out):
@@ -87,7 +89,6 @@ class Mopac(AbstractMethod):
                     keywords += '%s=%s ' % (k, v)
                 else:
                     keywords += '%s ' % k
-            keywords += 'THREADS=%s ' % self.threads
             query = ('SELECT result AS charge '
                      'FROM molecule_method_property mpp '
                      'JOIN property p ON mpp.property_id = p.property_id '
