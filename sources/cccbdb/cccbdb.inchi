@@ -393,7 +393,7 @@ InChI=1S/F2H/c1-3-2/q-1	FHF-	18130740
 InChI=1S/F2H/c1-3-2	FHF	18130740
 InChI=1S/FH2N/c1-2/h2H2	monofluoroamine	15861059
 InChI=1/F2H2/c1-3-2/h1H	Hydrogen fluoride dimer	30664121
-1S/CH2F/c1-2/h1H2	fluoromethyl radical	3744294
+InChI=1S/CH2F/c1-2/h1H2	fluoromethyl radical	3744294
 InChI=1/CH3F/c1-2/h1H3	Methyl fluoride	593533
 InChI=1S/CH3F/c1-2/h1H3	methylfluoride-d3	558214
 InChI=1S/Ne2/c1-2	Neon dimer	12185056
