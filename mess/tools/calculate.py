@@ -15,8 +15,6 @@ import sys
 from socket import gethostname
 
 import mess.mapreduce as mapreduce
-from mess.db import MessDB
-from mess.path import MethodPath
 from mess.tool import AbstractTool
 from mess.utils import get_inchikey_dir, is_inchikey, load_method
 
@@ -51,6 +49,15 @@ class Calculate(AbstractTool):
     
     def execute(self, args):
         """Run calculations."""
+        if args.inchikeys.name == '<stdin>' and args.inchikeys.isatty():
+            sys.exit('No input specified.')
+        else:
+            try:
+                inchikeys = set(row.split()[0].strip()
+                                for row in args.inchikeys)
+            except IndexError:
+                inchikeys = set([])
+                return
         method = load_method(args.method)
         method.set_parent_path(args.parent_path)
         if args.map:
@@ -61,22 +68,20 @@ class Calculate(AbstractTool):
             args.inchikeys.close()
             self.reduce_client(method, args.hostname)
             return
-        if args.inchikeys.name == '<stdin>' and args.inchikeys.isatty():
-            sys.exit('No input specified.')
         method.setup()
         if args.mapreduce_server:
-            self.mapreduce_server(args.inchikeys, method)
+            self.mapreduce_server(inchikeys, method)
         else:
-            self.mapreduce_local(args.inchikeys, method)
+            self.mapreduce_local(inchikeys, method)
 
     def mapreduce_local(self, inchikeys, method):
         """Run a method's map and reduce functions locally."""
         keys = {}
-        for row in inchikeys:
-            inchikey = row.split()[0].strip()
+        for inchikey in inchikeys:
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
-            for key, values in method.map(inchikey, get_inchikey_dir(inchikey)):
+            for key, values in method.map(inchikey,
+                                          get_inchikey_dir(inchikey)):
                 try:
                     keys[key].append(values)
                 except KeyError:
@@ -88,8 +93,7 @@ class Calculate(AbstractTool):
         """Start a mapreduce server."""
         self.log_console.info('hostname is %s' % gethostname())
         datasource = {}
-        for row in inchikeys:
-            inchikey = row.split()[0].strip()
+        for inchikey in inchikeys:
             if not is_inchikey(inchikey, enforce_standard=True):
                 sys.exit('%s is not a valid InChIKey.' % inchikey)
             datasource[inchikey] = get_inchikey_dir(inchikey)
@@ -105,7 +109,8 @@ class Calculate(AbstractTool):
     
     def map_client(self, method, hostname):
         """Start a map client."""
-        self.log_console.info('map client connecting to mapreduce server at %s', hostname)
+        self.log_console.info(('map client connecting to mapreduce server '
+                               'at %s'), hostname)
         client = mapreduce.Client()
         client.password = method.hash
         client.mapfn = method.map
@@ -119,7 +124,8 @@ class Calculate(AbstractTool):
     
     def reduce_client(self, method, hostname):
         """Start a reduce client."""
-        self.log_console.info('reduce client connecting to mapreduce server at %s', hostname)
+        self.log_console.info(('reduce client connecting to mapreduce server '
+                               'at %s'), hostname)
         client = mapreduce.Client()
         client.password = method.hash
         client.reducefn = method.reduce
