@@ -33,7 +33,10 @@ class Import(AbstractTool):
     def subparse(self, subparser):
         """Set tool-specific argparse arguments."""
         subparser.add_argument('source',
-                               help='A molecule source file or directory')
+                               help='a molecule source file or directory')
+        subparser.add_argument('-k', '--skip-fragments', action='store_true',
+                               help=('do not attempt to separate and import '
+                                     'non-covalently bound fragments'))
     
     def execute(self, args):
         """Run import method for every molecule in source."""
@@ -47,31 +50,35 @@ class Import(AbstractTool):
             for mol in pybel.readfile(source_file.split('.')[-1],
                                       os.path.join(source.source_dir,
                                                    source_file)):
-                decorate(mol, UnicodeDecorator)
-                if mol.dim == 3:
+                if not threedee and mol.dim == 3:
                     threedee = True
-                cansmi = mol.write('can').split()[0]
-                for fragment in cansmi.split('.'):
+                try:
+                    decorate(mol, UnicodeDecorator)
+                except IndexError:
+                    self.log_console.error('Unexpected error importing %s.',
+                                           mol.title)
+                    continue
+                inchikey = mol.write('inchikey').rstrip()
+                if not is_inchikey(inchikey):
+                    self.log_console.warning(
+                        ("'%s' is not an importable molecule."), mol.title)
+                    continue
+                molecules[inchikey] = (mol, source)
+                if not args.skip_fragments:
+                    cansmi = mol.write('can').split()[0]
                     if cansmi.count('.') > 0:
-                        frag = pybel.readstring('can', fragment)
-                        decorate(frag, UnicodeDecorator)
-                        inchikey = frag.write('inchikey').rstrip()
-                        if not is_inchikey(inchikey):
-                            self.log_console.warning(
-                                ("'%s' fragment in %s "
-                                 "is not an importable molecule."),
-                                fragment, mol.title)
-                            continue
-                        frag.title = mol.title
-                        molecules[inchikey] = (frag, source)
-                    else:
-                        inchikey = mol.write('inchikey').rstrip()
-                        if not is_inchikey(inchikey):
-                            self.log_console.warning(
-                                ("'%s' (%s) is not an importable molecule."),
-                                fragment, mol.title)
-                            continue
-                        molecules[inchikey] = (mol, source)
+                        for fragment in cansmi.split('.'):
+                            fragmol = pybel.readstring('can', fragment)
+                            decorate(fragmol, UnicodeDecorator)
+                            inchikey = fragmol.write('inchikey').rstrip()
+                            if not is_inchikey(inchikey):
+                                self.log_console.warning(
+                                    ("'%s' fragment in %s "
+                                     "is not an importable molecule."),
+                                    fragment, mol.title)
+                            else:
+                                fragmol.title = mol.title
+                                molecules[inchikey] = (fragmol, source)
         import0d = Import0D()
         import0d.setup()
         if threedee:
@@ -267,6 +274,8 @@ class Import3D(AbstractMethod):
                                self.method_dir,
                                '%s.xyz' % self.inchikey),
                   overwrite=True)
+        self.log_all.info('%s 3D structure from %s added',
+                          self.inchikey, source.dirname)
     
     def check(self):
         pass
