@@ -77,7 +77,9 @@ class Source(object):
     def files(self):
         """Returns a list of importable files in the source directory."""
         return [f for f in os.listdir(self.source_dir)
-                if not (f.startswith('.') or f.startswith('~'))
+                if not (f.startswith('.')
+                        or f.startswith('~')
+                        or f.endswith('.txt'))
                 and f.split('.')[-1] in pybel.informats]
     
     def setup(self, source):
