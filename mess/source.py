@@ -113,7 +113,7 @@ class Source(object):
                                        source_attributes['citation'],
                                        source_attributes['last_update'],
                                        source_basename))
-        if self.db.total_changes - total_changes > 0:
+        if self.db.total_changes - total_changes > 1:
             self.log.info('%s added to sources in database', source_basename)
         select_query = ('SELECT source_id, name, dirname, '
                         'url, url_template, last_update '
