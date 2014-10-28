@@ -147,11 +147,13 @@ class Select(AbstractTool):
             query = ('SELECT inchikey, name AS property_name, '
                      'cast(mmpd.result as numeric) AS result_numeric, units '
                      'FROM molecule_method_property_denorm mmpd '
-                     'WHERE name = ? AND result_numeric %s ?') % operator
+                     'WHERE LOWER(name) = LOWER(?) '
+                     'AND result_numeric %s ?') % operator
         except ValueError:
             query = ('SELECT inchikey, name AS property_name, result, units '
                      'FROM molecule_method_property_denorm '
-                     'WHERE name = ? AND result %s ?') % operator
+                     'WHERE LOWER(name) = LOWER(?) '
+                     'AND LOWER(result) %s LOWER(?)') % operator
         if path is not None:
             query += ' AND method_path_id = ?'
             return query, (prop, value, path)
