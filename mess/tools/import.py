@@ -267,18 +267,32 @@ class Import3D(AbstractMethod):
     def map(self, mol, source):
         """Import molecule into MESS.DB."""
         self.inchikey = mol.write('inchikey').rstrip()
-        inchikey_dir = get_inchikey_dir(self.inchikey)
-        setup_dir(os.path.join(inchikey_dir, self.method_dir))
-        mol.write('xyz',
-                  os.path.join(inchikey_dir,
-                               self.method_dir,
-                               '%s.xyz' % self.inchikey),
-                  overwrite=True)
-        self.log_all.info('%s 3D structure from %s added',
-                          self.inchikey, source.dirname)
+        if not self.check():
+            inchikey_dir = get_inchikey_dir(self.inchikey)
+            setup_dir(os.path.join(inchikey_dir, self.method_dir))
+            mol.write('xyz',
+                      os.path.join(inchikey_dir,
+                                   self.method_dir,
+                                   '%s.xyz' % self.inchikey),
+                      overwrite=True)
+            self.log_all.info('%s 3D structure from %s added',
+                              self.inchikey, source.dirname)
     
     def check(self):
-        pass
+        inchikey_dir = get_inchikey_dir(self.inchikey)
+        try:
+            mol = pybel.readfile('xyz',
+                                 os.path.join(inchikey_dir,
+                                              self.method_dir,
+                                              '%s.xyz' % self.inchikey)).next()
+        except IOError:
+            return False
+        decorate(mol, UnicodeDecorator)
+        if not mol.write('inchikey').rstrip() == self.inchikey:
+            self.log_console.warning('inconsistent 3D geometry in %s (%s)',
+                                     self.inchikey, self.method_dir)
+            return False
+        return True
 
 
 def load():
