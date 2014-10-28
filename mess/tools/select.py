@@ -9,6 +9,7 @@ This module contains the select tool class and load function.
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import argparse
 import codecs
 import csv
 import re
@@ -35,6 +36,10 @@ class Select(AbstractTool):
     
     def subparse(self, subparser):
         """Set tool-specific argparse arguments."""
+        subparser.add_argument('inchikeys', nargs='?',
+                               type=argparse.FileType('r'), default=sys.stdin,
+                               help=('a list of inchikeys to filter '
+                                     '(default: all)'))
         subparser.add_argument('-q', '--query', type=str,
                                help=('An SQL query string or file that '
                                      'returns inchikeys in first column'))
@@ -46,7 +51,7 @@ class Select(AbstractTool):
         subparser.add_argument('-o', '--property-operator', type=str,
                                choices=['=', '!=', '>', '<', '>=', '<='],
                                help='How to compare property')
-        subparser.add_argument('-v', '--property-value', type=float,
+        subparser.add_argument('-v', '--property-value', type=str,
                                help='What value of property to compare to')
         subparser.add_argument('-p', '--path', type=int, default=None,
                                help=('Specify a path id to restrict to a '
@@ -68,6 +73,15 @@ class Select(AbstractTool):
     
     def execute(self, args):
         """Run select query, output table."""
+        if args.inchikeys.name == '<stdin>' and args.inchikeys.isatty():
+            filter_from = None
+        else:
+            try:
+                filter_from = set(row.split()[0].strip()
+                                  for row in args.inchikeys)
+            except IndexError:
+                filter_from = set([])
+                return
         if args.query and (args.property_name
                            or args.property_operator
                            or args.property_value):
@@ -120,6 +134,8 @@ class Select(AbstractTool):
         if args.headers:
             writer.writerow(list(h[0] for h in cur.description))
         for result in cur:
+            if filter_from is not None and result[0] not in filter_from:
+                continue
             if args.regex_subset and not re.match(args.regex_subset, result[0],
                                                   re.IGNORECASE):
                 continue
@@ -143,7 +159,7 @@ class Select(AbstractTool):
     def property_query(cls, prop, operator, value, path=None):
         """Generate a property query."""
         try:
-            float(value)
+            value = float(value)
             query = ('SELECT inchikey, name AS property_name, '
                      'cast(mmpd.result as numeric) AS result_numeric, units '
                      'FROM molecule_method_property_denorm mmpd '
