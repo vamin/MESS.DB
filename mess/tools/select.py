@@ -94,8 +94,7 @@ class Select(AbstractTool):
         cur = db.cursor()
         if args.query:
             try:
-                cur.execute(codecs.open(args.query,
-                                                 encoding='utf-8').read())
+                cur.execute(codecs.open(args.query, encoding='utf-8').read())
             except sqlite3.OperationalError:
                 sys.exit("'%s' does not contain valid sql." % args.query)
             except IOError:
@@ -143,9 +142,16 @@ class Select(AbstractTool):
     @classmethod
     def property_query(cls, prop, operator, value, path=None):
         """Generate a property query."""
-        query = ('SELECT inchikey, name, result, units '
-                 'FROM molecule_method_property_denorm '
-                 'WHERE name = ? AND result %s ?') % operator
+        try:
+            float(value)
+            query = ('SELECT inchikey, name AS property_name, '
+                     'cast(mmpd.result as numeric) AS result_numeric, units '
+                     'FROM molecule_method_property_denorm mmpd '
+                     'WHERE name = ? AND result_numeric %s ?') % operator
+        except ValueError:
+            query = ('SELECT inchikey, name AS property_name, result, units '
+                     'FROM molecule_method_property_denorm '
+                     'WHERE name = ? AND result %s ?') % operator
         if path is not None:
             query += ' AND method_path_id = ?'
             return query, (prop, value, path)
