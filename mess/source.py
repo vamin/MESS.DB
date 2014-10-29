@@ -195,7 +195,9 @@ class Source(object):
                     sources_out.writerow([name, dirname, identifier,
                                           source_url.encode('ascii',
                                                             'replace')])
+                    self.log.inchikey = inchikey
                     self.log.info('%s added to %s sources', name, inchikey)
+                    self.log.inchikey = None
 
 
 class CaseInsensitiveDict(dict):
