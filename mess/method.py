@@ -206,6 +206,18 @@ class AbstractMethod(object):
         return (query, (inchikey, method_path_id, name, description,
                         format_, units, value))
     
+    def get_insert_moldata_queries(self, inchikey, mol,
+                                   description='', format_='', units=''):
+        """Returns queries to insert molecule data values to mess.db."""
+        for name, value in mol.data.iteritems():
+            yield self.get_insert_property_query(inchikey,
+                                                 self.path_id,
+                                                 name,
+                                                 description,
+                                                 format_,
+                                                 value,
+                                                 units)
+    
     def get_timing_query(self, inchikey, path_id, start):
         """Get a query to insert execution time property into db."""
         return self.get_insert_property_query(inchikey, path_id, 'runtime',
