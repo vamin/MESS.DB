@@ -142,7 +142,7 @@ class Log(object):
     
     def __init__(self, scope=None):
         """Sets the scope, which must be 'console' or 'all'."""
-        if scope is None:
+        if scope not in ['console', 'all']:
             raise RuntimeError(('Log object must be initialized with valid '
                                 'scope: \'console\' or \'all\'.'))
         self.scope = scope
@@ -196,25 +196,22 @@ class Log(object):
     def _to_all(self, inchikey=None):
         """Log to console, central log, and molecule log. Use to report things
         that change the database."""
-        if inchikey is not None:
-            if not is_inchikey(inchikey):
-                sys.exit('invalid inchikey passed to logger')
-            molecule_log_path = '%s/%s.log' % (get_inchikey_dir(inchikey),
-                                               inchikey)
-            molecule_log_handler = logging.FileHandler(molecule_log_path)
+        if inchikey is not None and not is_inchikey(inchikey):
+            sys.exit('invalid inchikey passed to logger')
         logger = logging.getLogger('mess')
-        
         for handler in logger.handlers:
             try:
                 if ('molecules/' in handler.baseFilename
                         or '/dev/null' in handler.baseFilename):
                     if inchikey is not None:
                         logger.removeHandler(handler)
-                        logger.addHandler(molecule_log_handler)
+                        mol_log = '%s/%s.log' % (get_inchikey_dir(inchikey),
+                                                 inchikey)
+                        logger.addHandler(logging.FileHandler(mol_log))
                         break
-                    else:
+                    elif '/dev/null' not in handler.baseFilename:
                         logger.removeHandler(handler)
-                        logger.addHandler('/dev/null')
+                        logger.addHandler(logging.FileHandler('/dev/null'))
                         break
             except AttributeError:
                 continue
