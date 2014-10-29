@@ -58,21 +58,18 @@ class Source(object):
         self.last_update = None
     
     @classmethod
-    def get_source_dir(cls, source):
-        """Returns source directory from user-supplied source, which may be a
-        directory or may be the name of a source in the source directory."""
-        if not os.path.isdir(source):
-            source_dir = os.path.join(os.path.dirname(__file__), '../',
-                                      'sources/', source)
-            if not os.path.isdir(source_dir):
-                sys.exit('%s is not a valid source or source directory.' %
-                         source)
-        else:
-            source_dir = source
-        source_path_parent = os.path.abspath(os.path.join(source_dir, '..'))
-        if not source_path_parent.split('/')[-1] == 'sources':
-            sys.exit("All sources must reside in the 'sources' directory.")
-        return os.path.abspath(source_dir)
+    def get_sources(cls):
+        """Returns a dictionary of source basenames mapped to source paths."""
+        source_dir = os.path.join(os.path.dirname(__file__), '../sources/')
+        sources = {}
+        for root, _, filenames in os.walk(source_dir):
+            for filename in [f for f in filenames
+                             if f.endswith('.ini')
+                             and not (f.startswith('.') or f.startswith('~'))]:
+                ini_basename = os.path.splitext(filename)[0]
+                if ini_basename == os.path.basename(root):
+                    sources[ini_basename] = os.path.abspath(root)
+        return sources
     
     def files(self):
         """Returns a list of importable files in the source directory."""
@@ -88,14 +85,15 @@ class Source(object):
         Args:
             source: A path to a source directory or a source basename.
         """
-        self.source_dir = self.get_source_dir(source)
-        # read attributes
-        source_basename = os.path.basename(self.source_dir.split('/')[-1])
-        source_ini = os.path.join(os.path.splitext(self.source_dir)[0],
-                                  '%s.ini' % source_basename)
-        if not os.path.isfile(source_ini):
-            sys.exit(('All sources must have a corresponding INI file '
-                      'in their directory.'))
+        source_basename = os.path.basename(source.rstrip(os.sep))
+        if source_basename.endswith('.ini'):
+            source_basename = os.path.splitext(source_basename)[0]
+        sources = self.get_sources()
+        if source_basename not in sources:
+            sys.exit(("All sources must reside in the 'sources' directory, "
+                      'read sources/SOURCES_README.md for details.'))
+        self.source_dir = sources[source_basename]
+        source_ini = os.path.join(self.source_dir, '%s.ini' % source_basename)
         source_attributes = self.parse_ini(source_ini)
         # insert/update source in the database
         total_changes = self.db.total_changes
