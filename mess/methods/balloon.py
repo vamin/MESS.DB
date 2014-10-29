@@ -99,9 +99,18 @@ class Balloon(AbstractMethod):
             messages.append(balloon.stderr.read())
             forcefield = b'mmff94s'
             steps = 512
+            moldata = {}
             try:
                 mol = pybel.readfile('sdf', sdf_out).next()
                 mol.write(b'xyz', str(xyz_out))
+                for query, values in self.get_insert_moldata_queries(
+                        self.inchikey,
+                        mol,
+                        description='balloon molecule data'):
+                    try:
+                        moldata[query].append(values)
+                    except KeyError:
+                        moldata[query] = [values]
             except IOError:
                 sdf_bad = os.path.join(out_dir, '%s_bad.sdf' % inchikey)
                 try:
@@ -119,6 +128,7 @@ class Balloon(AbstractMethod):
             if self.check(xyz_out):
                 if abs(mol.molwt - pybel.readstring('smi',
                                                     r.smiles).molwt) > 0.001:
+                    moldata = {}
                     mol = pybel.readstring(b'smi', str(r.smiles))
                     mol.make3D(forcefield, steps)
                     mol.write(b'xyz', str(xyz_out), overwrite=True)
@@ -130,6 +140,7 @@ class Balloon(AbstractMethod):
                                        'mismatch'),
                                       self.inchikey, forcefield, steps)
             else:
+                moldata = {}
                 mol = pybel.readstring(b'smi', str(r.smiles))
                 mol.make3D(forcefield, steps)
                 mol.write(b'xyz', str(xyz_out), overwrite=True)
@@ -144,7 +155,9 @@ class Balloon(AbstractMethod):
             else:
                 self.log_all.warning('%s coordinate generation failed',
                                      self.inchikey)
-                
+            for query, values in moldata.iteritems():
+                for v in values:
+                    yield query, v
             yield self.get_timing_query(self.inchikey, start)
         else:
             self.log_console.info('%s skipped', self.inchikey)
