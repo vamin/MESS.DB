@@ -147,9 +147,14 @@ class Import0D(AbstractMethod):
         source.update_source_tsv(self.inchikey, identifier)
         yield source.update_molecule_source_query(self.inchikey, identifier)
         yield self.insert_molecule_query(self.inchikey, mol)
-        for query, values in self.insert_property_queries(self.inchikey,
-                                                          self.path_id,
-                                                          mol):
+        for query, values in self.get_insert_moldata_queries(
+                self.inchikey,
+                mol,
+                description='molecule data from %s input' % source.dirname):
+            yield query, values
+        for query, values in self.get_openbabel_property_queries(self.inchikey,
+                                                                 self.path_id,
+                                                                 mol):
             yield query, values
         
     def check(self):
@@ -207,7 +212,7 @@ class Import0D(AbstractMethod):
                  'VALUES (?, ?, ?, ?)')
         return (query, (inchikey, inchi, smiles, formula))
     
-    def insert_property_queries(self, inchikey, method_path_id, mol):
+    def get_openbabel_property_queries(self, inchikey, method_path_id, mol):
         """Load properties available in Open Babel into mess.db.
         
         Args:
