@@ -37,12 +37,14 @@ class Balloon(AbstractMethod):
                      'Algorithm. Journal of Chemical Information and '
                      'Modeling, 47, 2462 - 2474.')
     # parameters
-    parameters = {'-v': '1',
-                  '--maxtime': '1024',
+    parameters = {'--maxtime': '1024',
                   '--nGenerations': '1024',
+                  '--maxFlipDistance': '32',
+                  '--distanceDependent': '',
+                  '--fullforce': '',
+                  '--contract': '',
                   '--singleconf': '',
-                  '--randomSeed': '>>>crc32(inchikey)',
-                  ">>>pybel mol.localopt(forcefield='uff', steps=128)": ''}
+                  '--randomSeed': '#crc32(inchikey)'}
     
     @property
     def prog_version(self):
@@ -84,7 +86,7 @@ class Balloon(AbstractMethod):
                 pass
             balloon_cmd = ['balloon']
             for k, v in self.parameters.items():
-                if k.startswith('>>>') or v.startswith('>>>'):
+                if k.startswith('#') or v.startswith('#'):
                     continue
                 balloon_cmd.append(k)
                 if v:
@@ -97,19 +99,54 @@ class Balloon(AbstractMethod):
             balloon.stdin.write('Y')  # in case balloon asks about overwrite
             messages.append(balloon.stdout.read())
             messages.append(balloon.stderr.read())
+            forcefield = b'mmff94s'
+            steps = 512
             try:
                 mol = pybel.readfile('sdf', sdf_out).next()
+                mol.write(b'xyz', str(xyz_out))
             except IOError:
                 sdf_bad = os.path.join(out_dir, '%s_bad.sdf' % inchikey)
-                mol = pybel.readfile('sdf', sdf_bad).next()
-            decorate(mol, UnicodeDecorator)
-            mol.localopt(forcefield='mmff94s', steps=128)
-            mol.write('xyz', xyz_out)
+                try:
+                    mol = pybel.readfile('sdf', sdf_bad).next()
+                    mol.localopt(forcefield=forcefield, steps=steps)
+                    self.log_all.info(('"bad" %s sdf cleaned up '
+                                       'with %s forcefield '
+                                       'and %i steps'),
+                                      self.inchikey,
+                                      forcefield,
+                                      steps)
+                    mol.write(b'xyz', str(xyz_out))
+                except IOError:
+                    pass
             if self.check(xyz_out):
-                self.log_all.info('%s 3D coordinates generated', self.inchikey)
+                if abs(mol.molwt - pybel.readstring('smi',
+                                                    r.smiles).molwt) > 0.001:
+                    mol = pybel.readstring(b'smi', str(r.smiles))
+                    mol.make3D(forcefield, steps)
+                    mol.write(b'xyz', str(xyz_out), overwrite=True)
+                    self.log_all.info(('%s 3D coordinates generation '
+                                       'attempted by '
+                                       'Open Babel rule-based algorithm '
+                                       '(forcefields=%s steps=%i) instead of '
+                                       'balloon due to hydrogen atom '
+                                       'mismatch'),
+                                      self.inchikey, forcefield, steps)
+            else:
+                mol = pybel.readstring(b'smi', str(r.smiles))
+                mol.make3D(forcefield, steps)
+                mol.write(b'xyz', str(xyz_out), overwrite=True)
+                self.log_all.info(('%s 3D coordinates generation attempted by '
+                                   'Open Babel rule-based algorithm '
+                                   '(forcefields=%s steps=%i) instead of '
+                                   'balloon due to unexpected failure'),
+                                  self.inchikey, forcefield, steps)
+            if self.check(xyz_out):
+                self.log_all.info('%s 3D coordinates generated successfully',
+                                  self.inchikey)
             else:
                 self.log_all.warning('%s coordinate generation failed',
                                      self.inchikey)
+                
             yield self.get_timing_query(inchikey, self.path_id, start)
         else:
             self.log_console.info('%s skipped', self.inchikey)
