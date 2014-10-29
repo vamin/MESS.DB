@@ -72,6 +72,11 @@ class Mopac(AbstractMethod):
         if self.parent_method_dir is None:
             sys.exit(('This method requires a parent path with a valid '
                       'xyz file (i.e., it cannot accept an InChI).'))
+        if not self.has_parent_path(self.inchikey):
+            self.log_console.info(('parent path %i has not been calculated '
+                                   'for %s, skipping current calculation'),
+                                  self._parent_path_id, self.inchikey)
+            return
         out_dir = os.path.realpath(os.path.join(inchikey_dir, self.method_dir))
         setup_dir(out_dir)
         mop_file = os.path.join(out_dir, '%s.mop' % self.inchikey)

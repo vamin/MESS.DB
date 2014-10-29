@@ -230,6 +230,18 @@ class AbstractMethod(object):
         if parent_path > 0:
             self._parent_path_id = parent_path
     
+    def has_parent_path(self, inchikey):
+        """Returns True if molecule has had entire parent path calculated,
+        False otherwise."""
+        query = ('SELECT inchikey FROM molecule_method_property WHERE '
+                 'inchikey = ? AND method_path_id = ?')
+        try:
+            self.db.execute(query,
+                            (inchikey, self._parent_path_id)).fetchone()[0]
+            return True
+        except TypeError:
+            return False
+    
     def check_dependencies(self):
         """If check_dependencies is not implemented, raise error."""
         raise NotImplementedError(("every method needs a 'check_dependencies' "
