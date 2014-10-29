@@ -73,7 +73,7 @@ class Calculate(AbstractTool):
             self.mapreduce_server(inchikeys, method)
         else:
             self.mapreduce_local(inchikeys, method)
-
+    
     def mapreduce_local(self, inchikeys, method):
         """Run a method's map and reduce functions locally."""
         keys = {}
@@ -88,7 +88,7 @@ class Calculate(AbstractTool):
                     keys[key] = [values]
         for key, values in keys.iteritems():
             method.reduce(key, values)
-
+    
     def mapreduce_server(self, inchikeys, method):
         """Start a mapreduce server."""
         self.log_console.info('hostname is %s' % gethostname())
