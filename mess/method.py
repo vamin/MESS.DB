@@ -187,8 +187,8 @@ class AbstractMethod(object):
             self.log_all.info('%i method parameters added to MESS.DB',
                               added_parameters)
     
-    def get_insert_property_query(self, inchikey, method_path_id, name,
-                                  description, format_, value, units):
+    def get_insert_property_query(self, inchikey, name, description,
+                                  format_, value, units=''):
         """Returns query to insert property value to mess.db.
         
         Args:
@@ -203,24 +203,23 @@ class AbstractMethod(object):
         """
         query = ('INSERT OR IGNORE INTO molecule_method_property_denorm '
                  'VALUES (?, ?, ?, ?, ?, ?, ?);')
-        return (query, (inchikey, method_path_id, name, description,
+        return (query, (inchikey, self.path_id, name, description,
                         format_, units, value))
     
     def get_insert_moldata_queries(self, inchikey, mol,
-                                   description='', format_='', units=''):
+                                   description='', units=''):
         """Returns queries to insert molecule data values to mess.db."""
         for name, value in mol.data.iteritems():
             yield self.get_insert_property_query(inchikey,
-                                                 self.path_id,
                                                  name,
                                                  description,
-                                                 format_,
+                                                 type(value).__name__,
                                                  value,
                                                  units)
     
-    def get_timing_query(self, inchikey, path_id, start):
+    def get_timing_query(self, inchikey, start):
         """Get a query to insert execution time property into db."""
-        return self.get_insert_property_query(inchikey, path_id, 'runtime',
+        return self.get_insert_property_query(inchikey, 'runtime',
                                               'execution time',
                                               type(start).__name__,
                                               time.time() - start, 's')

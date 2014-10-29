@@ -153,7 +153,6 @@ class Import0D(AbstractMethod):
                 description='molecule data from %s input' % source.dirname):
             yield query, values
         for query, values in self.get_openbabel_property_queries(self.inchikey,
-                                                                 self.path_id,
                                                                  mol):
             yield query, values
         
@@ -212,7 +211,7 @@ class Import0D(AbstractMethod):
                  'VALUES (?, ?, ?, ?)')
         return (query, (inchikey, inchi, smiles, formula))
     
-    def get_openbabel_property_queries(self, inchikey, method_path_id, mol):
+    def get_openbabel_property_queries(self, inchikey, mol):
         """Load properties available in Open Babel into mess.db.
         
         Args:
@@ -223,29 +222,24 @@ class Import0D(AbstractMethod):
         """
         # insert Open Babel molecule attributes
         yield self.get_insert_property_query(
-            inchikey, method_path_id,
-            'charge', 'Open Babel molecule attribute',
-            type(mol.charge).__name__, mol.charge, '')
+            inchikey, 'charge', 'Open Babel molecule attribute',
+            type(mol.charge).__name__, mol.charge)
         yield self.get_insert_property_query(
-            inchikey, method_path_id,
-            'exactmass', 'Open Babel molecule attribute',
+            inchikey, 'exactmass', 'Open Babel molecule attribute',
             type(mol.exactmass).__name__, mol.exactmass, 'g/mol')
         yield self.get_insert_property_query(
-            inchikey, method_path_id,
-            'molwt', 'Open Babel descriptor value', type(mol.molwt).__name__,
-            mol.molwt, 'g/mol')
+            inchikey, 'molwt', 'Open Babel descriptor value',
+            type(mol.molwt).__name__, mol.molwt, 'g/mol')
         yield self.get_insert_property_query(
-            inchikey, method_path_id,
-            'spin', 'Open Babel descriptor value', type(mol.spin).__name__,
-            mol.spin, '')
+            inchikey, 'spin', 'Open Babel descriptor value',
+            type(mol.spin).__name__, mol.spin)
         # insert Open Babel descriptors
         for property_name, property_value in mol.calcdesc().iteritems():
             if math.isnan(property_value):
                 continue
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                property_name, 'Open Babel descriptor value',
-                type(property_value).__name__, property_value, '')
+                inchikey, property_name, 'Open Babel descriptor value',
+                type(property_value).__name__, property_value)
 
 
 class Import3D(AbstractMethod):

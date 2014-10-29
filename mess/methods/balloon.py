@@ -18,7 +18,6 @@ import time
 
 import pybel
 
-from mess.decorators import decorate, UnicodeDecorator
 from mess.method import AbstractMethod
 from mess.utils import setup_dir
 
@@ -42,7 +41,6 @@ class Balloon(AbstractMethod):
                   '--maxFlipDistance': '32',
                   '--distanceDependent': '',
                   '--fullforce': '',
-                  '--contract': '',
                   '--singleconf': '',
                   '--randomSeed': '#crc32(inchikey)'}
     
@@ -147,7 +145,7 @@ class Balloon(AbstractMethod):
                 self.log_all.warning('%s coordinate generation failed',
                                      self.inchikey)
                 
-            yield self.get_timing_query(inchikey, self.path_id, start)
+            yield self.get_timing_query(self.inchikey, start)
         else:
             self.log_console.info('%s skipped', self.inchikey)
     

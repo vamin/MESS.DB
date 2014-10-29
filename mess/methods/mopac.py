@@ -112,18 +112,14 @@ class Mopac(AbstractMethod):
             self.moo_to_xyz(os.path.abspath(out_file), xyz_out)
             if self.check(out_file, xyz_out):
                 self.log_all.info('%s calculation successful', self.inchikey)
-                yield self.get_timing_query(self.inchikey, self.path_id, start)
-                for query, values in self.import_properties(self.inchikey,
-                                                            self.path_id,
-                                                            out_file):
+                yield self.get_timing_query(self.inchikey, start)
+                for query, values in self.import_properties(out_file):
                     yield query, values
             else:
                 print(babel_stderr, file=sys.stderr)
         else:
             self.log_console.info('%s calculation skipped', self.inchikey)
-            for query, values in self.import_properties(self.inchikey,
-                                                        self.path_id,
-                                                        out_file):
+            for query, values in self.import_properties(out_file):
                 yield query, values
     
     def check(self, moo_out, xyz_out):
@@ -170,7 +166,7 @@ class Mopac(AbstractMethod):
         else:
             return False
     
-    def import_properties(self, inchikey, method_path_id, moo_out):
+    def import_properties(self, moo_out):
         """Load properties available in Mopac output into mess.db.
         
         Args:
@@ -237,84 +233,71 @@ class Mopac(AbstractMethod):
         # insert properties into db
         try:
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'HEAT OF FORMATION', 'MOPAC property', 'float',
+                self.inchikey, 'HEAT OF FORMATION', 'MOPAC property', 'float',
                 heat_of_formation_kcal, 'kcal/mol')
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'HEAT OF FORMATION', 'MOPAC property', 'float',
+                self.inchikey, 'HEAT OF FORMATION', 'MOPAC property', 'float',
                 heat_of_formation_kJ, 'kJ/mol')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
         try:
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'TOTAL ENERGY', 'MOPAC property', 'float',
+                self.inchikey, 'TOTAL ENERGY', 'MOPAC property', 'float',
                 total_energy, 'eV')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
         try:
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'ELECTRONIC ENERGY', 'MOPAC property', 'float',
+                self.inchikey, 'ELECTRONIC ENERGY', 'MOPAC property', 'float',
                 electronic_energy, 'eV')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
         try:
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'POINT GROUP', 'MOPAC property', 'str',
-                point_group, '')
+                self.inchikey, 'POINT GROUP', 'MOPAC property', 'str',
+                point_group)
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
         try:
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'CORE-CORE REPULSION', 'MOPAC property', 'float',
-                core_repulsion, 'eV')
+                self.inchikey, 'CORE-CORE REPULSION', 'MOPAC property',
+                'float', core_repulsion, 'eV')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
         try:
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'COSMO AREA', 'MOPAC property', 'float',
+                self.inchikey, 'COSMO AREA', 'MOPAC property', 'float',
                 cosmo_area, 'A^2')
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'COSMO VOLUME', 'MOPAC property', 'float',
+                self.inchikey, 'COSMO VOLUME', 'MOPAC property', 'float',
                 cosmo_volume, 'A^3')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
         try:
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'GRADIENT NORM', 'MOPAC property', 'float',
-                gradient_norm, '')
+                self.inchikey, 'GRADIENT NORM', 'MOPAC property', 'float',
+                gradient_norm)
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
         try:
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'IONIZATION POTENTIAL', 'MOPAC property', 'float',
-                ionization_potential, 'eV')
+                self.inchikey, 'IONIZATION POTENTIAL', 'MOPAC property',
+                'float', ionization_potential, 'eV')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
         try:
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'HOMO', 'MOPAC property', 'float',
+                self.inchikey, 'HOMO', 'MOPAC property', 'float',
                 homo, 'eV')
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'LUMO', 'MOPAC property', 'float',
+                self.inchikey, 'LUMO', 'MOPAC property', 'float',
                 lumo, 'eV')
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
         try:
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'FILLED LEVELS', 'MOPAC property', 'int',
-                filled_levels, '')
+                self.inchikey, 'FILLED LEVELS', 'MOPAC property', 'int',
+                filled_levels)
         except UnboundLocalError as e:
             print(e, file=sys.stderr)
         try:
@@ -327,9 +310,8 @@ class Mopac(AbstractMethod):
                 if n == 5:
                     break
             yield self.get_insert_property_query(
-                inchikey, method_path_id,
-                'LOCALIZED ORBITALS', 'MOPAC property', 'JSON',
-                json.dumps(localized_orbitals_dict, sort_keys=True), '')
+                self.inchikey, 'LOCALIZED ORBITALS', 'MOPAC property', 'JSON',
+                json.dumps(localized_orbitals_dict, sort_keys=True))
         except (UnboundLocalError, IndexError) as e:
             print(e, file=sys.stderr)
 
