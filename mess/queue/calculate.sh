@@ -61,7 +61,7 @@ while getopts "p:N:H" OPT; do
 done
 
 # Check overridden arguments
-if [[ $THREADS < 3 ]]; then
+if [ "$THREADS" -lt 3 ]; then
     echo "You must ask for at least 3 threads."
     echo "The first two threads are reserved for the server and the reducer."
     echo "Additional threads are assigned to mappers."
