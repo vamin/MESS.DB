@@ -169,8 +169,9 @@ class Match(AbstractTool):
                 if target_fp is not None:
                     similarity = self.calculate_similarity(target_fp, fp,
                                                            'tanimoto')
-                    writer.writerow([inchikey, args.fingerprint,
-                                     args.target, similarity])
+                    if similarity > args.cutoff:
+                        writer.writerow([inchikey, args.fingerprint,
+                                         args.target, similarity])
                 else:
                     writer.writerow([inchikey, args.fingerprint] + fp)
             if args.spectrophore:
@@ -186,10 +187,14 @@ class Match(AbstractTool):
                     mol = pybel.readfile('xyz', xyz_file).next()
                     sp = Match.calculate_spectrophore(mol, sp_args)
                 if target_sp is not None:
-                    similarity = self.calculate_similarity(target_sp, sp,
-                                                           'cos')
-                    writer.writerow([inchikey, 'Spectrophore',
-                                     args.target, similarity])
+                    try:
+                        similarity = self.calculate_similarity(target_sp, sp,
+                                                               'cos')
+                    except ValueError:
+                        similarity = 0
+                    if similarity > args.cutoff:
+                        writer.writerow([inchikey, 'Spectrophore',
+                                         args.target, similarity])
                 else:
                     writer.writerow([inchikey, 'Spectrophore'] + sp)
     
@@ -238,6 +243,8 @@ class Match(AbstractTool):
         if not mol.dim == 3:
             logger.warning(('molecule representation not 3D, Spectrophore '
                             'will return vector of nan and 0.0'))
+        if len(mol.atoms) < 3:
+            return []
         spec = pybel.ob.OBSpectrophore()
         if args is not None:
             for key in args:
