@@ -81,9 +81,22 @@ class Backup(AbstractTool):
                                           args.restore)
                     try:
                         shutil.rmtree(db_path)
+                        print('db')
+                    except OSError:
+                        pass  # already deleted
+                    try:
                         shutil.rmtree(mol_path)
+                        print('mol')
+                    except OSError:
+                        pass  # already deleted
+                    try:
                         shutil.rmtree(logs_path)
+                        print('logs')
+                    except OSError:
+                        pass  # already deleted    
+                    try:
                         shutil.rmtree(sources_path)
+                        print('sources')
                     except OSError:
                         pass  # already deleted
                     subprocess.call(['tar', '-jxvf',

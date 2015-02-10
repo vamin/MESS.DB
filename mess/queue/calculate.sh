@@ -101,7 +101,7 @@ sed "s,__INPUTS__,$INPUTS,g" $QUEUEDIR/qsub/mess-server.qsub \
 	 | sed "s,__METHOD__,$METHOD,g" \
 	 | sed "s,__PARENT__,$PATH_ID,g" >>$SUB
 $SUB_CMD $SUB
-sleep 2
+sleep 8
 
 echo "Deploying reducer for '$METHOD' calculation."
 SUB=$TEMPDIR'mess-reducer-'$METHOD'.qsub'

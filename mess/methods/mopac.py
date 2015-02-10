@@ -43,10 +43,11 @@ class Mopac(AbstractMethod):
                   'AUX': '',
                   'LET': '',
                   'MMOK': '',
-                  'DDMIN': 0.0,
-                  'THREADS': 1,
-                  'T': '1W',
-                  'CYCLES': 2048}
+                  'DDMIN': 0.0}
+    # these parameters do not affect the output and so are not recorded
+    secondary_parameters = {'THREADS': 1,
+                            'T': '1D',
+                            'CYCLES': 2048}
     
     def check_dependencies(self):
         """Check that MOPAC2012.exe is installed and runnable.
@@ -97,12 +98,17 @@ class Mopac(AbstractMethod):
                     keywords += '%s=%s ' % (k, v)
                 else:
                     keywords += '%s ' % k
+            for k, v in self.secondary_parameters.items():
+                if v:
+                    keywords += '%s=%s ' % (k, v)
+                else:
+                    keywords += '%s ' % k
             query = ('SELECT result AS charge '
                      'FROM molecule_method_property mpp '
                      'JOIN property p ON mpp.property_id = p.property_id '
                      "WHERE p.name='charge' AND mpp.inchikey=?")
             charge = self.db.execute(query, (self.inchikey,)).fetchone()[0]
-            keywords += 'CHARGE=%i' % charge
+            keywords += 'CHARGE=%i ' % charge
             babel = subprocess.Popen(['obabel', '-ixyz', xyz_in, '-omop',
                                       '-xk' + keywords],
                                      stdout=codecs.open(mop_file, 'w',

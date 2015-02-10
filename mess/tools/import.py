@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import codecs
 import math
 import os
+from collections import OrderedDict
 
 import pybel
 
@@ -43,7 +44,8 @@ class Import(AbstractTool):
         source = Source()
         source.setup(args.source)
         self.log_console.info('reading molecules')
-        molecules = {}
+        molecules = OrderedDict() # not required, but useful for debugging
+                                  # crashing imports
         threedee = False
         pybel.ob.obErrorLog.SetOutputLevel(-1)
         for source_file in source.files():
@@ -60,7 +62,7 @@ class Import(AbstractTool):
                     continue
                 inchikey = mol.write('inchikey').rstrip()
                 if not is_inchikey(inchikey):
-                    self.log_console.warning(
+                    self.log_console.info(
                         ("'%s' is not an importable molecule."), mol.title)
                     continue
                 molecules[inchikey] = (mol, source)
@@ -72,7 +74,7 @@ class Import(AbstractTool):
                             decorate(fragmol, UnicodeDecorator)
                             inchikey = fragmol.write('inchikey').rstrip()
                             if not is_inchikey(inchikey):
-                                self.log_console.warning(
+                                self.log_console.info(
                                     ("'%s' fragment in %s "
                                      "is not an importable molecule."),
                                     fragment, mol.title)
