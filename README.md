@@ -6,9 +6,9 @@ relational database. MESS.DB scales happily to millions of molecules.
 
 ## Quick Start ##
 
-- Clone the repository:
+- Clone the repository and submodules:
   ```bash
-  git clone git@github.com:vamin/MESS.DB.git
+  git clone --recursive git@github.com:vamin/MESS.DB.git messdb
   cd messdb  
   ```
 
@@ -26,11 +26,6 @@ relational database. MESS.DB scales happily to millions of molecules.
 - Import the sample source molecules:
   ```bash
   mess import fda
-  ```
-
-- Prepare your own source for import:
-  ```bash
-  sources/setup_source.sh
   ```
 
 - Generate 3D structures for all molecules in the database:
